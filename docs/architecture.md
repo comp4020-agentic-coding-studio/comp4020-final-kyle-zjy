@@ -164,15 +164,19 @@ start, the server loads active rooms and re-arms timers from stored deadlines
 ├── src/
 │   ├── shared/                pure TS, imported by both server and client
 │   │   ├── characters/
-│   │   │   ├── types.ts       Zodiac, MBTI, Character, Skill        (PHASE 0 ✓)
+│   │   │   ├── types.ts       Zodiac, MBTI, Character (coreSkillId)  (PHASE 0 ✓)
 │   │   │   ├── signs.ts       sign/type display data, constellations (PHASE 1 ✓)
 │   │   │   ├── validate.ts    static checks on a character's data    (PHASE 2 ✓)
 │   │   │   └── roster/        12 files × 16 characters + index.ts    (PHASE 2 ✓)
+│   │   ├── skills/
+│   │   │   ├── core/          core abilities by family (mechanics, no names)
+│   │   │   ├── types.ts       scenario adapter types, visuals
+│   │   │   └── resolver.ts    core + adapter → the ability a scenario runs
 │   │   ├── game/
 │   │   │   ├── state.ts       GamePhase, GameState, player state    (PHASE 0 ✓)
 │   │   │   ├── actions.ts     GameAction / LobbyAction unions       (PHASE 0 ✓)
 │   │   │   ├── effects.ts     Effect primitives for the Skill Resolver (PHASE 0 ✓)
-│   │   │   └── scenario01.ts  "00:17" carriages, events, tuning     (PHASE 5–7)
+│   │   │   └── scenario01/    "00:17" content, tuning, skill-adapters/, skills.ts
 │   │   └── protocol.ts        WebSocket message types               (PHASE 0 ✓)
 │   ├── server/
 │   │   ├── index.ts           HTTP + WS bootstrap
@@ -250,6 +254,21 @@ are evicted from memory (they stay in SQLite and rehydrate on the next
   (`test/`, pure code). `pnpm check` runs both; `pnpm test:unit` runs only unit.
 
 ## 15. PHASE 8: the Skill Resolver
+
+Abilities are layered so a new scenario never copies 192 skills:
+
+```
+Character (id, zodiac, mbti, nickname, avatar, coreSkillId)
+  → Core Skill      src/shared/skills/core/   family, trigger, target, Effect primitives
+  → Scenario Adapter src/shared/game/scenario01/skill-adapters/  name, description, visual,
+                                              rarely a behaviour that replaces part of the mechanics
+  → resolveSkill     src/shared/skills/resolver.ts  → characterSkill(id) in scenario01/skills.ts
+  → Runtime resolver src/server/engine/resolver.ts  (below)
+```
+
+Only one ability needs a scenario behaviour today: Pisces ENTP's core is a
+one-hit protection; in scenario 01 it is a pass for the next ticket check.
+`test/skills-architecture.test.ts` checks 192/192 at each layer.
 
 All 192 abilities run through shared code; docs/skill-mapping-notes.md has
 the glossary and the pipelines. Engine modules involved:

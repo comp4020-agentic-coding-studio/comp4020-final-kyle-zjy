@@ -60,7 +60,7 @@ function ownSecrets(sec: PlayerSecrets, over: boolean): ViewerSecrets {
   if (over) return sec;
   return {
     ...sec,
-    messages: sec.messages.map(({ isTrue: _isTrue, ...m }) => m),
-    dreamCards: sec.dreamCards.map(({ isTrue: _isTrue, ...d }) => d),
+    messages: sec.messages,
+    dreamCards: sec.dreamCards,
   };
 }

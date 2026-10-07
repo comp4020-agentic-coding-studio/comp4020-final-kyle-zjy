@@ -19,7 +19,7 @@ export function escapeStatus(s: GameState): EscapeCheck {
   const anchorsLeft = Object.values(s.anchors).filter((a) => !a.repaired).length;
   if (anchorsLeft) missing.push(anchorsLeft > 1 ? m`${anchorsLeft} reality anchors still broken` : m`1 reality anchor still broken`);
   if (s.fragments.length < 3) missing.push(m`only ${s.fragments.length}/3 memory fragment types`);
-  const locks = s.escape.round === s.round ? [s.escape.power, s.escape.route, s.escape.drive].filter(Boolean).length : 0;
+  const locks = s.escape.round === s.round ? [s.escape.power, s.escape.identity, s.escape.memory].filter(Boolean).length : 0;
   if (locks < 3) missing.push(m`${locks}/3 escape locks this round`);
   if (s.collapse >= s.collapseMax) missing.push(m`the train has collapsed`);
   const players = Object.values(s.players);
@@ -41,7 +41,7 @@ export function checkEnd(ctx: Ctx): boolean {
     startEnding(ctx, "FAILED", "ALL_LOST");
     return true;
   }
-  const locks = s.escape.round === s.round && s.escape.power && s.escape.route && s.escape.drive;
+  const locks = s.escape.round === s.round && s.escape.power && s.escape.identity && s.escape.memory;
   if (!locks) return false;
   const status = escapeStatus(s);
   if (!status.ready) {
@@ -156,7 +156,7 @@ function computeResults(ctx: Ctx): PlayerResult[] {
         ...highlights.map(({ a, n }) => a.line(n)),
         p.skill.usesLeft < 1 ? m`ability used` : m`ability never used`,
       ],
-      messages: secrets.messages.map((m) => ({ text: m.text, isTrue: m.isTrue })),
+      messages: secrets.messages.map((m) => ({ text: m.text })),
     };
   });
 }

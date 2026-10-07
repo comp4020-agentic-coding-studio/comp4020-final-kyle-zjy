@@ -5,13 +5,14 @@ import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import type { ActionAvailability, GameAction, GameActionType } from "../../shared/game/actions.ts";
-import { ITEMS, MAX_SANITY } from "../../shared/game/scenario01/content.ts";
+import { isKeyItem, ITEMS, MAX_SANITY } from "../../shared/game/scenario01/content.ts";
 import type { ItemId, PlayerView, PublicPlayerState } from "../../shared/game/state.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { sendGame } from "../store.ts";
 import { useCharacterText, useFormat, useScenarioText, useT, type TFunction } from "../i18n/index.ts";
 import { Icon } from "./Icon.tsx";
 import { statusName } from "./status.ts";
+import { characterSkill } from "../../shared/game/scenario01/skills.ts";
 
 const GRID: GameActionType[] = ["MOVE", "INVESTIGATE", "SEARCH", "REPAIR", "HELP", "TRADE", "STABILIZE", "CONFRONT"];
 
@@ -145,6 +146,12 @@ function Hud({ g, me }: { g: PlayerView; me: PublicPlayerState }) {
           >
             {t("dock.skillChip", { skill: skill.skillName, state: t(`skill.state.${me.skill.state}`) })}
           </span>
+          {me.items.filter(isKeyItem).map((k) => (
+            <motion.span key={k} initial={{ scale: 1.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex items-center gap-1 rounded-full border border-gold-bright/70 bg-gold/15 px-2 py-0.5 text-[10px] font-bold text-gold-bright">
+              <Icon name="KEY" size={11} />
+              {text.items[k].name}
+            </motion.span>
+          ))}
           {me.helpBonus > 0 && <span className="rounded-full border border-signal/50 px-2 py-0.5 text-[10px] text-signal">{t("dock.helpBonus", { n: me.helpBonus })}</span>}
           {me.shields > 0 && <span className="rounded-full border border-violet-soft/50 px-2 py-0.5 text-[10px] text-violet-soft">{t("dock.shield", { n: me.shields })}</span>}
           {me.statuses.map((st) => (
@@ -282,7 +289,19 @@ function ItemButton({ item, count, g, me, onUse }: { item: ItemId; count: number
   const words = useScenarioText().items[item];
   const info = { ...ITEMS[item], name: words.name, text: words.text };
   const [choosing, setChoosing] = useState(false);
+  const t = useT();
   const mates = Object.values(g.players).filter((p) => p.carriageIndex === me.carriageIndex && !p.away);
+  if (isKeyItem(item))
+    return (
+      <div className="flex min-h-12 items-start gap-2 rounded-lg border border-gold-bright/50 bg-gold/10 p-2 text-left">
+        <Icon name="KEY" size={18} className="mt-0.5 shrink-0 text-gold-bright" />
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-gold-bright">{info.name}</span>
+          <span className="block text-[10px] font-bold tracking-wider text-gold">{t("dock.keyItem")}</span>
+          <span className="block text-xs text-mist">{info.text}</span>
+        </span>
+      </div>
+    );
   if (choosing) return <PeopleRow people={mates} onPick={(id) => onUse(id)} />;
   return (
     <button className="flex min-h-12 items-start gap-2 rounded-lg border border-gold/30 bg-[#121a3a]/70 p-2 text-left hover:border-gold-bright" onClick={() => (info.needsTarget && mates.length > 1 ? setChoosing(true) : onUse())}>
@@ -299,7 +318,7 @@ function ItemButton({ item, count, g, me, onUse }: { item: ItemId; count: number
 }
 
 function SkillPicker({ g, me, onUse }: { g: PlayerView; me: PublicPlayerState; onUse: (targets: string[]) => void }) {
-  const skill = getCharacterById(me.skill.borrowed ?? me.characterId).skill;
+  const skill = characterSkill(me.skill.borrowed ?? me.characterId);
   const words = useCharacterText()(me.skill.borrowed ?? me.characterId);
   const t = useT();
   const [picked, setPicked] = useState<string[]>([]);

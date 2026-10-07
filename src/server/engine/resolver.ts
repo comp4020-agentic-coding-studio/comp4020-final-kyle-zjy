@@ -22,6 +22,7 @@ import { queueTrigger } from "./trigger-queue.ts";
 import { onResume, openWindow, setBeforeClose, settleIfAnswered } from "./windows.ts";
 import { list, m, ref } from "../../shared/i18n/msg.ts";
 import type { Msg } from "../../shared/i18n/types.ts";
+import { characterSkill } from "../../shared/game/scenario01/skills.ts";
 
 /** Every effect in the skill has a handler. */
 export function resolvable(skill: Skill): boolean {
@@ -38,7 +39,7 @@ export const skillCharacter = (ctx: Ctx, id: PlayerId): CharacterId => {
 
 export const skillOf = (ctx: Ctx, id: PlayerId): Skill => {
   const p = ctx.s.players[id];
-  return getCharacterById(p.skill.borrowed ?? p.characterId).skill;
+  return characterSkill(p.skill.borrowed ?? p.characterId);
 };
 
 const scopeOf = (ownerId: PlayerId, targets: PlayerId[], label: Msg, trigger?: TriggerEvent): Scope => ({
@@ -136,7 +137,7 @@ export function useSkill(ctx: Ctx, ownerId: PlayerId, chosen: PlayerId[], use: U
   const s = ctx.s;
   const p = s.players[ownerId];
   const character = getCharacterById(p.skill.borrowed ?? p.characterId);
-  const skill = character.skill;
+  const skill = characterSkill(character.id);
   p.skill.usesLeft--;
   if (p.skill.usesLeft <= 0) p.skill.state = "BURNED";
   p.stats.skillUsedRound = s.round;

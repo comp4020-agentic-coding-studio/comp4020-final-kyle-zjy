@@ -2,7 +2,7 @@
 // carriages, items, night rules, obsessions and player-count tuning. Shared by
 // the server (rules) and the client (names, descriptions, art cues).
 import type { Effect } from "../effects.ts";
-import type { AnchorId, CarriageIdentity, FailReason, FragmentType, GameConfig, ItemId, NightRuleId, ObsessionId, Outcome, TaskGoal } from "../state.ts";
+import type { AnchorId, CarriageIdentity, EscapeLockId, FailReason, FragmentType, GameConfig, ItemId, KeyItemId, NightRuleId, ObsessionId, Outcome, TaskGoal } from "../state.ts";
 
 export const SCENARIO = {
   id: "S01_LAST_TRAIN",
@@ -120,7 +120,8 @@ export const FRAGMENTS: Record<FragmentType, { name: string; text: string }> = {
   SIGNAL: { name: "Signal", text: "The train isn't following tracks. It's following a decision." },
 };
 
-export type ItemInfo = { name: string; text: string; effects: Effect[]; needsTarget?: "SAME_CARRIAGE_OR_SELF" };
+export type ItemTag = "KEY_ITEM" | "OBJECTIVE_ITEM";
+export type ItemInfo = { name: string; text: string; effects: Effect[]; needsTarget?: "SAME_CARRIAGE_OR_SELF"; tags?: ItemTag[] };
 
 export const ITEMS: Record<ItemId, ItemInfo> = {
   OLD_KEY: { name: "Old Key", text: "+2 to your next Repair roll.", effects: [{ kind: "ADD_STATUS", who: "SELF", status: "REPAIR_BONUS", rounds: 99, value: 2, polarity: "POSITIVE" }] },
@@ -132,9 +133,26 @@ export const ITEMS: Record<ItemId, ItemInfo> = {
   BLANK_TICKET: { name: "Blank Ticket", text: "Your next roll is made twice; the better result counts.", effects: [{ kind: "ADD_STATUS", who: "SELF", status: "ADVANTAGE", rounds: 99, polarity: "POSITIVE" }] },
   POCKET_WATCH: { name: "Pocket Watch", text: "Wind time back: Collapse −1.", effects: [{ kind: "CHANGE_COLLAPSE", delta: -1 }] },
   BLACK_COIN: { name: "Black Coin", text: "Gain 2 Fate, lose 1 Sanity.", effects: [{ kind: "GAIN_FATE", who: "SELF", amount: 2 }, { kind: "LOSE_SANITY", who: "SELF", amount: 1 }] },
+  POWER_KEY: { name: "Power Key", text: "Opens the Power Escape Lock in the Engine Room. Not used up; can be traded.", effects: [], tags: ["KEY_ITEM", "OBJECTIVE_ITEM"] },
+  IDENTITY_KEY: { name: "Identity Key", text: "Opens the Identity Escape Lock in the Archive Car. Not used up; can be traded.", effects: [], tags: ["KEY_ITEM", "OBJECTIVE_ITEM"] },
+  MEMORY_KEY: { name: "Memory Key", text: "Opens the Memory Escape Lock in the Driver's Cab. Not used up; can be traded.", effects: [], tags: ["KEY_ITEM", "OBJECTIVE_ITEM"] },
 };
 
-export const ITEM_IDS = Object.keys(ITEMS) as ItemId[];
+/**
+ * Key items are made only by restoring an anchor, are never used up, and move
+ * only by a trade: no random grant, steal, copy, swap or loss touches them.
+ */
+export const isKeyItem = (id: ItemId): id is KeyItemId => !!ITEMS[id].tags?.includes("KEY_ITEM");
+
+/** Ordinary items: the pool for starting items, rewards and random grants. */
+export const ITEM_IDS = (Object.keys(ITEMS) as ItemId[]).filter((id) => !isKeyItem(id));
+
+export const ESCAPE_LOCKS: EscapeLockId[] = ["power", "identity", "memory"];
+/** Where each escape lock stands (it moves with its carriage in a Reality Fold). */
+export const LOCK_AT: Record<EscapeLockId, CarriageIdentity> = { power: "ENGINE_ROOM", identity: "ARCHIVE", memory: "CAB" };
+export const KEY_FOR_LOCK: Record<EscapeLockId, KeyItemId> = { power: "POWER_KEY", identity: "IDENTITY_KEY", memory: "MEMORY_KEY" };
+export const LOCK_FOR_KEY: Record<KeyItemId, EscapeLockId> = { POWER_KEY: "power", IDENTITY_KEY: "identity", MEMORY_KEY: "memory" };
+export const KEY_FOR_ANCHOR: Record<AnchorId, KeyItemId> = { POWER: "POWER_KEY", IDENTITY: "IDENTITY_KEY", MEMORY: "MEMORY_KEY" };
 
 export const NIGHT_RULES: Record<NightRuleId, { name: string; text: string }> = {
   MERCURY_RETROGRADE: { name: "Mercury Retrograde", text: "The first reroll each player makes has a 1 in 3 chance of costing 1 Sanity." },
@@ -184,7 +202,7 @@ export function tuningFor(playerCount: number): GameConfig {
 
 /** Names of the three reality anchors and escape locks. */
 export const ANCHOR_NAMES: Record<AnchorId, string> = { POWER: "Power Anchor", IDENTITY: "Identity Anchor", MEMORY: "Memory Anchor" };
-export const LOCK_NAMES = { power: "Power Lock", route: "Route Lock", drive: "Drive Lock" } as const;
+export const LOCK_NAMES: Record<EscapeLockId, string> = { power: "Power Escape Lock", identity: "Identity Escape Lock", memory: "Memory Escape Lock" };
 
 /** Rule changes for one round (Rewrite the Rules, System Update). */
 export const RULE_CHANGES: Record<string, string> = {
@@ -217,14 +235,14 @@ export type EndingText = { kicker: string; title: string; lines: string[]; won: 
 export function endingText(outcome: Outcome, reason: FailReason | null): EndingText {
   switch (outcome) {
     case "NORMAL":
-      return { won: true, kicker: "Escaped · Normal ending", title: "Route confirmed.", lines: ["Three terminals light up at once.", "The doors open on a platform you recognise.", "Outside, the city comes back."] };
+      return { won: true, kicker: "Escaped · Normal ending", title: "Route confirmed.", lines: ["Three escape locks turn at once.", "The doors open on a platform you recognise.", "Outside, the city comes back."] };
     case "TRUE_DELETE":
-      return { won: true, kicker: "Escaped · True ending", title: "You arrive lighter.", lines: ["Three terminals light up.", "The blank name on the manifest fades away,", "and so does the weight you didn't know you carried."] };
+      return { won: true, kicker: "Escaped · True ending", title: "You arrive lighter.", lines: ["Three escape locks turn.", "The blank name on the manifest fades away,", "and so does the weight you didn't know you carried."] };
     case "TRUE_TICKET":
-      return { won: true, kicker: "Escaped · True ending", title: "One more passenger.", lines: ["Three terminals light up.", "Someone punches one more ticket.", "The passenger without a name takes the seat beside you."] };
+      return { won: true, kicker: "Escaped · True ending", title: "One more passenger.", lines: ["Three escape locks turn.", "Someone punches one more ticket.", "The passenger without a name takes the seat beside you."] };
     case "FAILED":
       if (reason === "COLLAPSE") return { won: false, kicker: "Lost · The train collapsed", title: "Passenger count: zero.", lines: ["The carriages fold into each other.", "The lights go out one by one.", "N13 keeps running, empty."] };
       if (reason === "ALL_LOST") return { won: false, kicker: "Lost · Nobody is left", title: "No one remembers their name.", lines: ["Every seat is taken.", "Nobody in them can say who they are.", "The train keeps every one of you."] };
-      return { won: false, kicker: "Lost · Out of time", title: "The doors never open.", lines: ["Round 12 ends.", "The terminals stay dark.", "N13 runs on, one passenger heavier."] };
+      return { won: false, kicker: "Lost · Out of time", title: "The doors never open.", lines: ["Round 12 ends.", "The escape locks never turn.", "N13 runs on, one passenger heavier."] };
   }
 }

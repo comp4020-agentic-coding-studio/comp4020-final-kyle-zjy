@@ -11,7 +11,7 @@ function objective(g: PlayerView, t: TFunction, text: ScenarioText): { text: str
   if (g.act === 2) {
     return { text: t("objective.act2"), done: Object.values(g.anchors).filter((a) => a.repaired).length, of: 3 };
   }
-  const locks = g.escape.round === g.round ? [g.escape.power, g.escape.route, g.escape.drive].filter(Boolean).length : 0;
+  const locks = g.escape.round === g.round ? [g.escape.power, g.escape.identity, g.escape.memory].filter(Boolean).length : 0;
   return { text: t("objective.act3"), done: locks, of: 3 };
 }
 

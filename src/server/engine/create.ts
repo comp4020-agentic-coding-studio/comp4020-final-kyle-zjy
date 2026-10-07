@@ -20,6 +20,7 @@ import type { GameState, PlayerGameState, PlayerId, RoundRecord } from "../../sh
 import { log, type Ctx } from "./context.ts";
 import { int, pick, seedState, shuffle } from "./rng.ts";
 import { m, ref } from "../../shared/i18n/msg.ts";
+import { characterSkill } from "../../shared/game/scenario01/skills.ts";
 
 export type Seat = { playerId: PlayerId; nickname: string; seat: number; zodiac: Zodiac; mbti: MBTI };
 
@@ -77,7 +78,7 @@ export function createGame(sessionId: string, seats: Seat[], seed: string, now: 
     inspector: { active: false, carriageIndex: 0, distortion: 0, banishedUntilRound: null, targetId: null },
     entities: [],
     seatNeighbours: [],
-    escape: { round: null, power: false, route: false, drive: false, by: {} },
+    escape: { round: null, power: false, identity: false, memory: false, by: {} },
     nightRule: "FULL_MOON",
     eventDeck: [],
     currentEvent: null,
@@ -130,7 +131,7 @@ export function createGame(sessionId: string, seats: Seat[], seed: string, now: 
       ap: 0,
       lost: false,
       carriageIndex: 0,
-      skill: { usesLeft: character.skill.maxUses, state: "READY" },
+      skill: { usesLeft: characterSkill(character.id).maxUses, state: "READY" },
       items: [pick(s, ITEM_IDS)],
       statuses: [],
       helpBonus: 0,

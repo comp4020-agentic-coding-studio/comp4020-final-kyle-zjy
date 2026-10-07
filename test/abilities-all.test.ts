@@ -8,6 +8,7 @@ import type { TargetRule } from "../src/shared/characters/types.ts";
 import { MAX_SANITY } from "../src/shared/game/scenario01/content.ts";
 import type { GameState } from "../src/shared/game/state.ts";
 import { Table } from "./helpers.ts";
+import { characterSkill } from "../src/shared/game/scenario01/skills.ts";
 
 // Every one of the 192 abilities, fired once through the real resolver in a
 // busy act-2 table: it must not throw, must leave the table in a legal state,
@@ -56,16 +57,16 @@ describe("all 192 abilities fire cleanly", () => {
     s.players.a.characterId = c.id;
     s.players.a.skill = { usesLeft: 1, state: "READY" };
     s.activeIndex = s.turnOrder.indexOf("a");
-    const targets = CHOSEN[c.skill.target] ?? [];
+    const targets = CHOSEN[characterSkill(c.id).target] ?? [];
     // reactions answer a parked hit on a, from b; event reactions answer a revealed event
-    if (c.skill.type !== "ACTIVE") {
-      s.pendingEffect = { id: "pe1", kind: c.skill.trigger.on === "TARGETED_ABILITY_DECLARED" ? "ABILITY" : "EFFECT", sourceId: "b", targetId: "a", targets: ["a"], label: m`a test hit`, effects: [{ kind: "LOSE_FATE", who: "TARGET", amount: 1 }], single: true, reduced: 0, cancelled: false, asked: ["a", "b", "c"], copyBack: [], attack: true, theft: false };
+    if (characterSkill(c.id).type !== "ACTIVE") {
+      s.pendingEffect = { id: "pe1", kind: characterSkill(c.id).trigger.on === "TARGETED_ABILITY_DECLARED" ? "ABILITY" : "EFFECT", sourceId: "b", targetId: "a", targets: ["a"], label: m`a test hit`, effects: [{ kind: "LOSE_FATE", who: "TARGET", amount: 1 }], single: true, reduced: 0, cancelled: false, asked: ["a", "b", "c"], copyBack: [], attack: true, theft: false };
       s.currentEvent = { id: "DINNER_BELL", round: s.round, resolved: false, revealing: true, asked: ["a", "b", "c"], excluded: [] };
       s.roll = { id: "r1", playerId: "a", purpose: "INVESTIGATE", label: m`test roll`, raw: 2, modifiers: [], fateSpent: 0, final: 2, tier: "FAIL", modifiable: true, done: false };
       s.rollContext = { kind: "INVESTIGATE", carriageIndex: 2, asked: ["a", "b", "c"] };
     }
     const ctx: Ctx = { s, now: base.now + 1000, events: [] };
-    useSkill(ctx, "a", targets, { trigger: { kind: c.skill.trigger.on, subjectId: "a", sourceId: "b", tier: "SUCCESS", amount: 2, status: s.players.a.statuses[0], item: "MEDKIT" } });
+    useSkill(ctx, "a", targets, { trigger: { kind: characterSkill(c.id).trigger.on, subjectId: "a", sourceId: "b", tier: "SUCCESS", amount: 2, status: s.players.a.statuses[0], item: "MEDKIT" } });
     expect(s.players.a.skill.usesLeft).toBeLessThanOrEqual(0);
     expect(legal(s)).toEqual([]);
     // let the table settle: every window it opened takes its default answer

@@ -66,7 +66,7 @@ export const ROSTER: Character[] = ZODIACS.flatMap((zodiac) =>
       zodiac,
       mbti: e.mbti,
       nickname: e.title,
-      skill: e.skill,
+      coreSkillId: e.coreSkillId,
       avatar: `/avatars/${characterId(zodiac, e.mbti)}.svg`,
       visual: { ...MBTI_VISUAL[e.mbti], motif: ZODIAC_INFO[zodiac].motif },
     }),

@@ -129,7 +129,7 @@ function PlayerCard({ g, r, highlight = false }: { g: PlayerView; r: PlayerResul
           <p className="label text-[10px] text-violet-soft">{t(highlight ? "results.yourMessage" : "results.theirMessage")}</p>
           {r.messages.map((m, i) => (
             <p key={i} className="mt-1 text-sm text-moon">
-              {t("common.quote", { text: fmt(m.text) })} <span className={`ml-1 font-mono text-[11px] font-bold ${m.isTrue ? "text-moss" : "text-ember"}`}>{t(m.isTrue ? "results.true" : "results.false")}</span>
+              {t("common.quote", { text: fmt(m.text) })}
             </p>
           ))}
         </div>

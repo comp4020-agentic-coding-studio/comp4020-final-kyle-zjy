@@ -3,15 +3,29 @@
 // in act 2 the Inspector, seat neighbours and anchor repairs.
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
+import type { CharacterId } from "../../shared/characters/types.ts";
+import { characterSkill } from "../../shared/game/scenario01/skills.ts";
 import type { AnchorId, FragmentType, ItemId, PlayerView } from "../../shared/game/state.ts";
+import type { SkillVfx } from "../../shared/skills/types.ts";
 import type { ScenarioText } from "../../shared/i18n/content-types.ts";
-import { useScenarioText, useT, type TFunction } from "../i18n/index.ts";
+import { useCharacterText, useScenarioText, useT, type TFunction } from "../i18n/index.ts";
 import { useStore, type Cue } from "../store.ts";
 import { Icon } from "./Icon.tsx";
 
 const SHOW_MS = 4200;
 
-function describe(c: Cue, g: PlayerView, t: TFunction, text: ScenarioText): { icon: string; text: string; tone: string } | null {
+const VFX: Record<SkillVfx, { icon: string; tone: string }> = {
+  DICE: { icon: "DICE", tone: "text-gold-bright border-gold/60" },
+  EYE: { icon: "SECRET", tone: "text-violet-soft border-violet/50" },
+  SHIELD: { icon: "STABILIZE", tone: "text-signal border-signal/50" },
+  SWAP: { icon: "TRADE", tone: "text-signal border-signal/50" },
+  SPARK: { icon: "USE_SKILL", tone: "text-gold-bright border-gold/60" },
+  CHAIN: { icon: "HELP", tone: "text-violet-soft border-violet/50" },
+  STRIKE: { icon: "CONFRONT", tone: "text-ember border-ember/50" },
+  CLOCK: { icon: "END_TURN", tone: "text-mist border-ash/50" },
+};
+
+function describe(c: Cue, g: PlayerView, t: TFunction, text: ScenarioText, skillName: (id: CharacterId) => string): { icon: string; text: string; tone: string } | null {
   const who = (id: unknown) => (typeof id === "string" ? (g.players[id]?.nickname ?? t("common.Someone")) : t("common.Someone"));
   const anchor = (id: unknown) => text.anchors[String(id) as AnchorId] ?? String(id);
   const p = c.payload;
@@ -46,6 +60,13 @@ function describe(c: Cue, g: PlayerView, t: TFunction, text: ScenarioText): { ic
       return { icon: "ANCHOR", text: t("cue.anchor", { anchor: anchor(p.anchor), progress: Number(p.progress), required: Number(p.required) }), tone: "text-gold border-gold/40" };
     case "ANCHOR_DONE":
       return { icon: "ANCHOR", text: t("cue.anchorDone", { anchor: anchor(p.anchor) }), tone: "text-moss border-moss/50" };
+    case "SKILL": {
+      // the scenario adapter's visual for this ability (src/shared/skills/types.ts)
+      const look = VFX[characterSkill(p.characterId as CharacterId).vfx];
+      return { icon: look.icon, text: t("cue.skill", { name: who(p.playerId), skill: skillName(p.characterId as CharacterId) }), tone: look.tone };
+    }
+    case "KEY":
+      return { icon: "KEY", text: p.playerId === g.viewerId ? t("cue.keyMine", { key: text.items[p.item as ItemId].name }) : t("cue.keyTheirs", { name: who(p.playerId), key: text.items[p.item as ItemId].name }), tone: "text-gold-bright border-gold-bright/60" };
     case "SHIELD":
       return { icon: "ANCHOR", text: t("cue.shield", { name: who(p.playerId) }), tone: "text-signal border-signal/50" };
     default:
@@ -57,12 +78,13 @@ export function CueFeed({ g }: { g: PlayerView }) {
   const cues = useStore((s) => s.cues);
   const t = useT();
   const text = useScenarioText();
+  const charText = useCharacterText();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(t);
   }, []);
-  const live = cues.filter((c) => now - c.at < SHOW_MS).map((c) => ({ c, d: describe(c, g, t, text) })).filter((x) => x.d).slice(-4);
+  const live = cues.filter((c) => now - c.at < SHOW_MS).map((c) => ({ c, d: describe(c, g, t, text, (id) => charText(id).skillName) })).filter((x) => x.d).slice(-4);
   return (
     <div className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+250px)] z-30 flex flex-col items-center gap-1.5 px-4" aria-live="polite">
       <AnimatePresence>

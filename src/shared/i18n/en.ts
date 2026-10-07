@@ -1,6 +1,7 @@
 // English text, read straight from the canonical game data.
 import { MBTI_INFO, TEMPERAMENTS, ZODIAC_INFO } from "../characters/signs.ts";
 import { ROSTER } from "../characters/roster/index.ts";
+import { characterSkill } from "../game/scenario01/skills.ts";
 import { ANCHOR_NAMES, BOON_LABELS, CARRIAGES, endingText, FRAGMENTS, ITEMS, LOCK_NAMES, NIGHT_RULES, OBSESSIONS, RULE_CHANGES, SCENARIO, TASK_GOALS } from "../game/scenario01/content.ts";
 import { EVENTS } from "../game/scenario01/events.ts";
 import { STATUSES } from "../game/scenario01/statuses.ts";
@@ -36,4 +37,4 @@ export const EN_SCENARIO: ScenarioText = {
   temperaments: Object.fromEntries(TEMPERAMENTS.map((t) => [t.id, t.name])) as ScenarioText["temperaments"],
 };
 
-export const EN_CHARACTERS = Object.fromEntries(ROSTER.map((c) => [c.id, { title: c.nickname, skillName: c.skill.name, skillDescription: c.skill.description }])) as CharactersText;
+export const EN_CHARACTERS = Object.fromEntries(ROSTER.map((c) => [c.id, { title: c.nickname, skillName: characterSkill(c.id).name, skillDescription: characterSkill(c.id).description }])) as CharactersText;

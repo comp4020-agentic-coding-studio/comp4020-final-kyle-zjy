@@ -3,15 +3,15 @@
 // Inspector, shadows and echoes drawn where they stand. Scrolls inside its own
 // container so the page never scrolls sideways.
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
-import { CARRIAGES } from "../../shared/game/scenario01/content.ts";
-import type { AnchorId, Carriage, CarriageIdentity, PlayerView } from "../../shared/game/state.ts";
+import { CARRIAGES, ESCAPE_LOCKS, KEY_FOR_LOCK, LOCK_AT } from "../../shared/game/scenario01/content.ts";
+import type { AnchorId, Carriage, CarriageIdentity, EscapeLockId, PlayerView } from "../../shared/game/state.ts";
 import { useScenarioText, useT } from "../i18n/index.ts";
 import { Icon } from "./Icon.tsx";
 
 const ANCHOR_AT: Partial<Record<CarriageIdentity, AnchorId>> = { ENGINE_ROOM: "POWER", ARCHIVE: "IDENTITY", SLEEPER: "MEMORY", MIRROR: "MEMORY" };
-const LOCK_AT: Partial<Record<CarriageIdentity, "power" | "route" | "drive">> = { ENGINE_ROOM: "power", ARCHIVE: "route", CAB: "drive" };
+const LOCK_HERE: Partial<Record<CarriageIdentity, EscapeLockId>> = Object.fromEntries(ESCAPE_LOCKS.map((l) => [LOCK_AT[l], l]));
 
 type Props = {
   g: PlayerView;
@@ -36,9 +36,9 @@ export function Train({ g, moveTargets = [], onPick }: Props) {
         <LayoutGroup>
           <ol className="mx-auto flex w-max items-stretch gap-0">
             {g.carriages.map((c, i) => (
-              <li key={c.index} className="flex items-stretch">
+              <li key={c.index} className="flex items-stretch [perspective:600px]">
                 {i > 0 && <Coupler />}
-                <CarriageCard g={g} c={c} target={moveTargets.includes(c.index)} onPick={onPick} />
+                <FoldingCard g={g} c={c} target={moveTargets.includes(c.index)} onPick={onPick} />
               </li>
             ))}
           </ol>
@@ -56,6 +56,32 @@ const Coupler = () => (
   </div>
 );
 
+/**
+ * Holds the carriage it showed until the fold scene is dismissed, then turns
+ * over to the new one, so the change happens where players can see it.
+ */
+function FoldingCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; target: boolean; onPick?: (i: number) => void }) {
+  const folding = g.sequence?.kind === "FOLD";
+  const [shown, setShown] = useState(c.identity);
+  const [turns, setTurns] = useState(0);
+  useEffect(() => {
+    if (folding || shown === c.identity) return;
+    setShown(c.identity);
+    setTurns((n) => n + 1);
+  }, [folding, c.identity, shown]);
+  return (
+    <motion.div
+      key={turns}
+      className="flex"
+      initial={turns ? { rotateY: -180, opacity: 0.4 } : false}
+      animate={{ rotateY: 0, opacity: 1 }}
+      transition={{ delay: 0.15 + c.index * 0.12, duration: 0.8, ease: "easeOut" }}
+    >
+      <CarriageCard g={g} c={{ ...c, identity: shown }} target={target} onPick={onPick} />
+    </motion.div>
+  );
+}
+
 function CarriageCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; target: boolean; onPick?: (i: number) => void }) {
   const t = useT();
   const words = useScenarioText().carriages[c.identity];
@@ -66,7 +92,7 @@ function CarriageCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; ta
   const inspectorHere = g.inspector.active && g.inspector.banishedUntilRound === null && g.inspector.carriageIndex === c.index;
   const entities = g.entities.filter((e) => e.carriageIndex === c.index);
   const anchor = g.act >= 2 ? ANCHOR_AT[c.identity] : undefined;
-  const lock = g.act === 3 ? LOCK_AT[c.identity] : undefined;
+  const lock = g.act === 3 ? LOCK_HERE[c.identity] : undefined;
   const lockOn = lock && g.escape.round === g.round && g.escape[lock];
   const Tag = target ? motion.button : motion.div;
 
@@ -115,6 +141,7 @@ function CarriageCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; ta
               {t(lockOn ? "train.lockOn" : "train.lockOff", { lock: t(`train.lock.${lock}`) })}
             </span>
           )}
+          {lock && <KeyHolder g={g} lock={lock} />}
         </div>
       )}
 
@@ -156,6 +183,18 @@ function CarriageCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; ta
         </div>
       )}
     </Tag>
+  );
+}
+
+/** Who carries this lock's key: only they can work it. */
+function KeyHolder({ g, lock }: { g: PlayerView; lock: EscapeLockId }) {
+  const t = useT();
+  const holder = g.turnOrder.map((id) => g.players[id]).find((p) => p.items.includes(KEY_FOR_LOCK[lock]));
+  return (
+    <span className={`flex items-center gap-0.5 truncate font-mono text-[9px] ${holder ? "text-gold-bright" : "text-ash"}`}>
+      <Icon name="KEY" size={10} />
+      {holder ? t("train.keyWith", { name: holder.nickname }) : t("train.keyMissing")}
+    </span>
   );
 }
 

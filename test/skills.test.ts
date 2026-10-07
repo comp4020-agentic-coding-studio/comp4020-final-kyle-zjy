@@ -5,6 +5,7 @@ import { getCharacterById, ROSTER } from "../src/shared/characters/roster/index.
 import type { CharacterId, TargetRule } from "../src/shared/characters/types.ts";
 import type { GameState, PendingWindow } from "../src/shared/game/state.ts";
 import { newRun } from "./helpers.ts";
+import { characterSkill } from "../src/shared/game/scenario01/skills.ts";
 
 // The generic skill checks, run against every character: an unused skill can
 // be used in its proper moment with legal targets, and never twice.
@@ -51,15 +52,15 @@ const LEGAL_TARGETS: Record<TargetRule, string[]> = {
 
 /** A state in which `id`'s skill has its proper moment. */
 function readyState(id: CharacterId): GameState {
-  const { type } = getCharacterById(id).skill;
+  const { type } = characterSkill(id);
   if (type === "ACTIVE") return state(id);
   return state(id, { activeIndex: 1, pending: [windowFor(type === "REACTION" ? "REACTION" : "PASSIVE_CONFIRM", "a")] });
 }
 
 describe("skill engine: every character", () => {
-  it.each(ROSTER.map((c) => [c.id, c.skill.type] as const))("%s (%s) can use its skill once, in its moment", (id) => {
+  it.each(ROSTER.map((c) => [c.id, characterSkill(c.id).type] as const))("%s (%s) can use its skill once, in its moment", (id) => {
     const s = readyState(id);
-    const targets = LEGAL_TARGETS[getCharacterById(id).skill.target];
+    const targets = LEGAL_TARGETS[characterSkill(id).target];
     expect(canUseSkill(s, "a", targets)).toEqual({ ok: true });
 
     s.players.a.skill = { usesLeft: 0, state: "BURNED" };

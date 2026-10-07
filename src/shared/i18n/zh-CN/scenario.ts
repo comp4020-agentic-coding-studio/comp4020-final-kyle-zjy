@@ -82,6 +82,9 @@ export const ZH_SCENARIO: ScenarioText = {
     BLANK_TICKET: { name: "空白车票", text: "你的下一次掷骰掷两次，取较好的结果。" },
     POCKET_WATCH: { name: "怀表", text: "把时间拨回去：崩坏度 −1。" },
     BLACK_COIN: { name: "黑色硬币", text: "获得 2 点命运，失去 1 点理智。" },
+    POWER_KEY: { name: "动力钥匙", text: "可开启动力车厢中的动力逃生锁。不会消耗，可以交易。" },
+    IDENTITY_KEY: { name: "身份钥匙", text: "可开启档案车厢中的身份逃生锁。不会消耗，可以交易。" },
+    MEMORY_KEY: { name: "记忆钥匙", text: "可开启驾驶室中的记忆逃生锁。不会消耗，可以交易。" },
   },
   nightRules: {
     MERCURY_RETROGRADE: { name: "水星逆行", text: "每名玩家的第一次重掷有三分之一的几率失去 1 点理智。" },
@@ -245,17 +248,17 @@ export const ZH_SCENARIO: ScenarioText = {
     NORMAL: {
       kicker: "成功逃离 · 普通结局",
       title: "路线已确认。",
-      lines: ["三台终端同时亮起。", "车门在一座你认得的站台前打开。", "门外，城市回来了。"],
+      lines: ["三把逃生锁同时转动。", "车门在一座你认得的站台前打开。", "门外，城市回来了。"],
     },
     TRUE_DELETE: {
       kicker: "成功逃离 · 真结局",
       title: "你到站时轻了许多。",
-      lines: ["三台终端亮起。", "乘客名单上那个空白的名字渐渐淡去，", "连同你从不知道自己背负着的重量。"],
+      lines: ["三把逃生锁转动了。", "乘客名单上那个空白的名字渐渐淡去，", "连同你从不知道自己背负着的重量。"],
     },
     TRUE_TICKET: {
       kicker: "成功逃离 · 真结局",
       title: "多了一名乘客。",
-      lines: ["三台终端亮起。", "有人多剪了一张票。", "那位没有名字的乘客，在你身旁坐了下来。"],
+      lines: ["三把逃生锁转动了。", "有人多剪了一张票。", "那位没有名字的乘客，在你身旁坐了下来。"],
     },
     FAILED_COLLAPSE: {
       kicker: "失败 · 列车崩坏",
@@ -270,11 +273,11 @@ export const ZH_SCENARIO: ScenarioText = {
     FAILED_TIME: {
       kicker: "失败 · 时间耗尽",
       title: "车门再也没有打开。",
-      lines: ["第 12 轮结束。", "终端依旧黑暗。", "N13 继续行驶，又沉了一名乘客的重量。"],
+      lines: ["第 12 轮结束。", "逃生锁始终没有转动。", "N13 继续行驶，又沉了一名乘客的重量。"],
     },
   },
   anchors: { POWER: "动力锚点", IDENTITY: "身份锚点", MEMORY: "记忆锚点" },
-  locks: { power: "动力锁", route: "路线锁", drive: "驾驶锁" },
+  locks: { power: "动力逃生锁", identity: "身份逃生锁", memory: "记忆逃生锁" },
   ruleChanges: {
     ROLL_BONUS: "本轮每次掷骰 +1",
     EXTRA_AP: "所有人 +1 行动点",

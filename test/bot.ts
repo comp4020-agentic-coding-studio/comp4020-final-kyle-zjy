@@ -1,22 +1,22 @@
 // A simple, sensible team of players for whole-run tests and the simulator
 // (scripts/sim.ts): act 1 investigates carriages whose fragment is missing,
-// act 2 repairs the nearest broken anchor, act 3 splits up over the escape
-// locks. Fate is spent only to turn a failure into a success; abilities,
+// act 2 repairs the nearest broken anchor, act 3 carries each key to its
+// escape lock (a passenger holding two keys hands one to a keyless mate). Fate is spent only to turn a failure into a success; abilities,
 // votes and events take their defaults; lost passengers steady themselves.
 // "idle" players only end their turns and take every default. With
 // `abilities`, players also use their active ability once its precondition
 // holds (on sensible targets) and say yes to every reaction they're offered.
-import { CARRIAGES } from "../src/shared/game/scenario01/content.ts";
+import { CARRIAGES, ESCAPE_LOCKS, isKeyItem, KEY_FOR_LOCK, LOCK_AT } from "../src/shared/game/scenario01/content.ts";
 import type { GameAction } from "../src/shared/game/actions.ts";
-import type { CarriageIdentity, GameState, PlayerId } from "../src/shared/game/state.ts";
+import type { CarriageIdentity, GameState, ItemId, PlayerId } from "../src/shared/game/state.ts";
 import type { CharacterId, MBTI, Zodiac } from "../src/shared/characters/types.ts";
 import { getCharacterById } from "../src/shared/characters/roster/index.ts";
 import { createGame } from "../src/server/engine/create.ts";
 import { applyGameAction, startGame, tickGame } from "../src/server/engine/engine.ts";
 import { activePlayerId } from "../src/server/engine/context.ts";
 import { availableActions } from "../src/server/engine/actions.ts";
+import { characterSkill } from "../src/shared/game/scenario01/skills.ts";
 
-const LOCK_AT: Record<"power" | "route" | "drive", CarriageIdentity> = { power: "ENGINE_ROOM", route: "ARCHIVE", drive: "CAB" };
 const ANCHOR_AT = { POWER: ["ENGINE_ROOM"], IDENTITY: ["ARCHIVE"], MEMORY: ["SLEEPER", "MIRROR"] } as const;
 
 const where = (s: GameState, identity: CarriageIdentity) => s.carriages.find((c) => c.identity === identity)!.index;
@@ -34,23 +34,33 @@ function goal(s: GameState, id: PlayerId): { at: number; action: "INVESTIGATE" |
   if (broken.length) return { at: nearest(broken.flatMap((a) => ANCHOR_AT[a.id].map((x) => where(s, x)))), action: "REPAIR" };
   if (s.act === 2) return missingFragments.length && s.fragments.length < 6 ? { at: nearest(missingFragments), action: "INVESTIGATE" } : null;
   if (s.fragments.length < 3) return missingFragments.length ? { at: nearest(missingFragments), action: "INVESTIGATE" } : null;
-  // act 3: one lock per passenger, in turn order, each taking the closest one nobody else has
+  // act 3: carry your key to its lock; with no key, go meet whoever holds two
   const thisRound = s.escape.round === s.round;
-  const open = (Object.keys(LOCK_AT) as (keyof typeof LOCK_AT)[]).filter((l) => !(thisRound && s.escape[l]));
-  const order = s.turnOrder.filter((x) => !s.players[x].away);
-  const claimed = new Map<keyof typeof LOCK_AT, PlayerId>();
-  for (const x of order) {
-    const px = s.players[x];
-    const free = open.filter((l) => !claimed.has(l)).sort((a, b) => Math.abs(where(s, LOCK_AT[a]) - px.carriageIndex) - Math.abs(where(s, LOCK_AT[b]) - px.carriageIndex));
-    if (free[0]) claimed.set(free[0], x);
-  }
-  const mine = [...claimed].find(([, x]) => x === id)?.[0] ?? open[0];
-  return mine ? { at: where(s, LOCK_AT[mine]), action: "REPAIR" } : null;
+  const open = ESCAPE_LOCKS.filter((l) => !(thisRound && s.escape[l]));
+  const mine = open.filter((l) => p.items.includes(KEY_FOR_LOCK[l]));
+  if (mine.length) return { at: nearest(mine.map((l) => where(s, LOCK_AT[l]))), action: "REPAIR" };
+  const hoarder = s.turnOrder.find((x) => x !== id && !s.players[x].away && s.players[x].items.filter(isKeyItem).length > 1);
+  return hoarder ? { at: s.players[hoarder].carriageIndex, action: "INVESTIGATE" } : null;
 }
+
+/** A spare key and a keyless mate in the carriage: give the key away. */
+function handOverKey(s: GameState, id: PlayerId): GameAction | null {
+  const p = s.players[id];
+  const keys = p.items.filter(isKeyItem);
+  if (s.act !== 3 || keys.length < 2 || !enabled(s, id, "TRADE")) return null;
+  const mate = s.turnOrder.find((x) => x !== id && !s.players[x].away && s.players[x].carriageIndex === p.carriageIndex && !s.players[x].items.some(isKeyItem));
+  if (!mate) return null;
+  // keep the key whose lock is closest
+  const far = [...keys].sort((a, b) => Math.abs(where(s, LOCK_AT[lockOf(b)]) - p.carriageIndex) - Math.abs(where(s, LOCK_AT[lockOf(a)]) - p.carriageIndex))[0];
+  return { type: "TRADE", targetId: mate, give: { items: [far], fate: 0 }, want: { items: [], fate: 0 } };
+}
+const lockOf = (key: ItemId) => ESCAPE_LOCKS.find((l) => KEY_FOR_LOCK[l] === key)!;
 
 export function turn(s: GameState, id: PlayerId): GameAction {
   const p = s.players[id];
   if (p.lost && enabled(s, id, "STABILIZE")) return { type: "STABILIZE", mode: "SANITY" };
+  const gift = handOverKey(s, id);
+  if (gift) return gift;
   const g = goal(s, id);
   if (g && p.carriageIndex === g.at && enabled(s, id, g.action)) return { type: g.action };
   if (g && p.carriageIndex !== g.at && enabled(s, id, "MOVE")) {
@@ -72,6 +82,11 @@ export function answer(s: GameState, id: PlayerId, w: GameState["pending"][numbe
     const need = Math.max(0, 4 - s.roll.final);
     return w.options.some((o) => o.id === String(need)) ? String(need) : "0";
   }
+  // a gift (nothing asked in return) is always welcome
+  if (w.kind === "TRADE_OFFER") {
+    const want = JSON.parse(String(w.resume.payload?.want ?? "{}")) as { items?: unknown[]; fate?: number };
+    if (!want.items?.length && !want.fate) return "ACCEPT";
+  }
   void id;
   return w.defaultOptionId;
 }
@@ -79,7 +94,7 @@ export function answer(s: GameState, id: PlayerId, w: GameState["pending"][numbe
 /** Sensible targets for an active ability: the poorest others first (they gain most from help). */
 function skillTargets(s: GameState, id: PlayerId): PlayerId[] {
   const p = s.players[id];
-  const rule = getCharacterById(p.skill.borrowed ?? p.characterId).skill.target;
+  const rule = characterSkill(p.skill.borrowed ?? p.characterId).target;
   const others = s.turnOrder.filter((x) => x !== id && !s.players[x].away).sort((a, b) => s.players[a].fate - s.players[b].fate);
   if (rule === "OTHER_PLAYER") return others.slice(0, 1);
   if (rule === "ANY_PLAYER") return [others[0] ?? id];

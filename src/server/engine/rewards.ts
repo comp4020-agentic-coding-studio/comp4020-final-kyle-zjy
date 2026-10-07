@@ -2,6 +2,7 @@
 // from a roll's outcome, a public event or a clue. Whatever produced it calls
 // `measureRewards` around the change; each player who came out ahead gets
 // their one-shot bonuses, wakes reward abilities and pays reward bonds.
+import { isKeyItem } from "../../shared/game/scenario01/content.ts";
 import type { ItemId, PlayerId } from "../../shared/game/state.ts";
 import { log, type Ctx } from "./context.ts";
 import { gainFate, payBonds, present, removeStatus, statusOf } from "./players.ts";
@@ -11,18 +12,22 @@ import { m, ref } from "../../shared/i18n/msg.ts";
 
 type Gain = { playerId: PlayerId; fate: number; item?: ItemId };
 
+// a key is an objective, not a reward: nothing that doubles, copies or bonds on rewards ever sees one
+const ordinary = (items: ItemId[]) => items.filter((i) => !isKeyItem(i));
+
 /** Runs `fn` and treats whatever the players in `pool` gained during it as rewards. Returns who gained. */
 export function measureRewards(ctx: Ctx, pool: PlayerId[], label: Msg, fn: () => void): Gain[] {
   const before = new Map(pool.map((id) => {
     const p = ctx.s.players[id];
-    return [id, { fate: p.fate, sanity: p.sanity, items: p.items.length }];
+    return [id, { fate: p.fate, sanity: p.sanity, items: ordinary(p.items).length }];
   }));
   fn();
   const gains: Gain[] = [];
   for (const [id, b] of before) {
     const p = ctx.s.players[id];
-    if (!p || (p.fate <= b.fate && p.sanity <= b.sanity && p.items.length <= b.items)) continue;
-    gains.push({ playerId: id, fate: Math.max(0, p.fate - b.fate), item: p.items.length > b.items ? p.items[p.items.length - 1] : undefined });
+    const items = p ? ordinary(p.items) : [];
+    if (!p || (p.fate <= b.fate && p.sanity <= b.sanity && items.length <= b.items)) continue;
+    gains.push({ playerId: id, fate: Math.max(0, p.fate - b.fate), item: items.length > b.items ? items[items.length - 1] : undefined });
   }
   for (const g of gains) rewarded(ctx, g, label);
   return gains;

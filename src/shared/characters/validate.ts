@@ -1,7 +1,7 @@
 // Static checks on a character's data: things that must hold before the Skill
 // Resolver ever runs it. Used by test/roster.test.ts over all 192.
 import { EFFECT_KINDS, type Effect } from "../game/effects.ts";
-import { TRIGGERS, type Character, type TargetRule } from "./types.ts";
+import { TRIGGERS, type Character, type Skill, type TargetRule } from "./types.ts";
 
 const CJK = /[\u3000-\u303f\u3400-\u9fff\uff00-\uffef]/;
 const NO_CHOSEN_TARGET: TargetRule[] = ["SELF", "NONE"];
@@ -29,9 +29,8 @@ const subjectsOf = (e: Effect): string[] =>
     .filter(([k]) => SUBJECT_FIELDS.includes(k))
     .flatMap(([, v]) => (typeof v === "string" ? [v] : Array.isArray(v) ? v.filter((x) => typeof x === "string") : []));
 
-export function validateCharacter(c: Character): string[] {
+export function validateCharacter(c: Character, s: Skill): string[] {
   const problems: string[] = [];
-  const s = c.skill;
   const say = (msg: string) => problems.push(`${c.id}: ${msg}`);
 
   for (const [field, text] of [

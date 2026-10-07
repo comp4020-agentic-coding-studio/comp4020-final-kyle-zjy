@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getCharacter, getCharacterById, ROSTER, ROSTER_BY_ZODIAC } from "../src/shared/characters/roster/index.ts";
 import { characterId, MBTIS, ZODIACS, type CharacterId } from "../src/shared/characters/types.ts";
 import { validateCharacter } from "../src/shared/characters/validate.ts";
+import { characterSkill } from "../src/shared/game/scenario01/skills.ts";
 
 // The roster contract: 12 signs × 16 types = 192 characters, each pair exactly
 // once, every one with well-formed English data and a usable skill definition.
@@ -48,7 +49,7 @@ describe("roster", () => {
   });
 
   it("gives every skill a distinct name, so the log is never ambiguous", () => {
-    const names = ROSTER.map((c) => c.skill.name.toLowerCase());
+    const names = ROSTER.map((c) => characterSkill(c.id).name.toLowerCase());
     expect(names.filter((n, i) => names.indexOf(n) !== i)).toEqual([]);
   });
 
@@ -57,18 +58,18 @@ describe("roster", () => {
   });
 
   it("passes the static skill checks for all 192", () => {
-    expect(ROSTER.flatMap(validateCharacter)).toEqual([]);
+    expect(ROSTER.flatMap((c) => validateCharacter(c, characterSkill(c.id)))).toEqual([]);
   });
 
   it("uses all three skill types", () => {
-    const types = new Set(ROSTER.map((c) => c.skill.type));
+    const types = new Set(ROSTER.map((c) => characterSkill(c.id).type));
     expect([...types].sort()).toEqual(["ACTIVE", "PASSIVE", "REACTION"]);
   });
 
   it("keeps the brief's example: Scorpio + ENTP is the Venom-Tongued Schemer with Backbite", () => {
     const c = getCharacter("scorpio", "ENTP");
     expect(c.nickname).toBe("The Venom-Tongued Schemer");
-    expect(c.skill.name).toBe("Backbite");
-    expect(c.skill.type).toBe("REACTION");
+    expect(characterSkill(c.id).name).toBe("Backbite");
+    expect(characterSkill(c.id).type).toBe("REACTION");
   });
 });

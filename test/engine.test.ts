@@ -346,7 +346,7 @@ describe("engine: what each player can see", () => {
     const t = new Table(3);
     const [a, b] = t.state.turnOrder;
     const s = structuredClone(t.state);
-    s.secrets[b].messages.push({ id: "m1", text: m`B's secret`, isTrue: true, round: 1 });
+    s.secrets[b].messages.push({ id: "m1", text: m`B's secret`, round: 1 });
     s.players[b].statuses.push({ id: "h1", kind: "MARKED", polarity: "NEGATIVE", sourceId: "SYSTEM", expiresAtRound: null, hidden: true, ordinary: true });
     const view = project(s, a);
     const json = JSON.stringify(view);

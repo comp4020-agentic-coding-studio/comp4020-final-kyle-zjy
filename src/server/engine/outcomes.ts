@@ -1,9 +1,9 @@
 // What a resolved roll does, by purpose and by carriage. Rewards and penalties
 // go through the shared effect handlers so shields, immunities and skills see
 // them like any other effect.
-import { CARRIAGES, FRAGMENTS } from "../../shared/game/scenario01/content.ts";
+import { CARRIAGES, ESCAPE_LOCKS, FRAGMENTS, KEY_FOR_LOCK, LOCK_AT, MAX_SANITY } from "../../shared/game/scenario01/content.ts";
 import type { Effect } from "../../shared/game/effects.ts";
-import type { AnchorId, CarriageIdentity, FragmentType, PlayerGameState, Roll, RollContext } from "../../shared/game/state.ts";
+import type { AnchorId, CarriageIdentity, EscapeLockId, FragmentType, PlayerGameState, Roll, RollContext } from "../../shared/game/state.ts";
 import { cue, log, newId, type Ctx } from "./context.ts";
 import { isSuccess, onRollOutcome } from "./dice.ts";
 import { applyEffects, changeCollapse, grantFragment, grantItem, restoreAnchor, type Scope } from "./effects.ts";
@@ -58,21 +58,14 @@ onRollOutcome("INVESTIGATE", (ctx, p, roll, rc) => {
   }
 });
 
-/** A private dream: true or false information about the train. */
+/** A private dream: true information about the train (the system never lies). */
 export function dreamCard(ctx: Ctx, p: PlayerGameState): void {
   const secrets = ctx.s.secrets[p.playerId];
-  const middle = ctx.s.carriages.filter((c) => c.identity !== "START" && c.identity !== "CAB");
-  const unfound = middle.filter((c) => !ctx.s.flags[`core_${c.identity}`]);
-  const truthful = int(ctx.s, 3) > 0; // two in three dreams tell the truth
-  let text: Msg;
-  if (truthful && unfound.length) {
-    text = m`A core memory still sleeps in the ${ref.carriage(pick(ctx.s, unfound).identity)}.`;
-  } else {
-    // a lie names a carriage whose memory is already awake, or claims they all are
-    const found = middle.filter((c) => ctx.s.flags[`core_${c.identity}`]);
-    text = !truthful && found.length ? m`A core memory still sleeps in the ${ref.carriage(pick(ctx.s, found).identity)}.` : m`Every core memory has woken. The train is running out of things to hide.`;
-  }
-  secrets.dreamCards.push({ id: newId(ctx, "dream"), text, isTrue: truthful });
+  const unfound = ctx.s.carriages.filter((c) => c.identity !== "START" && c.identity !== "CAB" && !ctx.s.flags[`core_${c.identity}`]);
+  const text = unfound.length
+    ? m`A core memory still sleeps in the ${ref.carriage(pick(ctx.s, unfound).identity)}.`
+    : m`Every core memory has woken. The train is running out of things to hide.`;
+  secrets.dreamCards.push({ id: newId(ctx, "dream"), text });
   log(ctx, m`${p.nickname} draws a dream card and keeps it to themselves.`, "SECRET", p.playerId);
   cue(ctx, "SECRET", { playerId: p.playerId });
   if (ctx.s.nightRule === "NAMELESS_NIGHT") p.fate += 1;
@@ -109,21 +102,18 @@ onRollOutcome("SEARCH", (ctx, p, roll, rc) => {
 });
 
 /** Which anchor or escape lock a repair in this carriage works on, if any. */
-export function repairTarget(ctx: Ctx, carriageIndex: number): { kind: "ANCHOR"; anchor: AnchorId } | { kind: "LOCK"; lock: "power" | "route" | "drive" } | null {
+export function repairTarget(ctx: Ctx, carriageIndex: number): { kind: "ANCHOR"; anchor: AnchorId } | { kind: "LOCK"; lock: EscapeLockId } | null {
   const identity = identityAt(ctx, carriageIndex);
   if (ctx.s.act === 1) return null;
   const anchorHere: Partial<Record<CarriageIdentity, AnchorId>> = { ENGINE_ROOM: "POWER", ARCHIVE: "IDENTITY", SLEEPER: "MEMORY", MIRROR: "MEMORY" };
   const anchor = anchorHere[identity];
   if (anchor && !ctx.s.anchors[anchor].repaired) return { kind: "ANCHOR", anchor };
   if (ctx.s.act === 3) {
-    if (identity === "ENGINE_ROOM") return { kind: "LOCK", lock: "power" };
-    if (identity === "ARCHIVE") return { kind: "LOCK", lock: "route" };
-    if (identity === "CAB") return { kind: "LOCK", lock: "drive" };
+    const lock = ESCAPE_LOCKS.find((l) => LOCK_AT[l] === identity);
+    if (lock) return { kind: "LOCK", lock };
   }
   return null;
 }
-
-export const LOCK_NAMES = { power: "Power Lock", route: "Route Lock", drive: "Drive Lock" } as const;
 
 onRollOutcome("REPAIR", (ctx, p, roll, rc) => {
   if (roll.tier === "DISASTER") {
@@ -148,17 +138,20 @@ onRollOutcome("REPAIR", (ctx, p, roll, rc) => {
       restoreAnchor(ctx, a);
     }
   } else {
+    // the key is checked when the action is declared and again here: a trade
+    // can't happen mid-roll, but a key must never open a lock it isn't on
+    if (!p.items.includes(KEY_FOR_LOCK[target.lock])) return log(ctx, m`${p.nickname} has no ${ref.item(KEY_FOR_LOCK[target.lock])}: the ${ref.lock(target.lock)} won't turn.`, "LOCK", p.playerId);
     const esc = ctx.s.escape;
     if (esc.round !== ctx.s.round) {
       esc.round = ctx.s.round;
-      esc.power = esc.route = esc.drive = false;
+      esc.power = esc.identity = esc.memory = false;
       esc.by = {};
     }
     esc[target.lock] = true;
     esc.by[target.lock] = p.playerId;
     if (unaided) p.stats.soloKeyTasks++;
     if (ctx.s.round >= 10) p.stats.finalTaskRound = ctx.s.round;
-    log(ctx, m`${p.nickname} engages the ${ref.lock(target.lock)}. (${[esc.power, esc.route, esc.drive].filter(Boolean).length}/3 this round)`, "LOCK", p.playerId);
+    log(ctx, m`${p.nickname} engages the ${ref.lock(target.lock)}. (${ESCAPE_LOCKS.filter((l) => esc[l]).length}/3 this round)`, "LOCK", p.playerId);
     cue(ctx, "LOCK", { lock: target.lock });
   }
 });
@@ -208,10 +201,9 @@ onRollOutcome("TICKET_CHECK", (ctx, p, roll, rc) => {
     return log(ctx, m`${p.nickname}'s ticket is stamped. They earn a temporary pass.`, "TICKET", p.playerId);
   }
   if (roll.tier === "SUCCESS") return log(ctx, m`${p.nickname}'s ticket is in order.`, "TICKET", p.playerId);
-  const effects: Effect[] = [{ kind: "LOSE_FATE", who: "SELF", amount: 1 }];
-  if (roll.tier === "DISASTER") effects.push({ kind: "LOSE_SANITY", who: "SELF", amount: 1 });
+  // the final result (after Fate, abilities and reactions) is 1–3: Sanity drops to 0 and they are lost
   log(ctx, m`"This ticket is not valid." The Inspector writes something down about ${p.nickname}.`, "TICKET_FAIL", p.playerId);
-  penalty(ctx, p, rc, effects, m`a failed ticket check`);
+  penalty(ctx, p, rc, [{ kind: "LOSE_SANITY", who: "SELF", amount: MAX_SANITY }], m`a failed ticket check`);
 });
 
 export const fragmentName = (f: FragmentType) => FRAGMENTS[f].name;

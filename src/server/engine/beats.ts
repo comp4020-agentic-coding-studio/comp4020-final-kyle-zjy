@@ -53,59 +53,52 @@ export function neighboursOf(ctx: Ctx, id: PlayerId): PlayerId[] {
   return (ctx.s.seatNeighbours.find((g) => g.includes(id)) ?? []).filter((x) => x !== id);
 }
 
-/** Round 5: every player receives one private message. Two in three are true; there is no traitor. */
+/** Round 5: every player receives one private message. Every message is true. */
 function dealSecretMessages(ctx: Ctx): void {
   const s = ctx.s;
   log(ctx, m`"Please confirm that your seat neighbour is still themselves." Every phone lights up with a private message.`, "STORY");
   for (const p of everyone(ctx)) {
-    const truthful = int(s, 3) > 0;
-    const text = secretMessage(ctx, p, truthful);
-    s.secrets[p.playerId].messages.push({ id: newId(ctx, "msg"), text, isTrue: truthful, round: s.round });
+    const text = secretMessage(ctx, p);
+    s.secrets[p.playerId].messages.push({ id: newId(ctx, "msg"), text, round: s.round });
     if (s.nightRule === "NAMELESS_NIGHT") p.fate += 1;
   }
   cue(ctx, "SECRET", { all: true });
 }
 
-/** One message about the table as it stands; a false one is always actually false. */
-export function secretMessage(ctx: Ctx, p: PlayerGameState, truthful: boolean): Msg {
+/**
+ * One true statement about the table as it stands now. The system never lies:
+ * every template here is built from the live state, so it holds when it is
+ * sent (it may be incomplete, and it may stop holding later).
+ */
+export function secretMessage(ctx: Ctx, p: PlayerGameState): Msg {
   const s = ctx.s;
   const nb = neighboursOf(ctx, p.playerId);
   const other = s.players[nb.length ? pick(s, nb) : pick(s, everyone(ctx).filter((x) => x.playerId !== p.playerId).map((x) => x.playerId).concat(p.playerId))];
-  const kind = int(s, 4);
-  if (kind === 0) {
-    const real = other.skill.usesLeft > 0;
-    const claim = truthful ? real : !real;
-    return claim ? m`${other.nickname}'s ability is still unused.` : m`${other.nickname}'s ability is already burned.`;
-  }
-  if (kind === 1) {
-    const real = other.fate;
-    const off = int(s, 2) ? 2 : -1;
-    // a lie must differ from the truth, so with 0 Fate it can't round down to 0
-    const claim = truthful ? real : real + off < 0 ? real + 1 : real + off;
-    return m`${other.nickname} is carrying ${claim} Fate.`;
-  }
-  if (kind === 2) {
-    const middle = s.carriages.filter((c) => c.identity !== "START" && c.identity !== "CAB");
-    const asleep = middle.filter((c) => !s.flags[`core_${c.identity}`]);
-    const awake = middle.filter((c) => s.flags[`core_${c.identity}`]);
-    // the truth names a sleeping carriage; a lie names an awake one, or claims all are awake
-    const pool = truthful ? asleep : awake;
-    if (!pool.length) return m`Every core memory on this train is awake.`;
-    return m`A core memory is still asleep in the ${ref.carriage(pick(s, pool).identity)}.`;
-  }
-  const realSafe = present(ctx).every((x) => x.sanity >= 2);
-  const claim = truthful ? realSafe : !realSafe;
-  return claim ? m`Nobody on this train is close to getting lost. Yet.` : m`Someone on this train is about to get lost.`;
+  const truths: Msg[] = [];
+  truths.push(other.skill.usesLeft > 0 ? m`${other.nickname}'s ability is still unused.` : m`${other.nickname}'s ability is already burned.`);
+  truths.push(m`${other.nickname} is carrying ${other.fate} Fate.`);
+  const asleep = s.carriages.filter((c) => c.identity !== "START" && c.identity !== "CAB" && !s.flags[`core_${c.identity}`]);
+  truths.push(asleep.length ? m`A core memory is still asleep in the ${ref.carriage(pick(s, asleep).identity)}.` : m`Every core memory on this train is awake.`);
+  truths.push(present(ctx).every((x) => x.sanity >= 2) ? m`Nobody on this train is close to getting lost. Yet.` : m`Someone on this train is about to get lost.`);
+  return truths[int(s, truths.length)];
 }
 
-/** Round 7: middle identities re-shuffle; nobody moves, but where they stand changes. */
-function realityFold(ctx: Ctx): void {
+/**
+ * Round 7: the six middle carriages trade places; the first and the cab stay.
+ * Every middle carriage ends up somewhere new (a derangement), so everyone
+ * standing in one is now in a different carriage. Passengers, the Inspector
+ * and entities keep their node index; anchors and locks go with their carriage.
+ */
+export function realityFold(ctx: Ctx): void {
   const s = ctx.s;
+  const fullBefore = s.carriages.map((c) => c.identity);
   const before = s.carriages.slice(1, 1 + MIDDLE.length).map((c) => c.identity);
-  let after = before;
-  for (let tries = 0; tries < 10 && after.join() === before.join(); tries++) after = shuffle(s, before);
+  let after = shuffle(s, before);
+  for (let tries = 0; tries < 20 && after.some((id, i) => id === before[i]); tries++) after = shuffle(s, before);
+  // still a fixed point after 20 draws (vanishingly rare): a rotation moves every one
+  if (after.some((id, i) => id === before[i])) after = [...before.slice(1), before[0]];
   after.forEach((identity, i) => (s.carriages[i + 1].identity = identity));
-  s.sequence = { kind: "FOLD", acks: [] };
+  s.sequence = { kind: "FOLD", acks: [], fold: { before: fullBefore, after: s.carriages.map((c) => c.identity) } };
   log(ctx, m`REALITY FOLD. The train turns inside out. You are standing exactly where you were, in a different carriage.`, "FOLD");
   cue(ctx, "FOLD", { before, after });
 }

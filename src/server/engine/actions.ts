@@ -5,14 +5,14 @@
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import type { ActionAvailability, GameAction, GameActionType, RejectCode, TradeOffer } from "../../shared/game/actions.ts";
 import { AP_COST } from "../../shared/game/actions.ts";
-import { CARRIAGES, ITEMS, MAX_HELP_BONUS, MAX_SANITY } from "../../shared/game/scenario01/content.ts";
+import { CARRIAGES, isKeyItem, ITEMS, KEY_FOR_LOCK, MAX_HELP_BONUS, MAX_SANITY } from "../../shared/game/scenario01/content.ts";
 import type { GameState, PlayerGameState, PlayerId } from "../../shared/game/state.ts";
 import { neighboursOf } from "./beats.ts";
 import { activePlayerId, cue, log, RuleError, type Ctx } from "./context.ts";
 import { startRoll } from "./dice.ts";
 import { applyEffects, statusName } from "./effects.ts";
 import { endTurn } from "./flow.ts";
-import { anchorName, LOCK_NAMES, repairTarget } from "./outcomes.ts";
+import { anchorName, repairTarget } from "./outcomes.ts";
 import { gainFate, gainSanity, identityAt, removeStatus, spendFate, visit } from "./players.ts";
 import { queueTrigger } from "./trigger-queue.ts";
 import { activeRequirementHolds, resolvable, useSkill } from "./resolver.ts";
@@ -20,6 +20,7 @@ import { canUseSkill } from "./skills.ts";
 import { answerWindow, onResume, openWindow } from "./windows.ts";
 import { list, m, ref } from "../../shared/i18n/msg.ts";
 import type { Msg } from "../../shared/i18n/types.ts";
+import { characterSkill } from "../../shared/game/scenario01/skills.ts";
 
 type Fail = { code: RejectCode; reason: Msg };
 const fail = (code: RejectCode, reason: Msg): Fail => ({ code, reason });
@@ -100,7 +101,9 @@ const REPAIR: Spec = {
       return null;
     }
     if (s.escape.round === s.round && s.escape[t.lock]) return fail("ILLEGAL_TARGET", m`The ${ref.lock(t.lock)} is already engaged this round.`);
-    if (t.lock === "route" && s.fragments.length < 3) return fail("ILLEGAL_TARGET", m`The Route Lock needs 3 memory fragment types (you have ${s.fragments.length}).`);
+    const key = KEY_FOR_LOCK[t.lock];
+    if (!p.items.includes(key)) return fail("ILLEGAL_TARGET", m`The ${ref.lock(t.lock)} needs the ${ref.item(key)}, and you aren't carrying it.`);
+    if (t.lock === "identity" && s.fragments.length < 3) return fail("ILLEGAL_TARGET", m`The ${ref.lock(t.lock)} needs 3 memory fragment types (you have ${s.fragments.length}).`);
     return null;
   },
   hint: (s, p) => {
@@ -262,7 +265,7 @@ const CONFRONT: Spec<Extract<GameAction, { type: "CONFRONT" }>> = {
 const USE_SKILL: Spec<Extract<GameAction, { type: "USE_SKILL" }>> = {
   targets: (s, p) => others(s, p).map((o) => o.playerId).concat(p.playerId),
   check: (s, p, a) => {
-    const skill = getCharacterById(p.skill.borrowed ?? p.characterId).skill;
+    const skill = characterSkill(p.skill.borrowed ?? p.characterId);
     if (skill.type !== "ACTIVE") {
       if (p.skill.usesLeft <= 0) return fail("SKILL_ALREADY_USED", m`Your ability is already burned.`);
       return fail("NOT_YOUR_WINDOW", skill.type === "REACTION" ? m`This ability answers something that happens. You'll be asked when it can fire.` : m`This ability is offered automatically when its condition comes true.`);
@@ -281,7 +284,7 @@ const USE_SKILL: Spec<Extract<GameAction, { type: "USE_SKILL" }>> = {
 
 /** For availability only: a legal target set, if one exists, so "can I use it?" is answerable. */
 function defaultTargets(s: GameState, p: PlayerGameState): PlayerId[] {
-  const rule = getCharacterById(p.skill.borrowed ?? p.characterId).skill.target;
+  const rule = characterSkill(p.skill.borrowed ?? p.characterId).target;
   const pool = others(s, p);
   if (rule === "ANY_PLAYER" || rule === "OTHER_PLAYER") return pool.slice(0, 1).map((o) => o.playerId);
   if (rule === "SAME_CARRIAGE") return sameCarriage(s, p).slice(0, 1).map((o) => o.playerId);
@@ -291,11 +294,12 @@ function defaultTargets(s: GameState, p: PlayerGameState): PlayerId[] {
 }
 
 const USE_ITEM: Spec<Extract<GameAction, { type: "USE_ITEM" }>> = {
-  targets: (s, p) => [...new Set(p.items)],
+  targets: (s, p) => [...new Set(p.items.filter((i) => !isKeyItem(i)))],
   check: (s, p, a) => {
-    if (!p.items.length) return fail("ILLEGAL_TARGET", m`You aren't carrying any items.`);
+    if (!p.items.some((i) => !isKeyItem(i))) return fail("ILLEGAL_TARGET", m`You aren't carrying any items you can use.`);
     if (!a) return null;
     if (!(a.item in ITEMS) || !p.items.includes(a.item)) return fail("ILLEGAL_TARGET", m`You don't have that item.`);
+    if (isKeyItem(a.item)) return fail("ILLEGAL_TARGET", m`A key isn't used up: carry it to its escape lock and Repair there.`);
     if (a.item === "POCKET_WATCH" && s.collapse === 0) return fail("ILLEGAL_TARGET", m`Collapse is already at 0.`);
     if (ITEMS[a.item].needsTarget && a.targetId && a.targetId !== p.playerId) {
       const t = s.players[a.targetId];

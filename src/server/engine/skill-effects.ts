@@ -15,6 +15,7 @@ import { pick, shuffle } from "./rng.ts";
 import { resolvable, runEffects, skillOf } from "./resolver.ts";
 import { list, m, ref } from "../../shared/i18n/msg.ts";
 import type { Msg } from "../../shared/i18n/types.ts";
+import { characterSkill } from "../../shared/game/scenario01/skills.ts";
 
 const selfOf = (scope: Scope): PlayerId | undefined => scope.self ?? (scope.ownerId === "SYSTEM" ? undefined : scope.ownerId);
 const nick = (ctx: Ctx, id: PlayerId) => ctx.s.players[id]?.nickname ?? "Someone";
@@ -99,12 +100,12 @@ const copyPool = (ctx: Ctx, owner: PlayerId, otherZodiacOnly: boolean) => {
   const mine = ROSTER.find((c) => c.id === ctx.s.players[owner].characterId)!;
   return ROSTER.filter(
     (c) =>
-      c.skill.copyable &&
-      c.skill.type === "ACTIVE" &&
-      AUTO_TARGET.includes(c.skill.target) &&
-      !c.skill.requires &&
-      resolvable(c.skill) &&
-      !c.skill.effects.some((x) => x.kind === "COPY_EFFECT") &&
+      characterSkill(c.id).copyable &&
+      characterSkill(c.id).type === "ACTIVE" &&
+      AUTO_TARGET.includes(characterSkill(c.id).target) &&
+      !characterSkill(c.id).requires &&
+      resolvable(characterSkill(c.id)) &&
+      !characterSkill(c.id).effects.some((x) => x.kind === "COPY_EFFECT") &&
       (!otherZodiacOnly || c.zodiac !== mine.zodiac),
   );
 };
@@ -129,7 +130,7 @@ registerHandler("COPY_EFFECT", (ctx, e, scope) => {
     case "LAST_SKILL": {
       const last = s.lastSkill;
       if (!last || last.ownerId === self) return;
-      const skill = ROSTER.find((c) => c.id === last.characterId)!.skill;
+      const skill = characterSkill(last.characterId);
       if (!skill.copyable || skill.type !== "ACTIVE" || !resolvable(skill)) return log(ctx, m`${scope.label}: ${ref.skill(last.characterId)} can't be copied.`, "SKILL", self);
       log(ctx, m`${nick(ctx, self)} copies ${ref.skill(last.characterId)}.`, "SKILL", self);
       return runEffects(ctx, self, skill, last.targets.filter((t) => s.players[t]), undefined, last.characterId);
@@ -159,8 +160,8 @@ registerHandler("COPY_EFFECT", (ctx, e, scope) => {
       if (!pool.length) return;
       const drawn = pick(s, pool);
       log(ctx, m`${scope.label}: ${nick(ctx, self)} draws ${ref.skill(drawn.id)} (${ref.title(drawn.id)}) and uses it at once.`, "SKILL", self);
-      const targets = drawn.skill.target === "RANDOM_PLAYERS" ? shuffle(s, present(ctx).map((p) => p.playerId)).slice(0, drawn.skill.count ?? 2) : [];
-      return runEffects(ctx, self, drawn.skill, targets, undefined, drawn.id);
+      const targets = characterSkill(drawn.id).target === "RANDOM_PLAYERS" ? shuffle(s, present(ctx).map((p) => p.playerId)).slice(0, characterSkill(drawn.id).count ?? 2) : [];
+      return runEffects(ctx, self, characterSkill(drawn.id), targets, undefined, drawn.id);
     }
   }
 });

@@ -115,7 +115,7 @@ function stepOnce(ctx: Ctx): boolean {
 function beginRound(ctx: Ctx): void {
   const s = ctx.s;
   s.round++;
-  s.escape = { round: null, power: false, route: false, drive: false, by: {} };
+  s.escape = { round: null, power: false, identity: false, memory: false, by: {} };
   s.roundRecord = emptyRoundRecord();
   // abilities lent out by Server Rave come home
   if (s.flags.skillsReturnRound && s.round >= s.flags.skillsReturnRound) {
@@ -178,8 +178,8 @@ export function endTurn(ctx: Ctx): void {
 function endRound(ctx: Ctx): void {
   const s = ctx.s;
   if (s.escape.round === s.round && !s.outcome) {
-    const set = [s.escape.power, s.escape.route, s.escape.drive].filter(Boolean).length;
-    if (set > 0) log(ctx, m`The escape locks slip back: ${set}/3 is not enough. All three must hold in the same round.`, "LOCK_RESET");
+    const set = [s.escape.power, s.escape.identity, s.escape.memory].filter(Boolean).length;
+    if (set > 0) log(ctx, m`The escape locks slip back: ${set}/3 is not enough. All three must hold in the same round. The keys stay with whoever carries them.`, "LOCK_RESET");
   }
   roundTriggers(ctx, "ROUND_END");
   changeCollapse(ctx, 1, m`the train runs on`);

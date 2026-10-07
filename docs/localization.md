@@ -48,7 +48,8 @@ One translation per concept, everywhere: UI, skills, events, log.
 | clue | 线索 | |
 | memory fragment / core memory | 记忆碎片 / 核心记忆 | |
 | reality anchor | 现实锚点 | |
-| escape lock (Power / Route / Drive) | 逃离锁（动力 / 路线 / 驾驶） | |
+| escape lock (Power / Identity / Memory) | 逃生锁（动力 / 身份 / 记忆） | |
+| key item (Power / Identity / Memory Key) | 关键道具（动力 / 身份 / 记忆钥匙） | made by restoring an anchor; trade only |
 | carriage | 车厢 | |
 | Driver's Cab | 驾驶室 | |
 | the Faceless Inspector / ticket check | 无面检票员 / 查票 | |

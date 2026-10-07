@@ -70,7 +70,16 @@ export type ItemId =
   | "RED_UMBRELLA"
   | "BLANK_TICKET"
   | "POCKET_WATCH"
-  | "BLACK_COIN";
+  | "BLACK_COIN"
+  // key items: made by restoring an anchor, one each, never random
+  | "POWER_KEY"
+  | "IDENTITY_KEY"
+  | "MEMORY_KEY";
+
+export type KeyItemId = "POWER_KEY" | "IDENTITY_KEY" | "MEMORY_KEY";
+
+/** The three escape locks of act 3; each opens only for the player carrying its key. */
+export type EscapeLockId = "power" | "identity" | "memory";
 
 export type NightRuleId =
   | "MERCURY_RETROGRADE"
@@ -305,21 +314,15 @@ export type PlayerTask = { id: string; text: Msg; untilRound: number; done: bool
 /** Owner-only data. Never leaves the server except to its owner. */
 export type PlayerSecrets = {
   obsession: ObsessionId;
-  messages: { id: string; text: Msg; round: number; isTrue: boolean }[];
+  messages: { id: string; text: Msg; round: number }[];
   allies: PlayerId[];
-  dreamCards: { id: string; text: Msg; isTrue: boolean }[];
+  dreamCards: { id: string; text: Msg }[];
   peeks: { id: string; text: Msg; round: number }[];
   tasks: PlayerTask[];
 };
 
-/**
- * The owner's secrets as sent to them. Whether a message or dream is true is
- * the whole point of it, so `isTrue` only travels once the run is over.
- */
-export type ViewerSecrets = Omit<PlayerSecrets, "messages" | "dreamCards"> & {
-  messages: { id: string; text: Msg; round: number; isTrue?: boolean }[];
-  dreamCards: { id: string; text: Msg; isTrue?: boolean }[];
-};
+/** The owner's secrets as sent to them. Messages and dream cards are always true. */
+export type ViewerSecrets = PlayerSecrets;
 
 export type DelayedEffect = { dueRound: number; ownerId: PlayerId; targets: PlayerId[]; effects: Effect[]; label: Msg };
 
@@ -340,7 +343,12 @@ export type Bond = {
 
 /** A short cinematic everyone sees at once (intro, blackout, fold, ending). */
 /** A scene everyone sees at once; it ends when every connected passenger has pressed Continue (or the host skips). */
-export type Sequence = { kind: "INTRO" | "BLACKOUT" | "FOLD" | "CAB_OPEN" | "ENDING"; acks: PlayerId[] };
+export type Sequence = {
+  kind: "INTRO" | "BLACKOUT" | "FOLD" | "CAB_OPEN" | "ENDING";
+  acks: PlayerId[];
+  /** FOLD: the carriage order before and after, by node index (so a reload replays the same fold). */
+  fold?: { before: CarriageIdentity[]; after: CarriageIdentity[] };
+};
 
 export type ActiveEvent = {
   id: string;
@@ -386,7 +394,7 @@ export type PlayerResult = {
   obsessionMet: boolean;
   title: Msg;
   highlights: Msg[];
-  messages: { text: Msg; isTrue: boolean }[];
+  messages: { text: Msg }[];
 };
 
 export type TuningTier = "SMALL" | "STANDARD" | "LARGE";
@@ -437,7 +445,7 @@ export type GameState = {
   inspector: Inspector;
   entities: Entity[];
   seatNeighbours: PlayerId[][];
-  escape: { round: number | null; power: boolean; route: boolean; drive: boolean; by: Partial<Record<"power" | "route" | "drive", PlayerId>> };
+  escape: { round: number | null; power: boolean; identity: boolean; memory: boolean; by: Partial<Record<EscapeLockId, PlayerId>> };
   nightRule: NightRuleId;
   eventDeck: string[];
   currentEvent: ActiveEvent | null;

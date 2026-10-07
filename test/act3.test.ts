@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { en } from "../src/shared/i18n/format.ts";
+import { en, format } from "../src/shared/i18n/format.ts";
+import { availableActions } from "../src/server/engine/actions.ts";
 import type { Ctx } from "../src/server/engine/context.ts";
 import { inspectorPhase } from "../src/server/engine/inspector.ts";
 import { project } from "../src/server/engine/project.ts";
@@ -29,15 +30,16 @@ const drain = (t: Table, option?: string) => {
   while (t.state.pending.length) t.answerAll(option);
 };
 
-/** Everything for an escape is in place except the Drive Lock, which the active player is about to try in the cab. */
+/** Everything for an escape is in place except the Memory Escape Lock, which the active player (with its key) is about to try in the cab. */
 function lastLock(n = 3, patch: (s: GameState, me: string) => void = () => {}) {
   const t = atRound(n, 8);
   const me = t.active!;
   edit(t, (s) => {
     for (const a of Object.values(s.anchors)) Object.assign(a, { progress: a.required, repaired: true });
     s.fragments = ["ROUTE", "DRIVER", "MANIFEST"];
-    s.escape = { round: s.round, power: true, route: true, drive: false, by: {} };
+    s.escape = { round: s.round, power: true, identity: true, memory: false, by: {} };
     s.players[me].carriageIndex = indexOf(s, "CAB");
+    s.players[me].items.push("MEMORY_KEY");
     s.players[me].fate = 0;
     patch(s, me);
     rigNextDie(s, 4);
@@ -91,7 +93,8 @@ describe("act 3: the train", () => {
   it("two passengers get 3 action points a round, and 4 in act 3; three get 2", () => {
     expect(Object.values(atRound(2, 7).state.players).map((p) => p.ap)).toEqual([3, 3]);
     expect(Object.values(atRound(2, 8).state.players).map((p) => p.ap)).toEqual([4, 4]);
-    expect(Object.values(atRound(3, 8).state.players).map((p) => p.ap)).toEqual([2, 2, 2]);
+    // a passenger lost to a ticket check acts with 1
+    expect(Object.values(atRound(3, 8).state.players).map((p) => (p.lost ? 2 : p.ap))).toEqual([2, 2, 2]);
   });
 
   it("a shield absorbs an echo's touch", () => {
@@ -113,12 +116,13 @@ describe("act 3: escape locks", () => {
     edit(t, (s) => {
       for (const a of Object.values(s.anchors)) Object.assign(a, { progress: a.required, repaired: true });
       s.players[me].carriageIndex = indexOf(s, "ENGINE_ROOM");
+      s.players[me].items.push("POWER_KEY");
       s.players[me].fate = 0;
       rigNextDie(s, 5);
     });
     t.act(me, { type: "REPAIR" });
     drain(t);
-    expect(t.state.escape).toMatchObject({ round: 8, power: true, route: false, drive: false, by: { power: me } });
+    expect(t.state.escape).toMatchObject({ round: 8, power: true, identity: false, memory: false, by: { power: me } });
     expect(() => t.act(me, { type: "REPAIR" })).toThrow(/already engaged this round/);
   });
 
@@ -136,22 +140,65 @@ describe("act 3: escape locks", () => {
     expect(t.state.escape.power).toBe(false);
   });
 
-  it("the Route Lock needs three fragment types", () => {
+  it("the Identity Escape Lock needs three fragment types", () => {
     const t = atRound(3, 8);
     const me = t.active!;
     edit(t, (s) => {
       s.anchors.IDENTITY.repaired = true;
+      s.players[me].items.push("IDENTITY_KEY");
       s.fragments = ["ROUTE", "DRIVER"];
       s.players[me].carriageIndex = indexOf(s, "ARCHIVE");
     });
     expect(() => t.act(me, { type: "REPAIR" })).toThrow(/needs 3 memory fragment types \(you have 2\)/);
   });
 
-  it("locks that don't all hold in one round slip back at the next", () => {
+  it("without the lock's key the Repair button is disabled and says which key is missing", () => {
     const t = atRound(3, 8);
-    edit(t, (s) => (s.escape = { round: s.round, power: true, route: true, drive: false, by: {} }));
+    const me = t.active!;
+    edit(t, (s) => {
+      for (const a of Object.values(s.anchors)) Object.assign(a, { progress: a.required, repaired: true });
+      s.players[me].carriageIndex = indexOf(s, "ENGINE_ROOM");
+      s.players[me].items.push("IDENTITY_KEY", "MEMORY_KEY");
+    });
+    const repair = availableActions(t.state, me).find((a) => a.type === "REPAIR")!;
+    expect(repair.enabled).toBe(false);
+    expect(en(repair.reason)).toBe("The Power Escape Lock needs the Power Key, and you aren't carrying it.");
+    expect(format("zh-CN", repair.reason!)).toContain("动力钥匙");
+    expect(() => t.act(me, { type: "REPAIR" })).toThrow(/needs the Power Key/);
+  });
+
+  it("a traded key moves the right to work its lock at once", () => {
+    const t = atRound(3, 8);
+    const [me, mate] = [t.active!, t.state.turnOrder.find((x) => x !== t.active)!];
+    edit(t, (s) => {
+      for (const a of Object.values(s.anchors)) Object.assign(a, { progress: a.required, repaired: true });
+      for (const id of [me, mate]) s.players[id].carriageIndex = indexOf(s, "ENGINE_ROOM");
+      s.players[mate].items.push("POWER_KEY");
+    });
+    // as if it were each one's turn
+    const canRepair = (id: string) => {
+      const s = structuredClone(t.state);
+      s.activeIndex = s.turnOrder.indexOf(id);
+      s.players[id].ap = 2;
+      return availableActions(s, id).find((a) => a.type === "REPAIR")!.enabled;
+    };
+    expect([canRepair(me), canRepair(mate)]).toEqual([false, true]);
+    t.act(me, { type: "TRADE", targetId: mate, give: { items: [], fate: 0 }, want: { items: ["POWER_KEY"], fate: 0 } });
+    t.answerAll("ACCEPT");
+    expect(t.state.players[me].items).toContain("POWER_KEY");
+    expect(t.state.players[mate].items).not.toContain("POWER_KEY");
+    expect([canRepair(me), canRepair(mate)]).toEqual([true, false]);
+  });
+
+  it("locks that don't all hold in one round slip back at the next, and the keys stay where they are", () => {
+    const t = atRound(3, 8);
+    edit(t, (s) => {
+      s.escape = { round: s.round, power: true, identity: true, memory: false, by: {} };
+      s.players[s.turnOrder[0]].items.push("POWER_KEY", "IDENTITY_KEY");
+    });
     t.playUntil(turnsOf(9));
-    expect(t.state.escape).toMatchObject({ round: null, power: false, route: false });
+    expect(t.state.escape).toMatchObject({ round: null, power: false, identity: false });
+    expect(t.state.players[t.state.turnOrder[0]].items).toEqual(expect.arrayContaining(["POWER_KEY", "IDENTITY_KEY"]));
     expect(t.state.log.some((l) => l.text.includes("2/3 is not enough"))).toBe(true);
   });
 });
@@ -178,7 +225,7 @@ describe("endings", () => {
     const { t, me } = lastLock(3, patch);
     const s = escape(t, me);
     expect(s.outcome).toBeNull();
-    expect(s.escape).toMatchObject({ power: true, route: true, drive: true });
+    expect(s.escape).toMatchObject({ power: true, identity: true, memory: true });
     expect(s.log.some((l) => l.text.includes("won't let go") && l.text.includes(why))).toBe(true);
   });
 

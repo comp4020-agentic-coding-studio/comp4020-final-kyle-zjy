@@ -53,10 +53,17 @@ What the agent needs to carry from any of it is your call.
 ## Characters and skills
 
 - The 192 characters live in `src/shared/characters/roster/<zodiac>.ts`, one
-  file per sign, 16 entries in canonical MBTI order. `pnpm test:unit` proves
-  12 × 16 = 192 with no duplicate or missing pair, unique ids, unique titles
-  and unique skill names, and runs the static skill checks.
-- A skill is data: trigger + target rule + `Effect` primitives. Never write
+  file per sign, 16 entries in canonical MBTI order. A character is id, sign,
+  type, title, avatar and a `coreSkillId`, nothing about any scenario.
+- Ability layers: core skill (`src/shared/skills/core/`, mechanics only) →
+  scenario adapter (`src/shared/game/scenario01/skill-adapters/`, name,
+  description, visual, a `behaviour` only where the scenario's own rules must
+  take part) → `characterSkill(id)`. A new scenario adds adapters, never a
+  copy of the mechanics.
+- `pnpm test:unit` proves 12 × 16 = 192 with no duplicate or missing pair,
+  unique ids, unique titles and unique skill names, 192/192 at each ability
+  layer, and runs the static skill checks.
+- A core skill is data: trigger + target rule + `Effect` primitives. Never write
   per-character code; if a skill can't be expressed, extend the primitives in
   `effects.ts` (the compile-time guard keeps `EFFECT_KINDS` in sync).
 - The player-facing `description` is the source of truth for a skill's

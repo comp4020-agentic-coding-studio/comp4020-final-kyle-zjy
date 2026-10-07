@@ -303,3 +303,29 @@ a zh-CN table. Fixing this turned up log lines that glued English fragments
 into sentences (plurals, "rises"/"falls", trade offers, item and anchor
 names); each variant is now a whole template. No rule, RNG or replay changed
 (the kept simulations still replay exactly). Tests: `test/localization.test.ts`.
+
+## Ticket check, true secrets, anchor keys, the fold, and core abilities
+
+- Ticket check: the final result decides (after Fate, abilities and
+  reactions). 1–3 empties Sanity and the player is lost (still in the run);
+  4–5 passes; 6 keeps the temporary pass.
+- The system never lies: round-5 messages and dream cards are built only from
+  what holds in the live state. `isTrue` and the TRUE/FALSE results badge are gone.
+- Anchor keys: each restored anchor puts its key (Power / Identity / Memory)
+  in the last repairer's inventory, once per run. Keys are never used up, are
+  not rewards, and move only by trade. Act 3's three escape locks (Engine
+  Room, Archive Car, Driver's Cab) open only for the key's carrier, still all
+  in the same round; the keys stay when the locks slip back. Map badges show
+  who carries each key; the dock shows your keys; a cue and log line announce
+  a new key.
+- Reality Fold: every middle carriage now moves (derangement). The before /
+  after order is stored on the FOLD sequence: the scene shows each carriage
+  turning over, and the map cards flip once the scene is dismissed.
+- Abilities: Character → core skill (20 families, 192 core abilities) →
+  scenario-01 adapter → `characterSkill`. Generated once from the old roster
+  data with no change to any mechanic; Pisces ENTP's ticket pass is the one
+  scenario behaviour. The adapter's visual now drives the ability cue.
+- The kept simulation logs were regenerated on purpose (the rules changed).
+  `pnpm sim --runs 40`, no abilities: 2 players 30%, 6 players 50%, 10
+  players 25% (was 45–57%). Most losses are Collapse; at 2 players some runs
+  end with everyone lost to ticket checks. Not retuned in this change.

@@ -10,6 +10,7 @@ import { Avatar, preloadAvatar } from "../components/Avatar.tsx";
 import { Sigil } from "../components/Sigil.tsx";
 import { useCharacterText, useScenarioText, useT } from "../i18n/index.ts";
 import { sendLobby } from "../store.ts";
+import { characterSkill } from "../../shared/game/scenario01/skills.ts";
 
 type Step = "zodiac" | "mbti" | "reveal";
 
@@ -295,13 +296,13 @@ function Reveal({ zodiac, mbti, onDone }: { zodiac: Zodiac; mbti: MBTI; onDone: 
       </motion.h2>
       <motion.p className="relative mt-5 font-display text-2xl text-moon" {...at(2.7)}>
         {text.skillName}
-        <span className="ml-2 align-middle text-[11px] font-bold tracking-widest text-violet-soft">{skillTypeLabel(t, c.skill.type)}</span>
+        <span className="ml-2 align-middle text-[11px] font-bold tracking-widest text-violet-soft">{skillTypeLabel(t, characterSkill(c.id).type)}</span>
       </motion.p>
       <motion.p className="relative mt-2 max-w-sm leading-relaxed text-mist" {...at(3.2)}>
         {text.skillDescription}
       </motion.p>
       <motion.p className="relative mt-3 max-w-sm text-sm text-ash" {...at(3.6)}>
-        {usesAndHint(t, c.skill.maxUses, c.skill.type)}
+        {usesAndHint(t, characterSkill(c.id).maxUses, characterSkill(c.id).type)}
       </motion.p>
       <motion.button className="btn btn-gold relative mt-8 w-full max-w-xs" onClick={onDone} {...at(3.8)}>
         {t("picker.take")}

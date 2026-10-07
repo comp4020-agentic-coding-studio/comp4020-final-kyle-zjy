@@ -17,6 +17,7 @@ import { ROSTER } from "../src/shared/characters/roster/index.ts";
 import { mkdirSync, writeFileSync } from "node:fs";
 import type { CharacterId } from "../src/shared/characters/types.ts";
 import { playRun } from "../test/bot.ts";
+import { characterSkill } from "../src/shared/game/scenario01/skills.ts";
 
 const arg = (name: string, fallback: string) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -62,7 +63,7 @@ if (COVERAGE) {
   const rare: string[] = [];
   for (const c of ROSTER) {
     const used = Array.from({ length: COVERAGE }, () => play(4, c.id)).filter((r) => r.seat0Used).length;
-    if (used === 0) never.push(`${c.id} (${c.skill.name}, ${c.skill.type} ${c.skill.trigger.on}${c.skill.trigger.condition ? ":" + c.skill.trigger.condition : ""})`);
+    if (used === 0) never.push(`${c.id} (${characterSkill(c.id).name}, ${characterSkill(c.id).type} ${characterSkill(c.id).trigger.on}${characterSkill(c.id).trigger.condition ? ":" + characterSkill(c.id).trigger.condition : ""})`);
     else if (used * 3 < COVERAGE) rare.push(`${c.id} ${used}/${COVERAGE}`);
   }
   console.log(`never used (${never.length}):\n  ${never.join("\n  ")}`);

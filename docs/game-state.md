@@ -128,7 +128,8 @@ players' effects aggressively, and can always STABILIZE or be helped.
 | `inspector` | `{ active, carriageIndex, distortion 0–3, banishedUntilRound }` |
 | `echoes` | act-3 passenger echoes that harass key players |
 | `seatNeighbours` | pairs/triple drawn at round 4 |
-| `escape` | `{ round, power, route, drive }`: three locks, must all be set in the same round |
+| `escape` | `{ round, power, identity, memory, by }`: the three escape locks (Engine Room, Archive Car, Driver's Cab), all set in the same round or they slip back; each opens only for the player carrying its key |
+| `sequence.fold` | round 7 only: the carriage order before and after the Reality Fold, so a reload replays the same fold |
 | `nightRule` | one of 8, drawn at start |
 | `eventDeck` | seeded deck order + discard |
 | `outcome` | set in ENDING |
@@ -171,7 +172,7 @@ All gameplay goes through the `GameAction` union (`src/shared/game/actions.ts`):
 | `MOVE` | 1 | to an adjacent carriage; CAB locked before round 8 |
 | `INVESTIGATE` | 1 | roll; clues, memory fragments, main line (archive/mirror/sleeper) |
 | `SEARCH` | 1 | roll; items, fate, statuses, discoveries (luggage/dining) |
-| `REPAIR` | 1 | roll; anchors, devices, escape locks |
+| `REPAIR` | 1 | roll; anchors (act 2–3), escape locks (act 3, only with that lock's key) |
 | `HELP` | 1 | same-carriage player: +1 to their next ordinary roll (cap +2); stronger for seat neighbours |
 | `TRADE` | 1 | same-carriage: opens TRADE_OFFER window |
 | `STABILIZE` | 2 | +1 sanity or remove one ordinary negative status |
@@ -196,15 +197,15 @@ Lobby actions (`LobbyAction`): `SET_NICKNAME`, `PICK_ZODIAC`, `PICK_MBTI`,
 | 1–3 | Explore. Goal: fragments ROUTE, DRIVER, MANIFEST. |
 | end of 3 | Blackout. "Identity registration closed. Anomaly detected." Passenger count glitches. → ACT_2 |
 | 4 | Faceless Inspector appears. Seat neighbours drawn. Anchors become repairable. |
-| 5 | "Please confirm your seat neighbour is still themselves." Each player gets one secret message (some false, no traitor). |
+| 5 | "Please confirm your seat neighbour is still themselves." Each player gets one secret message, always true of the table when it is dealt (it may be incomplete; players may still lie about it). |
 | 6 | Vote: Emergency brake (collapse −2, inspector acts now) vs keep going (+1 fate all, collapse +1). Tie → random. |
-| 7 | Reality Fold: middle carriages re-shuffle (players stay on their physical node, the identity changes). Cab access restored. → ACT_3 at round 8. |
+| 7 | Reality Fold: the six middle carriages re-shuffle so that every one moves (a derangement); the first carriage and the cab stay. Players, the Inspector and entities stay on their physical node, so the carriage under them changes; anchors and locks move with their carriage. Cab access restored. → ACT_3 at round 8. |
 | 8–12 | Cab open. Inspector moves twice per round. Echoes harass. Escape protocol: POWER (engine room), ROUTE (archive, team holds ≥ 3 fragment types), DRIVE (cab), all in one round. |
 | end of 12 | Not escaped → FAILED. |
 
 ### Win (all must hold)
 1. all three anchors repaired; 2. team holds ≥ 3 fragment types;
-3. POWER + ROUTE + DRIVE locks set in the same round; 4. collapse < 12;
+3. POWER + IDENTITY + MEMORY escape locks set in the same round, each by the carrier of its key; 4. collapse < 12;
 5. at least half the players are not lost.
 
 **True ending:** 6 core memories found → final choice (delete it / give it a ticket).
@@ -238,15 +239,32 @@ Sanity, not the train Collapse, so exploring is never worse than idling.
 | Data | Owner sees | Others see |
 | --- | --- | --- |
 | obsession | full | "has a secret goal" |
-| round-5 secret message | text only; whether it is true only once the run is over | nothing |
+| round-5 secret message | full (always true) | nothing |
 | secret ally / hidden pair | full | nothing (until revealed by rule) |
 | hidden statuses | full | nothing |
-| dream cards | text only; whether it is true only once the run is over | count only |
+| dream cards | full (always true) | count only |
 | peeked future events (preview skills) | the peek | nothing |
 | items | full | count + public item names |
 | everything else | full | full |
 
 Projection runs on the server; secrets are never in another player's
 payload, so there is nothing to find in devtools. A spec test asserts this.
-A false message or dream is always actually false at the moment it is dealt
-(`test/act2.test.ts` judges each one against the table).
+The system never lies: every message and dream is built from the live state
+and is true when dealt (`test/act2.test.ts` judges each one against the table).
+Players may still lie about what they received.
+
+## Keys and escape locks
+
+Restoring an anchor puts its key (POWER_KEY, IDENTITY_KEY, MEMORY_KEY;
+tags KEY_ITEM + OBJECTIVE_ITEM) in the inventory of the player who made the
+last repair, or the ability's user if an ability finished it. Each key is
+made once per run. A key is never used up, is not a reward, and moves only by
+a TRADE: random grants, steals, reward copies and doubling skip it, and a
+lost player keeps it. In act 3 only the carrier of a lock's key can Repair
+that lock; without it the button is disabled and names the missing key.
+
+## Ticket check
+
+The final result (after Fate, abilities and reactions) decides: 6 earns a
+temporary pass, 4–5 passes, 1–3 empties Sanity (the player is lost and
+stays in the run). Shields and other protections still apply.

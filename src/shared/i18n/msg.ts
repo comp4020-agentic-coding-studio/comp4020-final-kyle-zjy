@@ -7,7 +7,7 @@
 //
 // Content (carriage names, items, skills…) goes in as a reference, never as
 // an English string, so a Chinese sentence never ends up holding English words.
-import type { CarriageIdentity, FragmentType, ItemId, NightRuleId, ObsessionId, AnchorId } from "../game/state.ts";
+import type { CarriageIdentity, FragmentType, ItemId, NightRuleId, ObsessionId, AnchorId, EscapeLockId } from "../game/state.ts";
 import type { CharacterId, Zodiac } from "../characters/types.ts";
 import type { Msg, MsgParam } from "./types.ts";
 
@@ -28,7 +28,7 @@ export const ref = {
   ending: (key: string) => r("ending", key),
   status: (kind: string) => r("status", kind),
   anchor: (id: AnchorId) => r("anchor", id),
-  lock: (id: "power" | "route" | "drive") => r("lock", id),
+  lock: (id: EscapeLockId) => r("lock", id),
   skill: (id: CharacterId) => r("skill", id),
   title: (id: CharacterId) => r("title", id),
   event: (id: string) => r("event", id),

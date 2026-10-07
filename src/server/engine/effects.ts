@@ -1,8 +1,7 @@
 // Effect handlers: one per Effect kind, shared by abilities, items and events.
 // A skill, an item or an event card is just a list of effects; this module is
 // the only place their meaning lives.
-import { MAX_SANITY } from "../../shared/game/scenario01/content.ts";
-import { FRAGMENTS, ITEM_IDS } from "../../shared/game/scenario01/content.ts";
+import { FRAGMENTS, isKeyItem, ITEM_IDS, KEY_FOR_ANCHOR, LOCK_FOR_KEY, MAX_SANITY } from "../../shared/game/scenario01/content.ts";
 import type { Effect, EffectKind, EffectSubject } from "../../shared/game/effects.ts";
 import { statusLong as statusName } from "../../shared/game/scenario01/statuses.ts";
 import type { Anchor, FragmentType, ItemId, PlayerId } from "../../shared/game/state.ts";
@@ -201,10 +200,13 @@ const H: Registry = {
     if (thief === "SYSTEM") return;
     for (const id of negativeSubjects(ctx, e, scope, e.from)) {
       const victim = ctx.s.players[id];
-      if (!victim.items.length || id === thief || !lands(ctx, scope, id)) continue;
+      // key items only ever move by a trade
+      const takeable = victim.items.map((it, i) => [it, i] as const).filter(([it]) => !isKeyItem(it));
+      if (!takeable.length || id === thief || !lands(ctx, scope, id)) continue;
       // Snatch takes the very item the reward gave; otherwise one at random
-      const wanted = scope.trigger?.item ? victim.items.lastIndexOf(scope.trigger.item) : -1;
-      const item = victim.items.splice(wanted >= 0 ? wanted : int(ctx.s, victim.items.length), 1)[0];
+      const wanted = scope.trigger?.item ? takeable.filter(([it]) => it === scope.trigger!.item).at(-1) : undefined;
+      const at = (wanted ?? takeable[int(ctx.s, takeable.length)])[1];
+      const item = victim.items.splice(at, 1)[0];
       ctx.s.players[thief].items.push(item);
       log(ctx, m`${ctx.s.players[thief].nickname} takes an item from ${victim.nickname} (${scope.label}).`, "ITEM", thief);
       return;
@@ -291,9 +293,9 @@ const H: Registry = {
     if (!open.length) return;
     const weakest = open.sort((a, b) => a.progress / a.required - b.progress / b.required)[0];
     weakest.progress = Math.min(weakest.required, weakest.progress + e.amount);
-    log(ctx, m`${scope.label}: the ${weakest.id.toLowerCase()} anchor steadies (${weakest.progress}/${weakest.required}).`, "ANCHOR");
+    log(ctx, m`${scope.label}: the ${ref.anchor(weakest.id)} steadies (${weakest.progress}/${weakest.required}).`, "ANCHOR");
     cue(ctx, "ANCHOR", { anchor: weakest.id, progress: weakest.progress, required: weakest.required });
-    if (weakest.progress >= weakest.required) restoreAnchor(ctx, weakest);
+    if (weakest.progress >= weakest.required) restoreAnchor(ctx, weakest, scope.self ?? (scope.ownerId === "SYSTEM" ? undefined : scope.ownerId));
   },
   MOVE_PLAYER: (ctx, e, scope) => {
     for (const id of subjects(ctx, scope, e.who)) {
@@ -393,12 +395,26 @@ export function registerHandler<K extends EffectKind>(kind: K, fn: Handler<K>): 
 
 
 /** An anchor reaching its required repairs: it holds, and Collapse eases by 1. */
-export function restoreAnchor(ctx: Ctx, a: Anchor): void {
+/**
+ * The anchor holds, and its key appears in the hands of whoever made the last
+ * repair (or, if an ability finished it, its user; else the first passenger
+ * present). Each key is made once per run.
+ */
+export function restoreAnchor(ctx: Ctx, a: Anchor, by?: PlayerId): void {
   if (a.repaired) return;
   a.repaired = true;
   log(ctx, m`The ${ref.anchor(a.id)} is restored. Reality holds a little tighter.`, "ANCHOR_DONE", a.lastRepairedBy ?? undefined);
   cue(ctx, "ANCHOR_DONE", { anchor: a.id });
   changeCollapse(ctx, -1, m`the ${ref.anchor(a.id)} holding`);
+  const key = KEY_FOR_ANCHOR[a.id];
+  const made = Object.values(ctx.s.players).some((p) => p.items.includes(key));
+  if (made || ctx.s.flags[`key_${key}`]) return;
+  const holder = [a.lastRepairedBy, by].map((id) => (id ? ctx.s.players[id] : undefined)).find((p) => p && !p.away) ?? present(ctx)[0] ?? Object.values(ctx.s.players)[0];
+  if (!holder) return;
+  ctx.s.flags[`key_${key}`] = 1;
+  holder.items.push(key);
+  log(ctx, m`${holder.nickname} picks up the ${ref.item(key)}. It opens the ${ref.lock(LOCK_FOR_KEY[key])} in act 3.`, "KEY", holder.playerId);
+  cue(ctx, "KEY", { playerId: holder.playerId, item: key });
 }
 
 export function changeCollapse(ctx: Ctx, delta: number, why: Msg): void {

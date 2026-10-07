@@ -6,11 +6,15 @@ import { secretMessage } from "../src/server/engine/beats.ts";
 import { moveInspector } from "../src/server/engine/inspector.ts";
 import { next } from "../src/server/engine/rng.ts";
 import { applyEffects } from "../src/server/engine/effects.ts";
-import { dreamCard } from "../src/server/engine/outcomes.ts";
+import { dreamCard, repairTarget } from "../src/server/engine/outcomes.ts";
+import { realityFold } from "../src/server/engine/beats.ts";
+import { openDb } from "../src/server/db/db.ts";
+import { GameStore } from "../src/server/game/store.ts";
+import { RoomService } from "../src/server/rooms/service.ts";
 import { project } from "../src/server/engine/project.ts";
 import { CARRIAGES } from "../src/shared/game/scenario01/content.ts";
 import type { CarriageIdentity, GameState } from "../src/shared/game/state.ts";
-import { rigNextDie, Table } from "./helpers.ts";
+import { rigNextDie, seatsFor, Table } from "./helpers.ts";
 
 // Act 2 (rounds 4–7): the Faceless Inspector and ticket checks, seat
 // neighbours, the three anchors, round-5 secret messages, the round-6 brake
@@ -125,14 +129,57 @@ describe("act 2: ticket checks", () => {
     return { t, s: t.state, me };
   }
 
-  it("a failure costs 1 Fate", () => {
-    const { s, me } = check(2);
-    expect(s.players[me]).toMatchObject({ fate: 0, sanity: 3 });
+  it.each([1, 2, 3])("a final %i empties Sanity: the passenger is lost, but stays in the run", (die) => {
+    const { s, me } = check(die);
+    expect(s.players[me]).toMatchObject({ sanity: 0, lost: true, fate: 1 });
+    expect(s.turnOrder).toContain(me);
   });
 
-  it("a disaster costs 1 Fate and 1 Sanity", () => {
-    const { s, me } = check(1);
-    expect(s.players[me]).toMatchObject({ fate: 0, sanity: 2 });
+  it.each([4, 5])("a final %i passes: nothing happens", (die) => {
+    const { s, me } = check(die);
+    expect(s.players[me]).toMatchObject({ sanity: 3, lost: false, fate: 1 });
+    expect(s.players[me].statuses.map((x) => x.kind)).not.toContain("TEMP_PASS");
+  });
+
+  it("the final result counts: Fate that lifts a 3 to a 4 keeps Sanity", () => {
+    const t = atRound(3, 4);
+    const me = t.active!;
+    edit(t, (s) => {
+      s.players[me].carriageIndex = s.inspector.carriageIndex;
+      s.players[me].fate = 1;
+      s.jobs.push({ kind: "TICKET_CHECK", playerId: me });
+      rigNextDie(s, 3);
+    });
+    t.tick(1);
+    drain(t, "1");
+    expect(t.state.players[me]).toMatchObject({ sanity: 3, lost: false, fate: 0 });
+  });
+
+  it("the final result counts: a reaction that turns the failure into a success keeps Sanity", () => {
+    const t = atRound(3, 4);
+    const me = t.active!;
+    edit(t, (s) => {
+      // Aries INTJ: after your roll, move the result one tier better
+      s.players[me].characterId = "aries-intj";
+      s.players[me].skill = { usesLeft: 1, state: "READY" };
+      s.players[me].carriageIndex = s.inspector.carriageIndex;
+      s.players[me].fate = 0;
+      s.jobs.push({ kind: "TICKET_CHECK", playerId: me });
+      rigNextDie(s, 3);
+    });
+    t.tick(1);
+    while (t.state.pending.length) {
+      const w = t.state.pending[0];
+      const use = w.kind === "REACTION" && w.addressees.includes(me) ? w.options.find((o) => o.id.startsWith("USE"))?.id : undefined;
+      t.act(w.addressees[0], { type: "RESPOND", windowId: w.id, optionId: use ?? w.defaultOptionId });
+    }
+    expect(t.state.players[me].skill.usesLeft).toBe(0);
+    expect(t.state.players[me]).toMatchObject({ sanity: 3, lost: false });
+  });
+
+  it("a shield still stops the failed check from landing", () => {
+    const { s, me } = check(2, (x, id) => (x.players[id].shields = 1));
+    expect(s.players[me]).toMatchObject({ sanity: 3, lost: false, shields: 0 });
   });
 
   it("a perfect earns a temporary pass, which the next check uses up instead of rolling", () => {
@@ -245,22 +292,64 @@ describe("act 2: anchors", () => {
   });
 });
 
+describe("act 2: anchor keys", () => {
+  const holders = (s: GameState, key: string) => Object.values(s.players).filter((p) => p.items.includes(key as never));
+  const keyCount = (s: GameState) => Object.values(s.players).flatMap((p) => p.items).filter((i) => i.endsWith("_KEY") && i !== "OLD_KEY").length;
+
+  it("restoring an anchor puts its key, and only its key, in the last repairer's hands", () => {
+    const t = atRound(4, 4);
+    const me = t.active!;
+    edit(t, (s) => {
+      s.players[me].carriageIndex = indexOf(s, "ARCHIVE");
+      s.players[me].fate = 0;
+      rigNextDie(s, 6);
+    });
+    t.act(me, { type: "REPAIR" });
+    drain(t);
+    expect(holders(t.state, "IDENTITY_KEY").map((p) => p.playerId)).toEqual([me]);
+    expect(keyCount(t.state)).toBe(1);
+    expect(t.state.log.some((l) => l.text.includes("picks up the Identity Key"))).toBe(true);
+  });
+
+  it("each anchor makes one key once: finishing all three by ability makes exactly three, never a second of any", () => {
+    const t = atRound(4, 4);
+    const s = structuredClone(t.state);
+    const ctx = ctxOf(s);
+    for (let i = 0; i < 5; i++) applyEffects(ctx, [{ kind: "REPAIR_ANCHOR", which: "WEAKEST", amount: 3 }], { ownerId: "a", self: "a", targets: [], label: m`test` });
+    expect(Object.values(s.anchors).every((a) => a.repaired)).toBe(true);
+    for (const key of ["POWER_KEY", "IDENTITY_KEY", "MEMORY_KEY"]) expect(holders(s, key), key).toHaveLength(1);
+    expect(keyCount(s)).toBe(3);
+  });
+
+  it("no steal, copy, use or Sanity loss takes a key from its holder", () => {
+    const t = atRound(4, 4);
+    const s = structuredClone(t.state);
+    s.players.b.items = ["POWER_KEY"];
+    const ctx = ctxOf(s);
+    // a steal finds nothing to take; a reward copy of an anchor's key never happens (keys aren't rewards)
+    applyEffects(ctx, [{ kind: "STEAL_ITEM", from: "TARGET", transferableOnly: true }], { ownerId: "a", self: "a", targets: ["b"], label: m`test` });
+    applyEffects(ctx, [{ kind: "LOSE_SANITY", who: "TARGET", amount: 9 }], { ownerId: "SYSTEM", targets: ["b"], label: m`test` });
+    expect(s.players.b).toMatchObject({ lost: true, items: ["POWER_KEY"] });
+    expect(s.players.a.items).not.toContain("POWER_KEY");
+    // a key isn't used up
+    const u = atRound(4, 4);
+    edit(u, (x) => x.players[u.active!].items.push("POWER_KEY"));
+    expect(() => u.act(u.active!, { type: "USE_ITEM", item: "POWER_KEY" })).toThrow(/A key isn't used up/);
+  });
+});
+
 describe("act 2: round 5 secret messages", () => {
   it("everyone gets exactly one; nobody sees another's, nor whether their own is true", () => {
     const t = atRound(4, 5);
     for (const id of t.state.turnOrder) expect(t.state.secrets[id].messages).toHaveLength(1);
     for (const viewer of t.state.turnOrder) {
       const view = project(t.state, viewer);
-      expect(view.mySecrets!.messages[0]).not.toHaveProperty("isTrue");
       const json = JSON.stringify(view);
       for (const other of t.state.turnOrder.filter((id) => id !== viewer)) expect(json).not.toContain(t.state.secrets[other].messages[0].id);
     }
-    const over = structuredClone(t.state);
-    over.phase = "RESULTS";
-    expect(project(over, "a").mySecrets!.messages[0]).toHaveProperty("isTrue");
   });
 
-  /** Judges a message against the table, so a "false" message is checked to really be false. */
+  /** Judges a message against the table it was written about. */
   function holds(s: GameState, text: string): boolean {
     const byName = (n: string) => Object.values(s.players).find((p) => p.nickname === n)!;
     const middle = s.carriages.filter((c) => c.identity !== "START" && c.identity !== "CAB");
@@ -277,27 +366,27 @@ describe("act 2: round 5 secret messages", () => {
     throw new Error(`unknown message: ${text}`);
   }
 
-  // the edges a lie used to fall into: nobody has Fate, and no core memory is
-  // awake; each sample advances the run's own generator a different distance
+  // the table as played, plus the edges: nobody has Fate, every core memory
+  // awake, someone close to lost; each sample advances the generator differently
   const tables = [
+    (_: GameState) => {},
     (s: GameState) => Object.values(s.players).forEach((p) => (p.fate = 0)),
+    (s: GameState) => (s.players.b.sanity = 1),
     (s: GameState) => s.carriages.forEach((c) => (s.flags[`core_${c.identity}`] = 1)),
   ];
 
-  it.each(tables.map((f, i) => [i, f] as const))("a true message is true and a false one is false (table %i)", (_, setUp) => {
+  it.each(tables.map((f, i) => [i, f] as const))("every round-5 message is true of the table it was written for (table %i)", (_, setUp) => {
     const t = atRound(4, 5);
-    for (const truthful of [true, false]) {
-      for (let i = 1; i <= 120; i++) {
-        const s = structuredClone(t.state);
-        setUp(s);
-        for (let k = 0; k < i; k++) next(s);
-        const text = secretMessage(ctxOf(s), s.players.a, truthful);
-        expect(holds(s, en(text)), en(text)).toBe(truthful);
-      }
+    for (let i = 1; i <= 120; i++) {
+      const s = structuredClone(t.state);
+      setUp(s);
+      for (let k = 0; k < i; k++) next(s);
+      const text = en(secretMessage(ctxOf(s), s.players.a));
+      expect(holds(s, text), text).toBe(true);
     }
   });
 
-  it.each(tables.map((f, i) => [i, f] as const))("a dream card is true exactly when it says so (table %i)", (_, setUp) => {
+  it.each(tables.map((f, i) => [i, f] as const))("every dream card is true (table %i)", (_, setUp) => {
     const t = atRound(3, 4);
     for (let i = 1; i <= 120; i++) {
       const s = structuredClone(t.state);
@@ -305,7 +394,7 @@ describe("act 2: round 5 secret messages", () => {
       for (let k = 0; k < i; k++) next(s);
       dreamCard(ctxOf(s), s.players.a);
       const card = s.secrets.a.dreamCards.at(-1)!;
-      expect(holds(s, en(card.text)), en(card.text)).toBe(card.isTrue);
+      expect(holds(s, en(card.text)), en(card.text)).toBe(true);
     }
   });
 });
@@ -359,6 +448,46 @@ describe("act 2: round 7 Reality Fold", () => {
     expect([...ids(s)].sort()).toEqual([...ids(before)].sort());
     expect(ids(s)).not.toEqual(ids(before));
     for (const id of s.turnOrder) expect(s.players[id].carriageIndex).toBe(before.players[id].carriageIndex);
+  });
+
+  it("over many seeds: the ends stay, every middle carriage moves, none is lost or doubled", () => {
+    const t = atRound(3, 6);
+    for (let i = 0; i < 200; i++) {
+      const s = structuredClone(t.state);
+      for (let k = 0; k < i; k++) next(s);
+      const before = s.carriages.map((c) => c.identity);
+      realityFold(ctxOf(s));
+      const after = s.carriages.map((c) => c.identity);
+      expect([after[0], after.at(-1)]).toEqual([before[0], before.at(-1)]);
+      expect(new Set(after).size).toBe(after.length);
+      expect([...after].sort()).toEqual([...before].sort());
+      for (let j = 1; j < after.length - 1; j++) expect(after[j], `seed step ${i}, node ${j}`).not.toBe(before[j]);
+      expect(s.sequence?.fold).toEqual({ before, after });
+    }
+  });
+
+  it("every player is sent the same new map, and a reload reads it back", () => {
+    const t = atRound(3, 6);
+    t.playUntil((s) => s.round === 7);
+    const s = t.state;
+    const maps = s.turnOrder.map((id) => project(s, id)).map((v) => ({ carriages: v.carriages, fold: v.sequence?.fold }));
+    for (const m of maps) expect(m).toEqual({ carriages: s.carriages, fold: s.sequence!.fold });
+    // persisted and read back the way a refreshed or reconnecting client's server does
+    const db = openDb(":memory:");
+    const store = new GameStore(db);
+    const code = new RoomService(db, store).createRoom("Host", undefined).roomCode;
+    const saved = { ...s, sessionId: store.create(code, seatsFor(3), 0).sessionId };
+    store.save(code, saved, { kind: "TICK", at: 1 });
+    const reloaded = store.load(code)!;
+    expect(reloaded.carriages).toEqual(s.carriages);
+    expect(project(reloaded, "a").sequence?.fold).toEqual(s.sequence!.fold);
+  });
+
+  it("anchors and their repairs follow the carriage to its new place", () => {
+    const t = atRound(3, 6);
+    t.playUntil((s) => s.round === 7);
+    const engine = indexOf(t.state, "ENGINE_ROOM");
+    expect(repairTarget(ctxOf(t.state), engine)).toEqual(t.state.anchors.POWER.repaired ? null : { kind: "ANCHOR", anchor: "POWER" });
   });
 
   it("the end of round 7 opens the cab and starts act 3", () => {

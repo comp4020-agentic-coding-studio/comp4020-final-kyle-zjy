@@ -1,7 +1,6 @@
-// Character and skill data types. The 192-entry roster (PHASE 2) is typed
-// against these; skills are data — a trigger, a target rule and a list of
-// Effect primitives — so the Skill Resolver can run all 192 without bespoke code.
-import type { Effect } from "../game/effects.ts";
+// Character data types. The 192-entry roster is typed against these. A
+// character's ability is a core ability id; see src/shared/skills/.
+import type { CoreSkillId } from "../skills/core/types.ts";
 
 export const ZODIACS = [
   "aries",
@@ -45,91 +44,22 @@ export type CharacterId = `${Zodiac}-${Lowercase<MBTI>}`;
 export const characterId = (zodiac: Zodiac, mbti: MBTI): CharacterId =>
   `${zodiac}-${mbti.toLowerCase() as Lowercase<MBTI>}`;
 
-export type SkillType = "ACTIVE" | "REACTION" | "PASSIVE";
+// Skill vocabulary lives with the core abilities (src/shared/skills/core/types.ts).
+export { TRIGGERS } from "../skills/core/types.ts";
+export type { RollTier, Skill, SkillTrigger, SkillType, TargetRule, TriggerKind } from "../skills/core/types.ts";
 
-export const TRIGGERS = [
-  "OWN_TURN", // ACTIVE skills: used during your own turn
-  "OWN_ROLL_RESOLVED",
-  "ANY_ROLL_RESOLVED",
-  "PUBLIC_ROLL_DONE",
-  "NEGATIVE_EFFECT_TARGETS_SELF",
-  "NEGATIVE_EFFECT_TARGETS_ANY",
-  "ATTACKED_BY_PLAYER",
-  "TARGETED_ABILITY_DECLARED",
-  "PLAYER_GAINS_FATE",
-  "PLAYER_GAINS_BUFF",
-  "PLAYER_GAINS_REWARDS",
-  "SELF_GAINS_REWARD",
-  "HELPED_BY_PLAYER",
-  "SKILL_USED_BY_OTHER",
-  "OWN_CHOICE_MADE",
-  "EVENT_REVEALED",
-  "CHOICE_EVENT_REVEALED",
-  "STATUS_EXPIRING",
-  "FATE_REACHES_ZERO",
-  "FATE_THEFT_ATTEMPTED",
-  "RULE_CONFLICT",
-  "ROUND_START",
-  "ROUND_END",
-  "CONDITION_MET", // PASSIVE skills tracked by a counter or a game condition
-] as const;
-export type TriggerKind = (typeof TRIGGERS)[number];
-
-/** When a skill's window opens. ACTIVE skills use OWN_TURN. */
-export type SkillTrigger = {
-  on: TriggerKind;
-  /** Only these roll tiers fire the trigger. */
-  tiers?: RollTier[];
-  /** Only events caused by / happening to other players. */
-  others?: boolean;
-  fromPlayer?: boolean;
-  minAmount?: number;
-  /** CONDITION_MET: machine-readable condition id, e.g. "NO_NEGATIVE_2_ROUNDS". */
-  condition?: string;
-};
-
-export type RollTier = "DISASTER" | "FAIL" | "SUCCESS" | "PERFECT";
-
-/** Who an effect may point at; validated server-side against the live state. */
-export type TargetRule =
-  | "SELF"
-  | "ANY_PLAYER"
-  | "OTHER_PLAYER"
-  | "SAME_CARRIAGE"
-  | "TWO_PLAYERS"
-  | "UP_TO_THREE_PLAYERS"
-  | "ALL_PLAYERS"
-  | "LOWEST_FATE"
-  | "HIGHEST_FATE"
-  | "TRIGGER_SOURCE"
-  | "RANDOM_PLAYERS"
-  | "NONE";
-
-export type Skill = {
-  name: string;
-  description: string;
-  type: SkillType;
-  maxUses: number;
-  tags: string[];
-  trigger: SkillTrigger;
-  target: TargetRule;
-  /** Ordered primitives; the resolver applies them in sequence. */
-  effects: Effect[];
-  /** Extra precondition beyond the trigger, as a machine-readable id (e.g. "TARGET_WAS_HELPED_THIS_ROUND"). */
-  requires?: string;
-  /** RANDOM_PLAYERS: how many players the server draws (default 2). */
-  count?: number;
-  /** May other skills (copy / "anything is possible") reproduce this one? */
-  copyable: boolean;
-};
-
+/**
+ * Who a character is, in every scenario. Their ability is a pointer to a core
+ * ability (src/shared/skills/core); each scenario's adapter decides how it is
+ * named and shown there. Nothing here knows about any one scenario.
+ */
 export type Character = {
   id: CharacterId;
   zodiac: Zodiac;
   mbti: MBTI;
   /** Title shown on the card, e.g. "The Venom-Tongued Schemer". */
   nickname: string;
-  skill: Skill;
+  coreSkillId: CoreSkillId;
   /** Public path, e.g. `/avatars/scorpio-entp.svg`. */
   avatar: string;
   visual: {
@@ -143,7 +73,7 @@ export type Character = {
 export type RosterEntry = {
   mbti: MBTI;
   title: string;
-  skill: Skill;
+  coreSkillId: CoreSkillId;
 };
 
 export type ZodiacInfo = {

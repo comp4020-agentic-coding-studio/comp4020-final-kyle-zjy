@@ -1,7 +1,7 @@
 // Cinematics everyone sees at once. The server holds the table until every
 // connected passenger has pressed Continue (or the host skips): no clock.
 import { motion } from "motion/react";
-import type { PlayerView } from "../../shared/game/state.ts";
+import type { CarriageIdentity, PlayerView } from "../../shared/game/state.ts";
 import { useT } from "../i18n/index.ts";
 import { sendGame } from "../store.ts";
 import { notYet } from "./waiting.ts";
@@ -42,7 +42,7 @@ export function SequenceOverlay({ g }: { g: PlayerView }) {
       aria-modal="true"
       aria-label={scene.title}
     >
-      {seq.kind === "FOLD" && <FoldLines />}
+      {seq.kind === "FOLD" && !seq.fold && <FoldLines />}
       <div className="relative max-w-md text-center">
         <motion.p className="label text-signal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
           {scene.kicker}
@@ -55,6 +55,7 @@ export function SequenceOverlay({ g }: { g: PlayerView }) {
         >
           {scene.title}
         </motion.h2>
+        {seq.kind === "FOLD" && seq.fold && <FoldMap g={g} before={seq.fold.before} after={seq.fold.after} />}
         {lines.map((l, i) => (
           <motion.p key={i} className="mt-2 text-mist" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.4 + i * 0.6 }}>
             {l}
@@ -72,6 +73,43 @@ export function SequenceOverlay({ g }: { g: PlayerView }) {
         </motion.button>
       </div>
     </motion.div>
+  );
+}
+
+/**
+ * The fold, carriage by carriage: each node shows what it was, then turns over
+ * to what it is now. "You" marks the node the viewer is standing on.
+ */
+function FoldMap({ g, before, after }: { g: PlayerView; before: CarriageIdentity[]; after: CarriageIdentity[] }) {
+  const t = useT();
+  const mine = g.players[g.viewerId]?.carriageIndex;
+  return (
+    <ol className="mt-5 grid grid-cols-4 gap-1.5" aria-label={t("scene.FOLD.mapAria")}>
+      {after.map((now, i) => {
+        const moved = now !== before[i];
+        const name = (id: CarriageIdentity) => t(`dock.carriage.${id}`);
+        return (
+          <li key={i} className="min-w-0 [perspective:400px]" aria-label={moved ? t("scene.FOLD.nodeMoved", { from: name(before[i]), to: name(now) }) : name(now)}>
+            <motion.div
+              className={`flex min-h-12 flex-col items-center justify-center rounded-lg border px-1 py-1 text-center ${moved ? "border-violet-soft/70 bg-violet/15" : "border-ash/40 bg-white/5"} ${i === mine ? "ring-2 ring-gold" : ""}`}
+              initial={moved ? { rotateY: 0 } : false}
+              animate={moved ? { rotateY: [0, 90, 0] } : undefined}
+              transition={{ delay: 1 + i * 0.18, duration: 0.7, times: [0, 0.5, 1] }}
+            >
+              {moved && (
+                <motion.span className="block truncate text-[9px] text-ash line-through" initial={{ opacity: 1 }} animate={{ opacity: 0.55 }} transition={{ delay: 1.35 + i * 0.18 }}>
+                  {name(before[i])}
+                </motion.span>
+              )}
+              <motion.span className={`block w-full truncate text-[11px] font-semibold ${moved ? "text-violet-soft" : "text-mist"}`} initial={moved ? { opacity: 0 } : false} animate={{ opacity: 1 }} transition={{ delay: 1.35 + i * 0.18 }}>
+                {name(now)}
+              </motion.span>
+              {i === mine && <span className="block text-[9px] font-bold tracking-wider text-gold">{t("scene.FOLD.you")}</span>}
+            </motion.div>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 

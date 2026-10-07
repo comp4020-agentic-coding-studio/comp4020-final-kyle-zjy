@@ -10,6 +10,7 @@ import type { Character, SkillTrigger, TargetRule, TriggerKind } from "../../sha
 import type { RejectCode } from "../../shared/game/actions.ts";
 import type { Effect, EffectKind } from "../../shared/game/effects.ts";
 import type { GameState, ItemId, PlayerId, Status } from "../../shared/game/state.ts";
+import { characterSkill } from "../../shared/game/scenario01/skills.ts";
 
 export type SkillCheck = { ok: true } | { ok: false; code: RejectCode; reason: Msg };
 
@@ -62,7 +63,7 @@ export function canUseSkill(state: GameState, ownerId: PlayerId, targets: Player
   if (me.skill.state === "LOCKED") return no("SKILL_LOCKED", m`Your ability is locked right now.`);
   if (me.skill.usesLeft <= 0 || me.skill.state === "BURNED") return no("SKILL_ALREADY_USED", m`Your ability is already burned.`);
 
-  const skill = getCharacterById(me.skill.borrowed ?? me.characterId).skill;
+  const skill = characterSkill(me.skill.borrowed ?? me.characterId);
   const top = state.pending.at(-1);
   if (skill.type === "ACTIVE") {
     if (top?.blocksTable) return no("WINDOW_OPEN", m`Wait for the current decision to finish.`);
@@ -129,7 +130,7 @@ export function playersWokenBy(state: GameState, event: TriggerEvent): PlayerId[
   return state.turnOrder.filter((id) => {
     const p = state.players[id];
     if (!p || p.away || p.skill.usesLeft <= 0 || p.skill.state !== "READY") return false;
-    const skill = getCharacterById(p.characterId).skill;
+    const skill = characterSkill(p.characterId);
     return skill.type !== "ACTIVE" && triggerMatches(skill.trigger, id, event);
   });
 }
