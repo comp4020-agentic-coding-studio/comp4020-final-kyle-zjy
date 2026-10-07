@@ -19,6 +19,7 @@ import { EVENT_IDS } from "../../shared/game/scenario01/events.ts";
 import type { GameState, PlayerGameState, PlayerId, RoundRecord } from "../../shared/game/state.ts";
 import { log, type Ctx } from "./context.ts";
 import { int, pick, seedState, shuffle } from "./rng.ts";
+import { m, ref } from "../../shared/i18n/msg.ts";
 
 export type Seat = { playerId: PlayerId; nickname: string; seat: number; zodiac: Zodiac; mbti: MBTI };
 
@@ -153,9 +154,9 @@ export function createGame(sessionId: string, seats: Seat[], seed: string, now: 
     };
   });
 
-  log(ctx, "00:17. Every phone on the platform buzzes at once: Train N13 is arriving.", "STORY");
-  log(ctx, `Tonight's rule: ${NIGHT_RULES[s.nightRule].name}. ${NIGHT_RULES[s.nightRule].text}`, "RULE");
-  log(ctx, `The train has ${s.carriages.length} carriages. The ${CARRIAGES.CAB.name} is locked.`, "STORY");
+  log(ctx, m`00:17. Every phone on the platform buzzes at once: Train N13 is arriving.`, "STORY");
+  log(ctx, m`Tonight's rule: ${ref.nightRule(s.nightRule)}. ${ref.nightRuleText(s.nightRule)}`, "RULE");
+  log(ctx, m`The train has ${s.carriages.length} carriages. The ${ref.carriage("CAB")} is locked.`, "STORY");
   return s;
 }
 

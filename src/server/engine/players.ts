@@ -4,6 +4,8 @@ import { MAX_SANITY } from "../../shared/game/scenario01/content.ts";
 import type { CarriageIdentity, PlayerGameState, PlayerId, Status } from "../../shared/game/state.ts";
 import { cue, log, name, newId, type Ctx } from "./context.ts";
 import { queueTrigger } from "./trigger-queue.ts";
+import type { Msg } from "../../shared/i18n/types.ts";
+import { m, ref } from "../../shared/i18n/msg.ts";
 
 export const present = (ctx: Ctx): PlayerGameState[] => ctx.s.turnOrder.map((id) => ctx.s.players[id]).filter((p) => p && !p.away);
 export const everyone = (ctx: Ctx): PlayerGameState[] => ctx.s.turnOrder.map((id) => ctx.s.players[id]).filter(Boolean);
@@ -41,11 +43,11 @@ export function useUpStatus(ctx: Ctx, p: PlayerGameState, idOrKind: string): Sta
   return st;
 }
 
-export function gainFate(ctx: Ctx, p: PlayerGameState, amount: number, why?: string): number {
+export function gainFate(ctx: Ctx, p: PlayerGameState, amount: number, why?: Msg): number {
   if (amount <= 0) return 0;
   p.fate += amount;
   cue(ctx, "FATE", { playerId: p.playerId, delta: amount });
-  if (why) log(ctx, `${p.nickname} gains ${amount} Fate (${why}).`, "FATE", p.playerId);
+  if (why) log(ctx, m`${p.nickname} gains ${amount} Fate (${why}).`, "FATE", p.playerId);
   queueTrigger(ctx, { kind: "PLAYER_GAINS_FATE", subjectId: p.playerId, amount });
   payBonds(ctx, p.playerId, "onGainFate");
   return amount;
@@ -69,7 +71,7 @@ export function payBonds(ctx: Ctx, memberId: PlayerId, on: "onGainFate" | "onFir
       if (!o || o.away) continue;
       o.fate += n;
       cue(ctx, "FATE", { playerId: other, delta: n });
-      log(ctx, `${o.nickname} gains ${n} Fate through a bond${b.secret ? "" : ` with ${ctx.s.players[memberId].nickname}`}.`, "BOND", other);
+      log(ctx, b.secret ? m`${o.nickname} gains ${n} Fate through a bond.` : m`${o.nickname} gains ${n} Fate through a bond with ${ctx.s.players[memberId].nickname}.`, "BOND", other);
     }
   }
 }
@@ -86,46 +88,46 @@ export function spendFate(ctx: Ctx, p: PlayerGameState, amount: number): number 
   return spent;
 }
 
-export function loseFate(ctx: Ctx, p: PlayerGameState, amount: number, why?: string): number {
+export function loseFate(ctx: Ctx, p: PlayerGameState, amount: number, why?: Msg): number {
   if (hasStatus(p, "FATE_LOCKED")) {
-    log(ctx, `${p.nickname}'s Fate is locked and can't be reduced.`, "FATE", p.playerId);
+    log(ctx, m`${p.nickname}'s Fate is locked and can't be reduced.`, "FATE", p.playerId);
     return 0;
   }
   const lost = Math.min(p.fate, Math.max(0, amount));
   if (lost === 0) return 0;
   p.fate -= lost;
   cue(ctx, "FATE", { playerId: p.playerId, delta: -lost });
-  if (why) log(ctx, `${p.nickname} loses ${lost} Fate (${why}).`, "FATE", p.playerId);
+  if (why) log(ctx, m`${p.nickname} loses ${lost} Fate (${why}).`, "FATE", p.playerId);
   if (p.fate === 0) queueTrigger(ctx, { kind: "FATE_REACHES_ZERO", subjectId: p.playerId });
   return lost;
 }
 
-export function gainSanity(ctx: Ctx, p: PlayerGameState, amount: number, why?: string): number {
+export function gainSanity(ctx: Ctx, p: PlayerGameState, amount: number, why?: Msg): number {
   const before = p.sanity;
   p.sanity = Math.min(MAX_SANITY, p.sanity + Math.max(0, amount));
   const gained = p.sanity - before;
   if (gained > 0) {
     cue(ctx, "SANITY", { playerId: p.playerId, delta: gained });
-    if (why) log(ctx, `${p.nickname} recovers ${gained} Sanity (${why}).`, "SANITY", p.playerId);
+    if (why) log(ctx, m`${p.nickname} recovers ${gained} Sanity (${why}).`, "SANITY", p.playerId);
   }
   if (p.lost && p.sanity > 0) {
     p.lost = false;
-    log(ctx, `${p.nickname} finds their way back. No longer lost.`, "SANITY", p.playerId);
+    log(ctx, m`${p.nickname} finds their way back. No longer lost.`, "SANITY", p.playerId);
     cue(ctx, "FOUND", { playerId: p.playerId });
   }
   return gained;
 }
 
-export function loseSanity(ctx: Ctx, p: PlayerGameState, amount: number, why?: string): number {
+export function loseSanity(ctx: Ctx, p: PlayerGameState, amount: number, why?: Msg): number {
   const lost = Math.min(p.sanity, Math.max(0, amount));
   if (lost === 0) return 0;
   p.sanity -= lost;
   cue(ctx, "SANITY", { playerId: p.playerId, delta: -lost });
-  if (why) log(ctx, `${p.nickname} loses ${lost} Sanity (${why}).`, "SANITY", p.playerId);
+  if (why) log(ctx, m`${p.nickname} loses ${lost} Sanity (${why}).`, "SANITY", p.playerId);
   if (p.sanity === 0 && !p.lost) {
     p.lost = true;
     p.stats.timesLost++;
-    log(ctx, `${p.nickname} is LOST. Next round they act with 1 action point until they recover.`, "LOST", p.playerId);
+    log(ctx, m`${p.nickname} is LOST. Next round they act with 1 action point until they recover.`, "LOST", p.playerId);
     cue(ctx, "LOST", { playerId: p.playerId });
   }
   return lost;
@@ -135,25 +137,25 @@ export function loseSanity(ctx: Ctx, p: PlayerGameState, amount: number, why?: s
  * A negative effect is about to land on p. Shields absorb it first; an
  * immunity status cancels it. Returns true if it still lands.
  */
-export function absorbs(ctx: Ctx, p: PlayerGameState, label: string, group = false): boolean {
+export function absorbs(ctx: Ctx, p: PlayerGameState, label: Msg, group = false): boolean {
   const groupImmune = group ? statusOf(p, "IMMUNE_GROUP") : undefined;
   if (groupImmune) {
     if ((groupImmune.value ?? 1) <= 1) removeStatus(p, groupImmune.id);
     else groupImmune.value = (groupImmune.value ?? 1) - 1;
-    log(ctx, `${p.nickname} is untouched by ${label}.`, "DEFENCE", p.playerId);
+    log(ctx, m`${p.nickname} is untouched by ${label}.`, "DEFENCE", p.playerId);
     return true;
   }
   const immune = statusOf(p, "IMMUNE_NEGATIVE");
   if (immune) {
     if ((immune.value ?? 1) <= 1) removeStatus(p, immune.id);
     else immune.value = (immune.value ?? 1) - 1;
-    log(ctx, `${p.nickname} is immune to ${label}.`, "DEFENCE", p.playerId);
+    log(ctx, m`${p.nickname} is immune to ${label}.`, "DEFENCE", p.playerId);
     cue(ctx, "SHIELD", { playerId: p.playerId });
     return true;
   }
   if (p.shields > 0) {
     p.shields--;
-    log(ctx, `${p.nickname}'s shield blocks ${label}.`, "DEFENCE", p.playerId);
+    log(ctx, m`${p.nickname}'s shield blocks ${label}.`, "DEFENCE", p.playerId);
     cue(ctx, "SHIELD", { playerId: p.playerId });
     return true;
   }

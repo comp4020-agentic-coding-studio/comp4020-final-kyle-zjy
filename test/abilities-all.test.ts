@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { m } from "../src/shared/i18n/msg.ts";
 import type { Ctx } from "../src/server/engine/context.ts";
 import { useSkill } from "../src/server/engine/resolver.ts";
 import { tickGame } from "../src/server/engine/engine.ts";
@@ -28,7 +29,7 @@ const base = (() => {
   s.players.c.statuses = [st("STATIC", "NEGATIVE")];
   s.players.b.skill = { usesLeft: 0, state: "BURNED" };
   s.lastSkill = { ownerId: "b", characterId: "pisces-isfj", targets: ["a"], round: s.round };
-  s.delayed = [{ dueRound: s.round + 1, ownerId: "a", targets: [], effects: [{ kind: "GAIN_FATE", who: "SELF", amount: 1 }], label: "set aside" }];
+  s.delayed = [{ dueRound: s.round + 1, ownerId: "a", targets: [], effects: [{ kind: "GAIN_FATE", who: "SELF", amount: 1 }], label: m`set aside` }];
   s.roundRecord.succeeded = ["c"];
   s.roundRecord.lastSuccess = "c";
   s.roundRecord.bestRoll = 5;
@@ -58,9 +59,9 @@ describe("all 192 abilities fire cleanly", () => {
     const targets = CHOSEN[c.skill.target] ?? [];
     // reactions answer a parked hit on a, from b; event reactions answer a revealed event
     if (c.skill.type !== "ACTIVE") {
-      s.pendingEffect = { id: "pe1", kind: c.skill.trigger.on === "TARGETED_ABILITY_DECLARED" ? "ABILITY" : "EFFECT", sourceId: "b", targetId: "a", targets: ["a"], label: "a test hit", effects: [{ kind: "LOSE_FATE", who: "TARGET", amount: 1 }], single: true, reduced: 0, cancelled: false, asked: ["a", "b", "c"], copyBack: [], attack: true, theft: false };
+      s.pendingEffect = { id: "pe1", kind: c.skill.trigger.on === "TARGETED_ABILITY_DECLARED" ? "ABILITY" : "EFFECT", sourceId: "b", targetId: "a", targets: ["a"], label: m`a test hit`, effects: [{ kind: "LOSE_FATE", who: "TARGET", amount: 1 }], single: true, reduced: 0, cancelled: false, asked: ["a", "b", "c"], copyBack: [], attack: true, theft: false };
       s.currentEvent = { id: "DINNER_BELL", round: s.round, resolved: false, revealing: true, asked: ["a", "b", "c"], excluded: [] };
-      s.roll = { id: "r1", playerId: "a", purpose: "INVESTIGATE", label: "test roll", raw: 2, modifiers: [], fateSpent: 0, final: 2, tier: "FAIL", modifiable: true, done: false };
+      s.roll = { id: "r1", playerId: "a", purpose: "INVESTIGATE", label: m`test roll`, raw: 2, modifiers: [], fateSpent: 0, final: 2, tier: "FAIL", modifiable: true, done: false };
       s.rollContext = { kind: "INVESTIGATE", carriageIndex: 2, asked: ["a", "b", "c"] };
     }
     const ctx: Ctx = { s, now: base.now + 1000, events: [] };

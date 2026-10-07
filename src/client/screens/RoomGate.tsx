@@ -4,6 +4,8 @@
 import { motion } from "motion/react";
 import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from "react";
 import type { GamePhase } from "../../shared/game/state.ts";
+import { useT } from "../i18n/index.ts";
+import { rich } from "../i18n/rich.ts";
 import { navigate } from "../router.ts";
 import { connectRoom, disconnectRoom, reconnect, useStore } from "../store.ts";
 import { ConnectionBanner } from "../components/ConnectionBanner.tsx";
@@ -31,6 +33,7 @@ const SCREENS: Record<GamePhase, ComponentType> = {
 export function RoomGate({ code }: { code: string }) {
   const status = useStore((s) => s.status);
   const snapshot = useStore((s) => s.snapshot);
+  const t = useT();
 
   useEffect(() => {
     connectRoom(code);
@@ -44,20 +47,20 @@ export function RoomGate({ code }: { code: string }) {
   if (status === "needs-join") return <Landing initialCode={code} />;
   if (status === "missing")
     return (
-      <Notice title="This train has already left" action={["Back to the platform", () => navigate("/")]}>
-        Room <span className="font-mono text-gold-bright">{code}</span> doesn't exist or has closed.
+      <Notice title={t("gate.missing.title")} action={[t("gate.backToPlatform"), () => navigate("/")]}>
+        {rich(t("gate.missing.body"), { code: <span className="font-mono text-gold-bright">{code}</span> })}
       </Notice>
     );
   if (status === "kicked")
     return (
-      <Notice title="You were asked to step off" action={["Back to the platform", () => navigate("/")]}>
-        The host removed you from room <span className="font-mono">{code}</span>.
+      <Notice title={t("gate.kicked.title")} action={[t("gate.backToPlatform"), () => navigate("/")]}>
+        {rich(t("gate.kicked.body"), { code: <span className="font-mono">{code}</span> })}
       </Notice>
     );
   if (status === "replaced")
     return (
-      <Notice title="Opened somewhere else" action={["Use this tab", reconnect]}>
-        Your seat is now open in another tab or window. Only one can be in control at a time.
+      <Notice title={t("gate.replaced.title")} action={[t("gate.replaced.action"), reconnect]}>
+        {t("gate.replaced.body")}
       </Notice>
     );
   if (!snapshot) return <Boarding reconnecting={status === "reconnecting"} />;
@@ -76,6 +79,7 @@ export function RoomGate({ code }: { code: string }) {
 }
 
 function Boarding({ reconnecting }: { reconnecting: boolean }) {
+  const t = useT();
   return (
     <main className="night-sky flex min-h-dvh flex-col items-center justify-center gap-6 px-4 text-center" aria-busy="true">
       <div className="flex gap-2" aria-hidden="true">
@@ -89,7 +93,7 @@ function Boarding({ reconnecting }: { reconnecting: boolean }) {
         ))}
       </div>
       <p className="led text-sm tracking-widest" role="status">
-        {reconnecting ? "SIGNAL LOST · RECONNECTING" : "BOARDING"}
+        {t(reconnecting ? "gate.reconnecting" : "gate.boarding")}
       </p>
     </main>
   );

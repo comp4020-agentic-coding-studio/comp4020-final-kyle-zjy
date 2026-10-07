@@ -1,3 +1,4 @@
+import type { Msg } from "../i18n/types.ts";
 // Intents a client may send. Nothing here carries a value the server should
 // decide (dice, fate totals, phase): the server validates every action against
 // the live state, then reduces it (docs/architecture.md §4).
@@ -56,11 +57,11 @@ export type ActionAvailability = {
   enabled: boolean;
   apCost: number;
   /** Shown when disabled, e.g. "No action points left". */
-  reason?: string;
+  reason?: Msg;
   /** Legal targets: carriage indexes (MOVE), player ids (HELP/TRADE/skill), entity ids (CONFRONT). */
   targets?: (string | number)[];
   /** What a success would do here, e.g. "Find a memory fragment". */
-  hint?: string;
+  hint?: Msg;
 };
 
 export type RejectCode =

@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { en } from "../src/shared/i18n/format.ts";
+import { m } from "../src/shared/i18n/msg.ts";
 import type { Ctx } from "../src/server/engine/context.ts";
 import { applyEffects } from "../src/server/engine/effects.ts";
 import { project } from "../src/server/engine/project.ts";
@@ -102,8 +104,8 @@ describe("a hit parked for reactions", () => {
     const t = table("aries-istp", "leo-esfp");
     setUp(t, "a");
     const ctx = ctxOf(t);
-    applyEffects(ctx, [{ kind: "LOSE_FATE", who: "SELF", amount: 1 }], { ownerId: "a", targets: [], label: "a cost" });
-    applyEffects(ctx, [{ kind: "LOSE_FATE", who: "ALL", amount: 1 }], { ownerId: "SYSTEM", targets: [], label: "a storm", group: true });
+    applyEffects(ctx, [{ kind: "LOSE_FATE", who: "SELF", amount: 1 }], { ownerId: "a", targets: [], label: m`a cost` });
+    applyEffects(ctx, [{ kind: "LOSE_FATE", who: "ALL", amount: 1 }], { ownerId: "SYSTEM", targets: [], label: m`a storm`, group: true });
     expect(ctx.s.pendingEffect).toBeNull();
     expect(ctx.s.players.a.fate).toBe(1);
   });
@@ -144,7 +146,7 @@ describe("a public event as it is revealed", () => {
     const fate = t.state.players.b.fate;
     answer(t, "a", "USE");
     drain(t);
-    expect(t.state.currentEvent).toMatchObject({ id: instantGain.id, resolved: true, resultText: "Cancelled before it took effect." });
+    expect(t.state.currentEvent).toMatchObject({ id: instantGain.id, resolved: true, resultText: m`Cancelled before it took effect.` });
     expect(t.state.players.b.fate).toBe(fate);
   });
 
@@ -203,7 +205,7 @@ describe("after-the-fact triggers", () => {
     const t = table("taurus-isfj", "leo-esfp");
     setUp(t, "a");
     const ctx = ctxOf(t);
-    applyEffects(ctx, [{ kind: "LOSE_FATE", who: "ALL", amount: 9 }], { ownerId: "SYSTEM", targets: [], label: "a storm", group: true });
+    applyEffects(ctx, [{ kind: "LOSE_FATE", who: "ALL", amount: 9 }], { ownerId: "SYSTEM", targets: [], label: m`a storm`, group: true });
     t.tick(1);
     expect(t.state.players.a.fate).toBe(1);
     expect(t.state.players.b.fate).toBe(0);
@@ -213,7 +215,7 @@ describe("after-the-fact triggers", () => {
     const t = table("taurus-estp", "leo-esfp");
     setUp(t, "a");
     const gain = (n: number) => {
-      applyEffects(ctxOf(t), [{ kind: "GAIN_FATE", who: "TARGET", amount: n }], { ownerId: "SYSTEM", targets: ["b"], label: "luck" });
+      applyEffects(ctxOf(t), [{ kind: "GAIN_FATE", who: "TARGET", amount: n }], { ownerId: "SYSTEM", targets: ["b"], label: m`luck` });
       t.tick(1);
     };
     gain(1);
@@ -225,7 +227,7 @@ describe("after-the-fact triggers", () => {
   it("spread the word: a buff someone gains goes, weaker, to the player you choose", () => {
     const t = table("gemini-esfj", "leo-esfp", "pisces-isfj");
     setUp(t, "a");
-    applyEffects(ctxOf(t), [{ kind: "ADD_STATUS", who: "TARGET", status: "INVESTIGATE_BONUS", rounds: 3, value: 2 }], { ownerId: "SYSTEM", targets: ["b"], label: "a flashlight" });
+    applyEffects(ctxOf(t), [{ kind: "ADD_STATUS", who: "TARGET", status: "INVESTIGATE_BONUS", rounds: 3, value: 2 }], { ownerId: "SYSTEM", targets: ["b"], label: m`a flashlight` });
     t.tick(1);
     expect(top(t)?.options.map((o) => o.id)).toEqual(["USE:b", "USE:c", "SKIP"]);
     answer(t, "a", "USE:c");
@@ -312,7 +314,7 @@ describe("rewards and bonds", () => {
     const t = table("aries-enfj", "leo-esfp");
     setUp(t, "a");
     use(t, "a", ["b"]);
-    applyEffects(ctxOf(t), [{ kind: "GAIN_FATE", who: "TARGET", amount: 2 }], { ownerId: "SYSTEM", targets: ["a"], label: "luck" });
+    applyEffects(ctxOf(t), [{ kind: "GAIN_FATE", who: "TARGET", amount: 2 }], { ownerId: "SYSTEM", targets: ["a"], label: m`luck` });
     expect([t.state.players.a.fate, t.state.players.b.fate]).toEqual([5, 4]);
   });
 
@@ -398,7 +400,7 @@ describe("rolls an ability shapes", () => {
     edit(t, (s) => rigNextDie(s, 2));
     t.act("a", { type: "SEARCH" });
     const w = top(t)!;
-    expect(w.options.find((o) => o.id === "STORED")?.label).toBe("Use your recorded 6");
+    expect(w.options.find((o) => o.id === "STORED")?.label).toEqual(m`Use your recorded ${6}`);
     answer(t, "a", "STORED");
     drain(t);
     expect(t.state.roll?.final).toBe(6);
@@ -409,7 +411,7 @@ describe("rolls an ability shapes", () => {
     const t = table("aquarius-infj", "leo-esfp");
     setUp(t, "a");
     use(t, "a");
-    const seen = Number(t.state.secrets.a.peeks.at(-1)!.text.match(/show (\d)/)![1]);
+    const seen = Number(en(t.state.secrets.a.peeks.at(-1)!.text).match(/show (\d)/)![1]);
     edit(t, (s) => (s.players.a.fate = 0));
     t.act("a", { type: "SEARCH" });
     drain(t);
@@ -434,7 +436,7 @@ describe("rules, turn order, borrowed abilities", () => {
     edit(t, (s) => (s.players.a.fate = 0));
     t.act("a", { type: "SEARCH" });
     drain(t);
-    expect(t.state.roll?.modifiers).toContainEqual({ source: "Rewritten rules", delta: 1 });
+    expect(t.state.roll?.modifiers).toContainEqual({ source: m`Rewritten rules`, delta: 1 });
     t.playUntil((s) => s.round === 2 && s.step === "PLAYER_TURNS");
     expect(t.state.ruleMods).toEqual([]);
   });

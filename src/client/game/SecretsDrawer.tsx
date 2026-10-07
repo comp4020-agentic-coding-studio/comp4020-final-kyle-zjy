@@ -1,30 +1,33 @@
 // What only you know: your obsession, dream cards, the round-5 message and
 // anything your ability let you peek at. Sent to you and nobody else.
-import { NIGHT_RULES, OBSESSIONS } from "../../shared/game/scenario01/content.ts";
 import type { PlayerView } from "../../shared/game/state.ts";
+import { useFormat, useScenarioText, useT } from "../i18n/index.ts";
 import { Drawer } from "./Drawer.tsx";
 
 export function SecretsDrawer({ g, onClose }: { g: PlayerView; onClose: () => void }) {
   const s = g.mySecrets;
+  const t = useT();
+  const fmt = useFormat();
+  const text = useScenarioText();
   return (
-    <Drawer title="Only you know" onClose={onClose}>
+    <Drawer title={t("secrets.title")} onClose={onClose}>
       {s && (
         <div className="space-y-4">
           <section className="tarot p-3">
-            <p className="label text-gold">Your obsession</p>
-            <p className="mt-1 font-display text-xl">{OBSESSIONS[s.obsession].name}</p>
-            <p className="text-sm text-mist">{OBSESSIONS[s.obsession].text}</p>
-            <p className="mt-1 text-xs text-ash">Personal goal: it doesn't affect the team's escape, only your title at the end.</p>
+            <p className="label text-gold">{t("secrets.obsession")}</p>
+            <p className="mt-1 font-display text-xl">{text.obsessions[s.obsession].name}</p>
+            <p className="text-sm text-mist">{text.obsessions[s.obsession].text}</p>
+            <p className="mt-1 text-xs text-ash">{t("secrets.obsessionNote")}</p>
           </section>
-          <Section title="Messages" empty="Nothing yet. Round 5 brings everyone one message. Not all of them are true." items={s.messages.map((m) => ({ id: m.id, text: m.text, meta: `Round ${m.round}` }))} />
-          <Section title="Dream cards" empty="Investigate the Sleeper Car to dream. Two in three dreams tell the truth." items={s.dreamCards.map((d) => ({ id: d.id, text: d.text }))} />
-          <Section title="Glimpses" empty="Some abilities let you look ahead. What you see appears here." items={s.peeks.map((p) => ({ id: p.id, text: p.text, meta: `Round ${p.round}` }))} />
-          {s.tasks.length > 0 && <Section title="Tasks" empty="" items={s.tasks.map((t) => ({ id: t.id, text: `${t.text}${t.done ? " (done)" : ""}`, meta: `until round ${t.untilRound}` }))} />}
-          {s.allies.length > 0 && <Section title="Secret allies" empty="" items={s.allies.map((id) => ({ id, text: g.players[id]?.nickname ?? "?" }))} />}
+          <Section title={t("secrets.messages")} empty={t("secrets.messagesEmpty")} items={s.messages.map((m) => ({ id: m.id, text: fmt(m.text), meta: t("secrets.round", { n: m.round }) }))} />
+          <Section title={t("secrets.dreams")} empty={t("secrets.dreamsEmpty")} items={s.dreamCards.map((d) => ({ id: d.id, text: fmt(d.text) }))} />
+          <Section title={t("secrets.glimpses")} empty={t("secrets.glimpsesEmpty")} items={s.peeks.map((p) => ({ id: p.id, text: fmt(p.text), meta: t("secrets.round", { n: p.round }) }))} />
+          {s.tasks.length > 0 && <Section title={t("secrets.tasks")} empty="" items={s.tasks.map((task) => ({ id: task.id, text: `${fmt(task.text)}${task.done ? t("secrets.done") : ""}`, meta: t("secrets.until", { n: task.untilRound }) }))} />}
+          {s.allies.length > 0 && <Section title={t("secrets.allies")} empty="" items={s.allies.map((id) => ({ id, text: g.players[id]?.nickname ?? "?" }))} />}
           <section>
-            <p className="label">Tonight's rule</p>
+            <p className="label">{t("secrets.rule")}</p>
             <p className="mt-1 text-sm">
-              <span className="text-gold">{NIGHT_RULES[g.nightRule].name}.</span> <span className="text-mist">{NIGHT_RULES[g.nightRule].text}</span>
+              <span className="text-gold">{t("secrets.ruleName", { name: text.nightRules[g.nightRule].name })}</span> <span className="text-mist">{text.nightRules[g.nightRule].text}</span>
             </p>
           </section>
         </div>

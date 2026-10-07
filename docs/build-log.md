@@ -290,3 +290,16 @@ to show as away now allow 10 s, so `spec/game.test.ts` also passes against
 the live app. Three lobby specs that wait for a server-side close code still
 time out against the live app for the same reason; CI runs them against the
 local container, where they pass.
+
+## Localization: English and Simplified Chinese
+
+A player picks EN or 中文 on the landing page or in the lobby; the choice is
+stored per browser and locked from departure until the room is back in the
+lobby. The server has no locale: game state carries `Msg` values (an English
+template key plus parameters, content as id references), and each client
+renders them in its own language. Content stays canonical; Chinese for the
+scenario and the 192 characters is keyed by id; the 483 engine templates have
+a zh-CN table. Fixing this turned up log lines that glued English fragments
+into sentences (plurals, "rises"/"falls", trade offers, item and anchor
+names); each variant is now a whole template. No rule, RNG or replay changed
+(the kept simulations still replay exactly). Tests: `test/localization.test.ts`.

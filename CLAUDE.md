@@ -129,10 +129,15 @@ What the agent needs to carry from any of it is your call.
 
 ## Language
 
-- Prompts may be written in Chinese, but all web content must be in English:
-  UI text, headings, labels, buttons, placeholders, error messages, page
-  titles, and any other copy rendered on the site.
-- Translate Chinese wording from prompts into natural English before it goes
-  on a page. No Chinese text should appear anywhere in the shipped site.
-- Code, comments, commit messages, and docs in the repo are also written in
-  English.
+- English is the canonical/default locale. All player-facing text must go
+  through the localization layer. New hard-coded player-facing English or
+  Chinese strings are not allowed. Layers and glossary: `docs/localization.md`.
+  - UI copy: a key in `src/client/i18n/en.ts` and `zh-CN.ts` (`t("lobby.ready")`).
+  - Engine text in game state is a `Msg` built with `m``…``` / `ref.*` / `list()`,
+    never a sentence or a joined English fragment; give each variant its own
+    whole template. Add the Chinese to `src/shared/i18n/zh-CN/messages.ts`.
+  - Content (scenario, 192 characters) stays canonical; Chinese is keyed by id.
+  - `test/localization.test.ts` fails on a missing key, mismatched
+    placeholders, or English left in a Chinese render of a played run.
+- Code, comments, commit messages, and docs in the repo are written in
+  English, regardless of the language a prompt arrives in.

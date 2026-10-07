@@ -5,13 +5,15 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import type { RollTier } from "../../shared/characters/types.ts";
 import type { PlayerView, PublicWindow } from "../../shared/game/state.ts";
+import { useFormat, useT } from "../i18n/index.ts";
 import { sendGame } from "../store.ts";
 
-export const TIER: Record<RollTier, { word: string; color: string }> = {
-  DISASTER: { word: "Disaster", color: "#e2563f" },
-  FAIL: { word: "Failure", color: "#a3a9c7" },
-  SUCCESS: { word: "Success", color: "#5bc489" },
-  PERFECT: { word: "Perfect", color: "#e8c97f" },
+// The tier's word is in the catalogs (dice.tier.<TIER>); its colour is here.
+const TIER_COLOR: Record<RollTier, string> = {
+  DISASTER: "#e2563f",
+  FAIL: "#a3a9c7",
+  SUCCESS: "#5bc489",
+  PERFECT: "#e8c97f",
 };
 
 const PIPS: Record<number, [number, number][]> = {
@@ -24,8 +26,9 @@ const PIPS: Record<number, [number, number][]> = {
 };
 
 export function Die({ value, size = 84, color = "#f4ecd6" }: { value: number; size?: number; color?: string }) {
+  const t = useT();
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={`Die showing ${value}`}>
+    <svg width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={t("dice.dieAria", { n: value })}>
       <rect x="4" y="4" width="92" height="92" rx="18" fill="#141a3a" stroke={color} strokeWidth="3" />
       <rect x="10" y="10" width="80" height="80" rx="14" fill="none" stroke={color} strokeOpacity=".25" />
       {(PIPS[value] ?? []).map(([x, y], i) => (
@@ -40,6 +43,8 @@ const HOLD_MS = 2600;
 export function DiceOverlay({ g }: { g: PlayerView }) {
   const roll = g.roll;
   const reduce = useReducedMotion();
+  const t = useT();
+  const fmt = useFormat();
   const [tumbling, setTumbling] = useState(false);
   const [face, setFace] = useState(1);
   const rollId = roll?.id;
@@ -74,7 +79,9 @@ export function DiceOverlay({ g }: { g: PlayerView }) {
   const fateWindow = g.pending.find((w) => w.kind === "FATE_SPEND");
   const visible = !!roll && roll.id !== hiddenId && (roll.purpose !== "EVENT");
   const roller = roll ? g.players[roll.playerId] : null;
-  const tier = roll ? TIER[roll.tier] : null;
+  const tier = roll ? { word: t(`dice.tier.${roll.tier}`), color: TIER_COLOR[roll.tier] } : null;
+  const label = roll ? fmt(roll.label) : "";
+  const heading = roll && roller ? (roll.playerId === g.viewerId ? t("dice.mine", { label }) : t("dice.theirs", { name: roller.nickname, label })) : "";
 
   return (
     <AnimatePresence>
@@ -86,24 +93,22 @@ export function DiceOverlay({ g }: { g: PlayerView }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -12 }}
         >
-          <div className="tarot pointer-events-auto w-full max-w-sm p-4 text-center" role="dialog" aria-label={`${roller.nickname}'s ${roll.label}`} aria-live="polite">
-            <p className="label">
-              {roll.playerId === g.viewerId ? "Your" : `${roller.nickname}'s`} {roll.label}
-            </p>
+          <div className="tarot pointer-events-auto w-full max-w-sm p-4 text-center" role="dialog" aria-label={t("dice.theirs", { name: roller.nickname, label })} aria-live="polite">
+            <p className="label">{heading}</p>
             <div className="mt-3 flex items-center justify-center gap-4">
               <motion.div animate={tumbling ? { rotate: [0, 90, 200, 320, 360], scale: [1, 0.9, 1.05, 0.95, 1] } : { rotate: 0 }} transition={{ duration: 0.7 }}>
                 <Die value={tumbling ? face : roll.raw} />
               </motion.div>
               {!tumbling && (
                 <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="text-left">
-                  <p className="font-mono text-sm text-mist">raw {roll.raw}</p>
+                  <p className="font-mono text-sm text-mist">{t("dice.raw", { n: roll.raw })}</p>
                   {roll.modifiers.map((m, i) => (
                     <p key={i} className={`font-mono text-sm ${m.delta >= 0 ? "text-signal" : "text-ember"}`}>
                       {m.delta >= 0 ? "+" : ""}
-                      {m.delta} {m.source}
+                      {m.delta} {fmt(m.source)}
                     </p>
                   ))}
-                  {roll.fateSpent > 0 && <p className="font-mono text-sm text-gold-bright">+{roll.fateSpent} Fate</p>}
+                  {roll.fateSpent > 0 && <p className="font-mono text-sm text-gold-bright">{t("dice.fate", { n: roll.fateSpent })}</p>}
                   <p className="mt-1 font-mono text-3xl text-moon">= {roll.final}</p>
                 </motion.div>
               )}
@@ -123,15 +128,17 @@ export function DiceOverlay({ g }: { g: PlayerView }) {
 
 function FateChoice({ g, w }: { g: PlayerView; w: PublicWindow }) {
   const mine = w.addressees.includes(g.viewerId) && !w.myAnswer;
-  if (!mine) return <p className="mt-2 text-sm text-mist">Deciding whether to spend Fate…</p>;
+  const t = useT();
+  const fmt = useFormat();
+  if (!mine) return <p className="mt-2 text-sm text-mist">{t("dice.deciding")}</p>;
   return (
     <div className="mt-3">
-      <p className="text-sm text-mist">{w.prompt}</p>
+      <p className="text-sm text-mist">{fmt(w.prompt)}</p>
       <div className="mt-2 grid gap-2" style={{ gridTemplateColumns: `repeat(${w.options.length}, minmax(0, 1fr))` }}>
         {w.options.map((o) => (
           <button key={o.id} className={`btn min-h-14 flex-col gap-0 rounded-xl px-2 text-sm ${o.id === "0" ? "btn-ghost" : "btn-gold"}`} onClick={() => void sendGame({ type: "RESPOND", windowId: w.id, optionId: o.id })}>
-            <span>{o.label}</span>
-            <span className="text-[11px] font-normal opacity-80">{o.detail}</span>
+            <span>{fmt(o.label)}</span>
+            <span className="text-[11px] font-normal opacity-80">{fmt(o.detail)}</span>
           </button>
         ))}
       </div>

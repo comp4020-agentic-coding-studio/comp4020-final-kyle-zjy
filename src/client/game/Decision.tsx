@@ -7,20 +7,9 @@ import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import { EVENT_BY_ID } from "../../shared/game/scenario01/events.ts";
 import type { PlayerView, PublicWindow } from "../../shared/game/state.ts";
 import { Avatar } from "../components/Avatar.tsx";
+import { useCharacterText, useFormat, useT } from "../i18n/index.ts";
 import { sendGame } from "../store.ts";
 import { EventArt } from "./EventArt.tsx";
-
-const KIND_LABEL: Record<PublicWindow["kind"], string> = {
-  FATE_SPEND: "Fate",
-  REACTION: "Your ability can answer",
-  PASSIVE_CONFIRM: "Your ability's moment",
-  TARGET_CHOICE: "Choose",
-  EVENT_CHOICE: "Everyone chooses",
-  VOTE: "Vote",
-  TRADE_OFFER: "Trade offer",
-  ENDING_CHOICE: "The last choice",
-  SKILL_CHOICE: "Your ability",
-};
 
 export function DecisionLayer({ g }: { g: PlayerView }) {
   const w = g.pending.at(-1);
@@ -34,6 +23,10 @@ function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
   const card = isEvent ? EVENT_BY_ID.get(g.currentEvent!.id) : null;
   const owner = w.ownerId ? g.players[w.ownerId] : null;
   const ownerChar = owner ? getCharacterById(owner.characterId) : null;
+  const t = useT();
+  const fmt = useFormat();
+  const charText = useCharacterText();
+  const ownerSkill = owner ? charText(owner.skill.borrowed ?? owner.characterId) : null;
   return (
     <motion.div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-3 backdrop-blur-[2px] sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.div
@@ -54,22 +47,22 @@ function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
         <div className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="label text-gold">{KIND_LABEL[w.kind]}</p>
+              <p className="label text-gold">{t(`decision.kind.${w.kind}`)}</p>
               <h2 id={`dlg-${w.id}`} className="mt-1 font-display text-2xl leading-tight font-semibold">
-                {w.title}
+                {fmt(w.title)}
               </h2>
             </div>
           </div>
-          {(w.kind === "REACTION" || w.kind === "PASSIVE_CONFIRM") && ownerChar && (
+          {(w.kind === "REACTION" || w.kind === "PASSIVE_CONFIRM") && ownerChar && ownerSkill && (
             <div className="mt-3 flex items-center gap-3 rounded-xl border border-violet/40 bg-violet/10 p-2">
               <Avatar zodiac={ownerChar.zodiac} mbti={ownerChar.mbti} size={44} />
               <div className="min-w-0">
-                <p className="font-display text-lg text-gold-bright">{getCharacterById(owner!.skill.borrowed ?? owner!.characterId).skill.name}</p>
-                <p className="text-xs text-mist">{getCharacterById(owner!.skill.borrowed ?? owner!.characterId).skill.description}</p>
+                <p className="font-display text-lg text-gold-bright">{ownerSkill.skillName}</p>
+                <p className="text-xs text-mist">{ownerSkill.skillDescription}</p>
               </div>
             </div>
           )}
-          <p className="mt-3 text-sm leading-relaxed text-mist">{w.prompt}</p>
+          <p className="mt-3 text-sm leading-relaxed text-mist">{fmt(w.prompt)}</p>
           <div className="mt-4 grid gap-2">
             {w.options.map((o, i) => (
               <button
@@ -77,14 +70,14 @@ function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
                 className={`btn min-h-14 flex-col items-start gap-0 rounded-xl px-4 py-2 text-left ${i === 0 ? "btn-gold" : "btn-ghost"}`}
                 onClick={() => void sendGame({ type: "RESPOND", windowId: w.id, optionId: o.id })}
               >
-                <span className="text-base">{o.label}</span>
-                {o.detail && <span className="text-xs font-normal opacity-80">{o.detail}</span>}
+                <span className="text-base">{fmt(o.label)}</span>
+                {o.detail && <span className="text-xs font-normal opacity-80">{fmt(o.detail)}</span>}
               </button>
             ))}
           </div>
           {w.kind === "VOTE" && (
             <p className="mt-2 text-center text-xs text-ash">
-              {w.answeredBy.length}/{w.addressees.length} voted · votes stay secret until everyone has chosen
+              {t("decision.voted", { n: w.answeredBy.length, of: w.addressees.length })}
             </p>
           )}
         </div>
@@ -94,15 +87,20 @@ function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
 }
 
 function Waiting({ g, w }: { g: PlayerView; w: PublicWindow }) {
-  const waitingOn = w.addressees.filter((id) => !w.answeredBy.includes(id)).map((id) => g.players[id]?.nickname ?? "someone");
-  const answered = w.myAnswer ? w.options.find((o) => o.id === w.myAnswer)?.label : null;
+  const t = useT();
+  const fmt = useFormat();
+  const waitingOn = w.addressees.filter((id) => !w.answeredBy.includes(id)).map((id) => g.players[id]?.nickname ?? t("common.someone"));
+  const chosen = w.myAnswer ? w.options.find((o) => o.id === w.myAnswer) : null;
+  const answered = chosen ? fmt(chosen.label) : null;
   return (
     <motion.div className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+108px)] z-30 flex justify-center px-4" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-      <div className="glass flex items-center gap-2 rounded-full px-4 py-2 text-sm" role="status">
+      <div className="glass flex max-w-full min-w-0 items-center gap-2 rounded-full px-4 py-2 text-sm" role="status">
         <span className="h-2 w-2 animate-pulse rounded-full bg-signal" />
-        <span className="truncate">
-          {answered ? `You chose "${answered}". ` : ""}
-          {w.kind === "VOTE" || w.kind === "EVENT_CHOICE" ? `${w.title}: ${w.answeredBy.length}/${w.addressees.length} answered` : `Waiting for ${waitingOn.join(", ")}`}
+        <span className="min-w-0 truncate">
+          {answered ? t("decision.youChose", { label: answered }) : ""}
+          {w.kind === "VOTE" || w.kind === "EVENT_CHOICE"
+            ? t("decision.answered", { title: fmt(w.title), n: w.answeredBy.length, of: w.addressees.length })
+            : t("decision.waitingFor", { names: waitingOn.join(t("common.listSep")) })}
         </span>
       </div>
     </motion.div>

@@ -4,6 +4,7 @@
 import type { CharacterId, MBTI, RollTier, TriggerKind, Zodiac } from "../characters/types.ts";
 import type { ActionAvailability } from "./actions.ts";
 import type { Effect, StatusPolarity } from "./effects.ts";
+import type { Msg } from "../i18n/types.ts";
 
 export type PlayerId = string;
 export type RoomCode = string;
@@ -134,7 +135,7 @@ export type PlayerGameState = {
   /** A previewed die: the raw value of this player's next roll, fixed in advance. */
   nextRaw: number | null;
   /** A bet on the next own roll (Double Down, High or Low). */
-  wager: { onSuccess: Effect[]; onFail: Effect[]; label: string } | null;
+  wager: { onSuccess: Effect[]; onFail: Effect[]; label: Msg } | null;
   /** Ordinary statuses as they stood at the end of last round (Version Rollback). */
   lastRoundStatuses: Status[] | null;
   counters: Record<string, number>;
@@ -167,9 +168,9 @@ export type Roll = {
   id: string;
   playerId: PlayerId;
   purpose: RollPurpose;
-  label: string;
+  label: Msg;
   raw: number;
-  modifiers: { source: string; delta: number }[];
+  modifiers: { source: Msg; delta: number }[];
   fateSpent: number;
   final: number;
   tier: RollTier;
@@ -217,13 +218,13 @@ export type Job = { kind: "TICKET_CHECK" | "ECHO_STRIKE"; playerId: PlayerId; pa
 
 export type WindowKind = "FATE_SPEND" | "REACTION" | "PASSIVE_CONFIRM" | "TARGET_CHOICE" | "EVENT_CHOICE" | "VOTE" | "TRADE_OFFER" | "ENDING_CHOICE" | "SKILL_CHOICE";
 
-export type WindowOption = { id: string; label: string; detail?: string; risk?: string };
+export type WindowOption = { id: string; label: Msg; detail?: Msg };
 
 export type PendingWindow = {
   id: string;
   kind: WindowKind;
-  title: string;
-  prompt: string;
+  title: Msg;
+  prompt: Msg;
   addressees: PlayerId[];
   options: WindowOption[];
   defaultOptionId: string;
@@ -251,7 +252,7 @@ export type PendingEffect = {
   theft: boolean;
   sourceId: PlayerId | "SYSTEM";
   targetId: PlayerId;
-  label: string;
+  label: Msg;
   effects: Effect[];
   /** Single-target negative effects can be dodged / redirected. */
   single: boolean;
@@ -287,6 +288,9 @@ export type LogLine = {
   seq: number;
   /** In-fiction clock, starting at 00:17. */
   clock: string;
+  /** What happened, for each client to render in its own locale. */
+  msg: Msg;
+  /** The same line in English (server logs, tests). */
   text: string;
   kind: string;
   /** Player the line is about (for avatars in the log). */
@@ -296,15 +300,15 @@ export type LogLine = {
 export type TaskGoal = "REPAIR" | "FRAGMENT" | "HELP" | "NEW_CARRIAGE";
 
 /** A goal set by an ability; pays `reward` (scope: the setter as SELF, the holder as TARGET) when met in time. */
-export type PlayerTask = { id: string; text: string; untilRound: number; done: boolean; goal: TaskGoal; baseline: number; reward: Effect[]; setBy: PlayerId };
+export type PlayerTask = { id: string; text: Msg; untilRound: number; done: boolean; goal: TaskGoal; baseline: number; reward: Effect[]; setBy: PlayerId };
 
 /** Owner-only data. Never leaves the server except to its owner. */
 export type PlayerSecrets = {
   obsession: ObsessionId;
-  messages: { id: string; text: string; round: number; isTrue: boolean }[];
+  messages: { id: string; text: Msg; round: number; isTrue: boolean }[];
   allies: PlayerId[];
-  dreamCards: { id: string; text: string; isTrue: boolean }[];
-  peeks: { id: string; text: string; round: number }[];
+  dreamCards: { id: string; text: Msg; isTrue: boolean }[];
+  peeks: { id: string; text: Msg; round: number }[];
   tasks: PlayerTask[];
 };
 
@@ -313,11 +317,11 @@ export type PlayerSecrets = {
  * the whole point of it, so `isTrue` only travels once the run is over.
  */
 export type ViewerSecrets = Omit<PlayerSecrets, "messages" | "dreamCards"> & {
-  messages: { id: string; text: string; round: number; isTrue?: boolean }[];
-  dreamCards: { id: string; text: string; isTrue?: boolean }[];
+  messages: { id: string; text: Msg; round: number; isTrue?: boolean }[];
+  dreamCards: { id: string; text: Msg; isTrue?: boolean }[];
 };
 
-export type DelayedEffect = { dueRound: number; ownerId: PlayerId; targets: PlayerId[]; effects: Effect[]; label: string };
+export type DelayedEffect = { dueRound: number; ownerId: PlayerId; targets: PlayerId[]; effects: Effect[]; label: Msg };
 
 export type Bond = {
   id: string;
@@ -342,7 +346,7 @@ export type ActiveEvent = {
   id: string;
   round: number;
   resolved: boolean;
-  resultText?: string;
+  resultText?: Msg;
   choice?: string;
   /** While reactions to its reveal are being asked. */
   revealing?: boolean;
@@ -380,9 +384,9 @@ export type PlayerResult = {
   playerId: PlayerId;
   obsession: ObsessionId;
   obsessionMet: boolean;
-  title: string;
-  highlights: string[];
-  messages: { text: string; isTrue: boolean }[];
+  title: Msg;
+  highlights: Msg[];
+  messages: { text: Msg; isTrue: boolean }[];
 };
 
 export type TuningTier = "SMALL" | "STANDARD" | "LARGE";
@@ -473,7 +477,7 @@ export type PlayerView = Omit<
   players: Record<PlayerId, PublicPlayerState>;
   pending: PublicWindow[];
   /** Effects about to land, as far as the viewer may know. */
-  incoming: { label: string; targetId: PlayerId; sourceId: PlayerId | "SYSTEM" } | null;
+  incoming: { label: Msg; targetId: PlayerId; sourceId: PlayerId | "SYSTEM" } | null;
   /** The viewer's own bonds and every public bond. */
   bonds: Omit<Bond, "fired">[];
   myActions: ActionAvailability[];

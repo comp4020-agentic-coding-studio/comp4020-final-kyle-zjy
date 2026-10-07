@@ -1,3 +1,5 @@
+import { m } from "../../shared/i18n/msg.ts";
+import type { Msg } from "../../shared/i18n/types.ts";
 // Skill Engine interface. PHASE 2 implements the generic, data-driven parts
 // that every one of the 192 skills shares: may this player use their skill now,
 // against these targets, and whose skill does a game event wake up? The effect
@@ -9,7 +11,7 @@ import type { RejectCode } from "../../shared/game/actions.ts";
 import type { Effect, EffectKind } from "../../shared/game/effects.ts";
 import type { GameState, ItemId, PlayerId, Status } from "../../shared/game/state.ts";
 
-export type SkillCheck = { ok: true } | { ok: false; code: RejectCode; reason: string };
+export type SkillCheck = { ok: true } | { ok: false; code: RejectCode; reason: Msg };
 
 /** Something that happened in the game, as the trigger matcher sees it. */
 export type TriggerEvent = {
@@ -51,26 +53,26 @@ export function characterOf(state: GameState, playerId: PlayerId): Character | n
   return p ? getCharacterById(p.characterId) : null;
 }
 
-const no = (code: RejectCode, reason: string): SkillCheck => ({ ok: false, code, reason });
+const no = (code: RejectCode, reason: Msg): SkillCheck => ({ ok: false, code, reason });
 
 export function canUseSkill(state: GameState, ownerId: PlayerId, targets: PlayerId[]): SkillCheck {
   const me = state.players[ownerId];
-  if (!me || me.away) return no("NOT_IN_ROOM", "You're not in this run.");
-  if (!IN_RUN.has(state.phase)) return no("WRONG_PHASE", "Abilities can only be used during the run.");
-  if (me.skill.state === "LOCKED") return no("SKILL_LOCKED", "Your ability is locked right now.");
-  if (me.skill.usesLeft <= 0 || me.skill.state === "BURNED") return no("SKILL_ALREADY_USED", "Your ability is already burned.");
+  if (!me || me.away) return no("NOT_IN_ROOM", m`You're not in this run.`);
+  if (!IN_RUN.has(state.phase)) return no("WRONG_PHASE", m`Abilities can only be used during the run.`);
+  if (me.skill.state === "LOCKED") return no("SKILL_LOCKED", m`Your ability is locked right now.`);
+  if (me.skill.usesLeft <= 0 || me.skill.state === "BURNED") return no("SKILL_ALREADY_USED", m`Your ability is already burned.`);
 
   const skill = getCharacterById(me.skill.borrowed ?? me.characterId).skill;
   const top = state.pending.at(-1);
   if (skill.type === "ACTIVE") {
-    if (top?.blocksTable) return no("WINDOW_OPEN", "Wait for the current decision to finish.");
+    if (top?.blocksTable) return no("WINDOW_OPEN", m`Wait for the current decision to finish.`);
     if (state.step !== "PLAYER_TURNS" || state.turnOrder[state.activeIndex] !== ownerId) {
-      return no("NOT_YOUR_TURN", "Active abilities are used on your own turn.");
+      return no("NOT_YOUR_TURN", m`Active abilities are used on your own turn.`);
     }
   } else {
     const kind = skill.type === "REACTION" ? "REACTION" : "PASSIVE_CONFIRM";
     if (!top || top.kind !== kind || !top.addressees.includes(ownerId)) {
-      return no("NOT_YOUR_WINDOW", "This ability fires only when its moment comes.");
+      return no("NOT_YOUR_WINDOW", m`This ability fires only when its moment comes.`);
     }
   }
   return checkTargets(state, ownerId, skill.target, targets);
@@ -88,20 +90,20 @@ const CHOSEN: Partial<Record<TargetRule, { min: number; max: number; others: boo
 export function checkTargets(state: GameState, ownerId: PlayerId, rule: TargetRule, targets: PlayerId[]): SkillCheck {
   const spec = CHOSEN[rule];
   if (!spec) {
-    return targets.length === 0 ? { ok: true } : no("ILLEGAL_TARGET", "This ability doesn't take a chosen target.");
+    return targets.length === 0 ? { ok: true } : no("ILLEGAL_TARGET", m`This ability doesn't take a chosen target.`);
   }
-  if (new Set(targets).size !== targets.length) return no("ILLEGAL_TARGET", "Choose each player only once.");
+  if (new Set(targets).size !== targets.length) return no("ILLEGAL_TARGET", m`Choose each player only once.`);
   if (targets.length < spec.min || targets.length > spec.max) {
-    return no("ILLEGAL_TARGET", spec.min === spec.max ? `Choose ${spec.min} player${spec.min > 1 ? "s" : ""}.` : `Choose ${spec.min} to ${spec.max} players.`);
+    return no("ILLEGAL_TARGET", spec.min !== spec.max ? m`Choose ${spec.min} to ${spec.max} players.` : spec.min > 1 ? m`Choose ${spec.min} players.` : m`Choose a player.`);
   }
   const me = state.players[ownerId];
   const shielded = me.statuses.find((st) => st.kind === "FORBIDDEN_TARGET" && targets.includes(st.sourceId as PlayerId));
-  if (shielded) return no("ILLEGAL_TARGET", `Your next ability can't target ${state.players[shielded.sourceId as PlayerId]?.nickname ?? "them"}.`);
+  if (shielded) return no("ILLEGAL_TARGET", m`Your next ability can't target ${state.players[shielded.sourceId as PlayerId]?.nickname ?? "?"}.`);
   for (const id of targets) {
     const t = state.players[id];
-    if (!t || t.away) return no("ILLEGAL_TARGET", "That player isn't in the run.");
-    if (spec.others && id === ownerId) return no("ILLEGAL_TARGET", "Choose someone other than yourself.");
-    if (spec.sameCarriage && t.carriageIndex !== me.carriageIndex) return no("ILLEGAL_TARGET", "They need to be in your carriage.");
+    if (!t || t.away) return no("ILLEGAL_TARGET", m`That player isn't in the run.`);
+    if (spec.others && id === ownerId) return no("ILLEGAL_TARGET", m`Choose someone other than yourself.`);
+    if (spec.sameCarriage && t.carriageIndex !== me.carriageIndex) return no("ILLEGAL_TARGET", m`They need to be in your carriage.`);
   }
   return { ok: true };
 }

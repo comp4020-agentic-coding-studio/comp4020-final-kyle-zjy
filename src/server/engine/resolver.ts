@@ -20,6 +20,8 @@ import { pick, shuffle } from "./rng.ts";
 import { playersWokenBy, triggerMatches, type TriggerEvent } from "./skills.ts";
 import { queueTrigger } from "./trigger-queue.ts";
 import { onResume, openWindow, setBeforeClose, settleIfAnswered } from "./windows.ts";
+import { list, m, ref } from "../../shared/i18n/msg.ts";
+import type { Msg } from "../../shared/i18n/types.ts";
 
 /** Every effect in the skill has a handler. */
 export function resolvable(skill: Skill): boolean {
@@ -28,12 +30,18 @@ export function resolvable(skill: Skill): boolean {
   return ok;
 }
 
+/** Whose ability a player holds right now (a borrowed one counts as the lender's character). */
+export const skillCharacter = (ctx: Ctx, id: PlayerId): CharacterId => {
+  const p = ctx.s.players[id];
+  return p.skill.borrowed ?? p.characterId;
+};
+
 export const skillOf = (ctx: Ctx, id: PlayerId): Skill => {
   const p = ctx.s.players[id];
   return getCharacterById(p.skill.borrowed ?? p.characterId).skill;
 };
 
-const scopeOf = (ownerId: PlayerId, targets: PlayerId[], label: string, trigger?: TriggerEvent): Scope => ({
+const scopeOf = (ownerId: PlayerId, targets: PlayerId[], label: Msg, trigger?: TriggerEvent): Scope => ({
   ownerId,
   targets,
   triggerSource: trigger?.sourceId,
@@ -105,7 +113,7 @@ setExtraConditions(requirement);
 function canFire(ctx: Ctx, ownerId: PlayerId, trigger?: TriggerEvent, targets: PlayerId[] = []): boolean {
   const skill = skillOf(ctx, ownerId);
   if (!resolvable(skill)) return false;
-  return !skill.requires || requirement(ctx, skill.requires, scopeOf(ownerId, targets, skill.name, trigger));
+  return !skill.requires || requirement(ctx, skill.requires, scopeOf(ownerId, targets, ref.skill(skillCharacter(ctx, ownerId)), trigger));
 }
 
 /** For USE_SKILL: does an active ability's precondition hold for these targets? */
@@ -141,7 +149,8 @@ export function useSkill(ctx: Ctx, ownerId: PlayerId, chosen: PlayerId[], use: U
     p.statuses = p.statuses.filter((st) => st.kind !== "FORBIDDEN_TARGET"); // Dominate lasts one ability
   }
   for (const t of targets) if (t !== ownerId && !s.roundRecord.targeted.includes(t)) s.roundRecord.targeted.push(t);
-  log(ctx, `${p.nickname} uses ${skill.name}${targets.length && CHOSEN.includes(skill.target) ? ` on ${targets.map((t) => s.players[t].nickname).join(" and ")}` : ""}.`, "SKILL", ownerId);
+  const named = targets.length > 0 && CHOSEN.includes(skill.target);
+  log(ctx, named ? m`${p.nickname} uses ${ref.skill(character.id)} on ${list(targets.map((t) => s.players[t].nickname))}.` : m`${p.nickname} uses ${ref.skill(character.id)}.`, "SKILL", ownerId);
   cue(ctx, "SKILL", { playerId: ownerId, characterId: character.id, burned: p.skill.usesLeft <= 0 });
   twinNight(ctx, ownerId);
 
@@ -154,7 +163,7 @@ export function useSkill(ctx: Ctx, ownerId: PlayerId, chosen: PlayerId[], use: U
       sourceId: ownerId,
       targetId: declared.subjectId,
       targets,
-      label: skill.name,
+      label: ref.skill(character.id),
       effects: skill.effects,
       single: false,
       reduced: 0,
@@ -174,11 +183,12 @@ export function useSkill(ctx: Ctx, ownerId: PlayerId, chosen: PlayerId[], use: U
 /** Applies an ability's effects and reports it to the table's other abilities. */
 export function runEffects(ctx: Ctx, ownerId: PlayerId, skill: Skill, targets: PlayerId[], trigger?: TriggerEvent, characterId?: CharacterId): void {
   const before = fingerprint(ctx);
-  applyEffects(ctx, skill.effects, scopeOf(ownerId, targets, skill.name, trigger));
+  const label = characterId ? ref.skill(characterId) : m`an ability`;
+  applyEffects(ctx, skill.effects, scopeOf(ownerId, targets, label, trigger));
   const fizzled = fingerprint(ctx) === before;
   // recorded after it ran, so a copy made in answer still sees the ability before it
   if (characterId) ctx.s.lastSkill = { ownerId, characterId, targets, round: ctx.s.round };
-  if (fizzled) log(ctx, `${skill.name} finds nothing to act on.`, "SKILL", ownerId);
+  if (fizzled) log(ctx, m`${label} finds nothing to act on.`, "SKILL", ownerId);
   queueTrigger(ctx, { kind: "SKILL_USED_BY_OTHER", sourceId: ownerId, condition: fizzled ? "FIZZLED" : undefined });
 }
 
@@ -190,7 +200,7 @@ function twinNight(ctx: Ctx, ownerId: PlayerId): void {
   if (!others.length) return;
   const twin = pick(s, others);
   twin.fate += 1;
-  log(ctx, `Twin Night: the first ability of the night echoes. ${twin.nickname} gains 1 Fate.`, "RULE", twin.playerId);
+  log(ctx, m`Twin Night: the first ability of the night echoes. ${twin.nickname} gains 1 Fate.`, "RULE", twin.playerId);
 }
 
 // ---- waking holders ------------------------------------------------------------
@@ -225,9 +235,9 @@ export function useOptions(ctx: Ctx, ownerId: PlayerId): WindowOption[] {
   const use: WindowOption[] = legal
     ? present(ctx)
         .filter((p) => legal(p.playerId))
-        .map((p) => ({ id: `USE:${p.playerId}`, label: `Use it on ${p.playerId === ownerId ? "yourself" : p.nickname}` }))
-    : [{ id: "USE", label: "Use it now" }];
-  return [...use, { id: "SKIP", label: "Save it" }];
+        .map((p) => ({ id: `USE:${p.playerId}`, label: p.playerId === ownerId ? m`Use it on yourself` : m`Use it on ${p.nickname}` }))
+    : [{ id: "USE", label: m`Use it now` }];
+  return [...use, { id: "SKIP", label: m`Save it` }];
 }
 
 const targetsOf = (answer: string): PlayerId[] => (answer.startsWith("USE:") ? [answer.slice(4)] : []);
@@ -237,19 +247,19 @@ const targetsOf = (answer: string): PlayerId[] => (answer.startsWith("USE:") ? [
  * true when it did something (fired or opened a window), false once nobody
  * is left to ask.
  */
-export function askNext(ctx: Ctx, events: TriggerEvent[], asked: PlayerId[], why: string): boolean {
+export function askNext(ctx: Ctx, events: TriggerEvent[], asked: PlayerId[], why: Msg): boolean {
   const next = wokenBy(ctx, events, asked)[0];
   if (!next) return false;
   asked.push(next.id);
   if (next.skill.type === "PASSIVE") {
-    log(ctx, `${ctx.s.players[next.id].nickname}'s ${next.skill.name} takes effect.`, "SKILL", next.id);
+    log(ctx, m`${ctx.s.players[next.id].nickname}'s ${ref.skill(skillCharacter(ctx, next.id))} takes effect.`, "SKILL", next.id);
     useSkill(ctx, next.id, [], { trigger: next.event });
     return true;
   }
   openWindow(ctx, {
     kind: "REACTION",
-    title: next.skill.name,
-    prompt: `${why} ${next.skill.description} It's once per run.`,
+    title: ref.skill(skillCharacter(ctx, next.id)),
+    prompt: m`${why} ${ref.skillDescription(skillCharacter(ctx, next.id))} It's once per run.`,
     addressees: [next.id],
     options: useOptions(ctx, next.id),
     defaultOptionId: "SKIP",
@@ -265,21 +275,21 @@ onResume("SKILL_ASK", (ctx, w, answers) => {
   const answer = answers[owner] ?? "SKIP";
   if (answer === "SKIP") return;
   const event = JSON.parse(String(w.resume.payload?.event)) as TriggerEvent;
-  if (!canFire(ctx, owner, event)) return log(ctx, `${skillOf(ctx, owner).name}'s moment has passed.`, "SKILL", owner);
+  if (!canFire(ctx, owner, event)) return log(ctx, m`${ref.skill(skillCharacter(ctx, owner))}'s moment has passed.`, "SKILL", owner);
   useSkill(ctx, owner, targetsOf(answer), { trigger: event });
 });
 
 // ---- after-the-fact triggers ---------------------------------------------------
 
-const describe: Partial<Record<TriggerKind, string>> = {
-  PLAYER_GAINS_FATE: "Someone just gained Fate.",
-  PLAYER_GAINS_BUFF: "Someone just gained a buff.",
-  PLAYER_GAINS_REWARDS: "Someone just gained a reward.",
-  SELF_GAINS_REWARD: "You just gained a reward.",
-  SKILL_USED_BY_OTHER: "Someone just used an ability.",
-  HELPED_BY_PLAYER: "Someone just helped you.",
-  OWN_ROLL_RESOLVED: "Your roll is in.",
-  ANY_ROLL_RESOLVED: "A roll is in.",
+const describe: Partial<Record<TriggerKind, Msg>> = {
+  PLAYER_GAINS_FATE: m`Someone just gained Fate.`,
+  PLAYER_GAINS_BUFF: m`Someone just gained a buff.`,
+  PLAYER_GAINS_REWARDS: m`Someone just gained a reward.`,
+  SELF_GAINS_REWARD: m`You just gained a reward.`,
+  SKILL_USED_BY_OTHER: m`Someone just used an ability.`,
+  HELPED_BY_PLAYER: m`Someone just helped you.`,
+  OWN_ROLL_RESOLVED: m`Your roll is in.`,
+  ANY_ROLL_RESOLVED: m`A roll is in.`,
 };
 
 /** Asks the holders of queued triggers, one at a time. False when the queue is empty. */
@@ -288,7 +298,7 @@ export function processTriggers(ctx: Ctx): boolean {
   const q = ctx.s.triggerQueue;
   while (q.length) {
     const head = q[0];
-    if (askNext(ctx, [head], head.asked, describe[head.kind] ?? "Your moment.")) return true;
+    if (askNext(ctx, [head], head.asked, describe[head.kind] ?? m`Your moment.`)) return true;
     q.shift();
   }
   return false;
@@ -297,7 +307,7 @@ export function processTriggers(ctx: Ctx): boolean {
 /** Round-start / round-end abilities fire now, while the round is still the one they look at. */
 export function roundTriggers(ctx: Ctx, kind: Extract<TriggerKind, "ROUND_START" | "ROUND_END">): void {
   const asked: PlayerId[] = [];
-  for (let guard = 0; guard < 20 && askNext(ctx, [{ kind }], asked, kind === "ROUND_END" ? "The round is ending." : "A new round begins."); guard++);
+  for (let guard = 0; guard < 20 && askNext(ctx, [{ kind }], asked, kind === "ROUND_END" ? m`The round is ending.` : m`A new round begins.`); guard++);
 }
 
 /** A status about to run out wakes its holder's ability (Can't Let Go, Something to Show). */
@@ -306,7 +316,7 @@ export function statusesExpiring(ctx: Ctx): void {
   for (const p of present(ctx)) {
     for (const st of p.statuses.filter((x) => x.expiresAtRound !== null && x.expiresAtRound <= s.round)) {
       const asked: PlayerId[] = [];
-      for (let guard = 0; guard < 5 && askNext(ctx, [{ kind: "STATUS_EXPIRING", subjectId: p.playerId, status: st }], asked, "One of your statuses is about to end."); guard++);
+      for (let guard = 0; guard < 5 && askNext(ctx, [{ kind: "STATUS_EXPIRING", subjectId: p.playerId, status: st }], asked, m`One of your statuses is about to end.`); guard++);
     }
   }
 }
@@ -374,10 +384,10 @@ setBeforeClose((ctx, w) => {
   const mine = w.answers[holder];
   openWindow(ctx, {
     kind: "REACTION",
-    title: skill.name,
-    prompt: `Everyone has answered "${w.title}". ${skill.description} It's once per run.`,
+    title: ref.skill(skillCharacter(ctx, holder)),
+    prompt: m`Everyone has answered "${w.title}". ${ref.skillDescription(skillCharacter(ctx, holder))} It's once per run.`,
     addressees: [holder],
-    options: [{ id: "KEEP", label: "Keep my answer" }, ...w.options.filter((o) => o.id !== mine).map((o) => ({ id: o.id, label: `Change to: ${o.label}` }))],
+    options: [{ id: "KEEP", label: m`Keep my answer` }, ...w.options.filter((o) => o.id !== mine).map((o) => ({ id: o.id, label: m`Change to: ${o.label}` }))],
     defaultOptionId: "KEEP",
     resume: { kind: "REVISE", payload: { under: w.id } },
     blocksTable: true,

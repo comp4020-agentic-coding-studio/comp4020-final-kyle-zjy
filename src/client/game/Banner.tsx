@@ -3,22 +3,25 @@ import { AnimatePresence, motion } from "motion/react";
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import type { PlayerView } from "../../shared/game/state.ts";
 import { Avatar } from "../components/Avatar.tsx";
+import { useFormat, useT, type TFunction } from "../i18n/index.ts";
 import { useCountdown } from "./useCountdown.ts";
 
-function headline(g: PlayerView): { key: string; text: string; tone: "you" | "other" | "table" } {
+function headline(g: PlayerView, t: TFunction, fmt: ReturnType<typeof useFormat>): { key: string; text: string; tone: "you" | "other" | "table" } {
   const top = g.pending.at(-1);
-  if (top && top.kind !== "FATE_SPEND") return { key: `w-${top.id}`, text: top.kind === "VOTE" ? `Vote: ${top.title}` : top.title, tone: "table" };
-  if (g.roll && !g.roll.done) return { key: `r-${g.roll.id}`, text: `${g.players[g.roll.playerId]?.nickname ?? "Someone"} is rolling`, tone: "table" };
-  if (g.step === "INSPECTOR") return { key: "insp", text: "The Inspector is moving", tone: "table" };
-  if (g.step === "ROUND_EVENT") return { key: "ev", text: "An event is unfolding", tone: "table" };
+  if (top && top.kind !== "FATE_SPEND") return { key: `w-${top.id}`, text: top.kind === "VOTE" ? t("banner.vote", { title: fmt(top.title) }) : fmt(top.title), tone: "table" };
+  if (g.roll && !g.roll.done) return { key: `r-${g.roll.id}`, text: t("banner.rolling", { name: g.players[g.roll.playerId]?.nickname ?? t("common.Someone") }), tone: "table" };
+  if (g.step === "INSPECTOR") return { key: "insp", text: t("banner.inspector"), tone: "table" };
+  if (g.step === "ROUND_EVENT") return { key: "ev", text: t("banner.event"), tone: "table" };
   const active = g.step === "PLAYER_TURNS" ? g.turnOrder[g.activeIndex] : null;
-  if (active === g.viewerId) return { key: `t-${g.round}-${active}`, text: "Your turn", tone: "you" };
-  if (active) return { key: `t-${g.round}-${active}`, text: `${g.players[active].nickname}'s turn`, tone: "other" };
-  return { key: "between", text: "Between rounds", tone: "table" };
+  if (active === g.viewerId) return { key: `t-${g.round}-${active}`, text: t("banner.yourTurn"), tone: "you" };
+  if (active) return { key: `t-${g.round}-${active}`, text: t("banner.theirTurn", { name: g.players[active].nickname }), tone: "other" };
+  return { key: "between", text: t("banner.between"), tone: "table" };
 }
 
 export function Banner({ g }: { g: PlayerView }) {
-  const h = headline(g);
+  const t = useT();
+  const fmt = useFormat();
+  const h = headline(g, t, fmt);
   const active = g.step === "PLAYER_TURNS" ? g.players[g.turnOrder[g.activeIndex]] : null;
   const left = useCountdown(h.tone !== "table" ? g.turnDeadline : null);
   const ch = active ? getCharacterById(active.characterId) : null;
@@ -36,9 +39,9 @@ export function Banner({ g }: { g: PlayerView }) {
         >
           {ch && h.tone !== "table" && <Avatar zodiac={ch.zodiac} mbti={ch.mbti} size={34} />}
           <p className={`min-w-0 flex-1 truncate font-display text-xl font-semibold sm:text-2xl ${h.tone === "you" ? "text-signal" : "text-moon"}`}>{h.text}</p>
-          {h.tone === "you" && active && <span className="font-mono text-sm text-gold-bright">{active.ap} AP</span>}
+          {h.tone === "you" && active && <span className="shrink-0 font-mono text-sm whitespace-nowrap text-gold-bright">{t("banner.ap", { n: active.ap })}</span>}
           {/* only an away player's turn has a clock: the grace before it passes */}
-          {left !== null && active?.away && <span className="font-mono text-sm text-ember">away · {left}s</span>}
+          {left !== null && active?.away && <span className="shrink-0 font-mono text-sm whitespace-nowrap text-ember">{t("banner.away", { n: left })}</span>}
         </motion.div>
       </AnimatePresence>
     </div>

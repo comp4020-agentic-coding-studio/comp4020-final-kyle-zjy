@@ -9,6 +9,8 @@ import { cue, log, newId, type Ctx } from "./context.ts";
 import { applyEffects, setInterceptor, type Scope } from "./effects.ts";
 import { askNext, runEffects, skillOf, wokenBy } from "./resolver.ts";
 import type { TriggerEvent } from "./skills.ts";
+import { m, ref } from "../../shared/i18n/msg.ts";
+import type { Msg } from "../../shared/i18n/types.ts";
 
 const SUBJECT_FIELDS = ["who", "from"] as const;
 
@@ -73,7 +75,8 @@ setInterceptor((ctx, e, scope, targetId, recipient) => {
 export function processPending(ctx: Ctx): void {
   const pe = ctx.s.pendingEffect;
   if (!pe) return;
-  const why = pe.kind === "ABILITY" ? `${ctx.s.players[pe.sourceId as PlayerId]?.nickname ?? "Someone"} is using ${pe.label}.` : `${pe.label} is about to hit ${ctx.s.players[pe.targetId]?.nickname ?? "someone"}.`;
+  const source = pe.sourceId === "SYSTEM" ? undefined : ctx.s.players[pe.sourceId]?.nickname;
+  const why = pe.kind === "ABILITY" ? m`${source ?? "?"} is using ${pe.label}.` : m`${pe.label} is about to hit ${ctx.s.players[pe.targetId]?.nickname ?? "?"}.`;
   if (askNext(ctx, pendingEvents(pe), pe.asked, why)) return;
   land(ctx, pe);
 }
@@ -81,22 +84,22 @@ export function processPending(ctx: Ctx): void {
 function land(ctx: Ctx, pe: PendingEffect): void {
   const s = ctx.s;
   s.pendingEffect = null;
-  if (pe.cancelled) return log(ctx, `${pe.label} is cancelled before it lands.`, "DEFENCE", pe.targetId);
+  if (pe.cancelled) return log(ctx, m`${pe.label} is cancelled before it lands.`, "DEFENCE", pe.targetId);
   if (pe.kind === "ABILITY") {
     const owner = pe.sourceId as PlayerId;
     const p = s.players[owner];
-    return runEffects(ctx, owner, { ...skillOf(ctx, owner), name: pe.label, effects: pe.effects }, pe.targets, undefined, p.skill.borrowed ?? p.characterId);
+    return runEffects(ctx, owner, { ...skillOf(ctx, owner), effects: pe.effects }, pe.targets, undefined, p.skill.borrowed ?? p.characterId);
   }
   const scope = (targets: PlayerId[], ownerId: PlayerId | "SYSTEM"): Scope => ({ ownerId, targets, label: pe.label, landing: true });
   const effects = pe.effects.map((e) => weaken(e, pe.reduced)).filter((e): e is Effect => !!e);
-  if (!effects.length) log(ctx, `${pe.label} is weakened to nothing.`, "DEFENCE", pe.targetId);
+  if (!effects.length) log(ctx, m`${pe.label} is weakened to nothing.`, "DEFENCE", pe.targetId);
   else applyEffects(ctx, effects.map(aimed), scope(pe.targets, pe.sourceId));
   // copies sent back to whoever caused it
   if (pe.sourceId !== "SYSTEM") {
     for (const copy of pe.copyBack) {
       const back = pe.effects.map((e) => weaken(e, copy.weaken ? 1 : 0)).filter((e): e is Effect => !!e);
       if (!back.length) continue;
-      log(ctx, `${pe.label} rebounds on ${s.players[pe.sourceId].nickname}.`, "DEFENCE", pe.sourceId);
+      log(ctx, m`${pe.label} rebounds on ${s.players[pe.sourceId].nickname}.`, "DEFENCE", pe.sourceId);
       // aimed at the source; anything taken goes to the one who was hit
       applyEffects(ctx, back.map(aimed), scope([pe.sourceId, pe.targetId], pe.targetId));
     }

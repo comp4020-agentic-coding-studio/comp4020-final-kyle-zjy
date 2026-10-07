@@ -13,9 +13,11 @@ import { measureRewards } from "./rewards.ts";
 import { consumeStatus, gainFate, hasStatus, payBonds, removeStatus, spendFate, statusOf, useUpStatus } from "./players.ts";
 import { applyEffects } from "./effects.ts";
 import { onResume, openWindow } from "./windows.ts";
+import { m, ref } from "../../shared/i18n/msg.ts";
+import type { Msg } from "../../shared/i18n/types.ts";
 
 export const tierOf = (n: number): RollTier => (n <= 1 ? "DISASTER" : n <= 3 ? "FAIL" : n <= 5 ? "SUCCESS" : "PERFECT");
-export const TIER_LABEL: Record<RollTier, string> = { DISASTER: "Disaster", FAIL: "Failure", SUCCESS: "Success", PERFECT: "Perfect" };
+export const TIER_LABEL: Record<RollTier, Msg> = { DISASTER: m`Disaster`, FAIL: m`Failure`, SUCCESS: m`Success`, PERFECT: m`Perfect` };
 export const isSuccess = (t: RollTier) => t === "SUCCESS" || t === "PERFECT";
 export const clampDie = (n: number) => Math.max(1, Math.min(6, n));
 
@@ -44,10 +46,10 @@ export type RollOptions = {
   /** Fate, help and reactions apply (false for group/event auto-rolls). */
   modifiable?: boolean;
   /** Extra flat modifiers from the caller. */
-  extra?: { source: string; delta: number }[];
+  extra?: { source: Msg; delta: number }[];
 };
 
-export function startRoll(ctx: Ctx, p: PlayerGameState, purpose: RollPurpose, label: string, rc: RollContext, opts: RollOptions = {}): Roll {
+export function startRoll(ctx: Ctx, p: PlayerGameState, purpose: RollPurpose, label: Msg, rc: RollContext, opts: RollOptions = {}): Roll {
   const modifiable = opts.modifiable ?? true;
   // a previewed die was fixed in advance (Time Cache, Optimal Route)
   let raw = p.nextRaw ?? d6(ctx.s);
@@ -55,22 +57,22 @@ export function startRoll(ctx: Ctx, p: PlayerGameState, purpose: RollPurpose, la
   if (modifiable && hasStatus(p, "ADVANTAGE")) {
     useUpStatus(ctx, p, "ADVANTAGE");
     const second = d6(ctx.s);
-    log(ctx, `${p.nickname} rolls twice (${raw} and ${second}) and keeps the better.`, "ROLL", p.playerId);
+    log(ctx, m`${p.nickname} rolls twice (${raw} and ${second}) and keeps the better.`, "ROLL", p.playerId);
     raw = Math.max(raw, second);
   }
   const modifiers: Roll["modifiers"] = [...(opts.extra ?? [])];
   if (modifiable && p.helpBonus > 0) {
-    modifiers.push({ source: "Help", delta: p.helpBonus });
+    modifiers.push({ source: m`Help`, delta: p.helpBonus });
     p.helpBonus = 0;
     p.helpFrom = [];
   }
   const bonusKind = BONUS_STATUS[purpose];
   if (modifiable && bonusKind && hasStatus(p, bonusKind)) {
-    modifiers.push({ source: purpose === "REPAIR" ? "Old Key" : "Flashlight", delta: consumeStatus(ctx, p, bonusKind) });
+    modifiers.push({ source: ref.item(purpose === "REPAIR" ? "OLD_KEY" : "FLASHLIGHT"), delta: consumeStatus(ctx, p, bonusKind) });
   }
-  if (modifiable && ruleOn(ctx, "ROLL_BONUS")) modifiers.push({ source: "Rewritten rules", delta: 1 });
+  if (modifiable && ruleOn(ctx, "ROLL_BONUS")) modifiers.push({ source: m`Rewritten rules`, delta: 1 });
   const staticStatus = statusOf(p, "STATIC");
-  if (staticStatus) modifiers.push({ source: "Static", delta: staticStatus.value ?? -1 });
+  if (staticStatus) modifiers.push({ source: ref.status("STATIC"), delta: staticStatus.value ?? -1 });
   const total = raw + modifiers.reduce((sum, m) => sum + m.delta, 0);
   const final = clampDie(total);
   const roll: Roll = {
@@ -101,7 +103,7 @@ function armedStakes(ctx: Ctx, p: PlayerGameState): RollContext["stakes"] {
   p.wager = null;
   if (wager) removeStatus(p, "WAGER");
   if (!allIn && !doubled && !wager) return undefined;
-  if (allIn || doubled) log(ctx, `${p.nickname}'s roll counts double${allIn ? ", for better or worse" : ""}.`, "ROLL", p.playerId);
+  if (allIn || doubled) log(ctx, allIn ? m`${p.nickname}'s roll counts double, for better or worse.` : m`${p.nickname}'s roll counts double.`, "ROLL", p.playerId);
   return { rewardMult: allIn || doubled ? 2 : 1, penaltyMult: allIn ? 2 : 1, onSuccess: wager?.onSuccess, onFail: wager?.onFail };
 }
 
@@ -111,14 +113,16 @@ function offerFate(ctx: Ctx, p: PlayerGameState, roll: Roll): void {
   if (!roll.modifiable || (room <= 0 && !stored) || p.away) return reactionStage(ctx);
   const options: WindowOption[] = Array.from({ length: Math.max(0, room) + 1 }, (_, n) => ({
     id: String(n),
-    label: n === 0 ? "Keep it" : `Spend ${n} Fate`,
-    detail: `${roll.final}${n ? ` → ${roll.final + n} (${TIER_LABEL[tierOf(roll.final + n)]})` : ` (${TIER_LABEL[roll.tier]})`}`,
+    label: n === 0 ? m`Keep it` : m`Spend ${n} Fate`,
+    detail: n ? m`${roll.final} → ${roll.final + n} (${TIER_LABEL[tierOf(roll.final + n)]})` : m`${roll.final} (${TIER_LABEL[roll.tier]})`,
   }));
-  if (stored) options.push({ id: "STORED", label: `Use your recorded ${p.storedResult}`, detail: `${roll.final} → ${p.storedResult} (${TIER_LABEL[tierOf(p.storedResult!)]}), once` });
+  if (stored) options.push({ id: "STORED", label: m`Use your recorded ${p.storedResult!}`, detail: m`${roll.final} → ${p.storedResult!} (${TIER_LABEL[tierOf(p.storedResult!)]}), once` });
   openWindow(ctx, {
     kind: "FATE_SPEND",
-    title: "Bend fate?",
-    prompt: `You rolled ${roll.raw}${roll.final !== roll.raw ? `, ${roll.final} after modifiers` : ""}. Each Fate adds +1 (at most ${fateLimit(ctx)}).`,
+    title: m`Bend fate?`,
+    prompt: roll.final !== roll.raw
+      ? m`You rolled ${roll.raw}, ${roll.final} after modifiers. Each Fate adds +1 (at most ${fateLimit(ctx)}).`
+      : m`You rolled ${roll.raw}. Each Fate adds +1 (at most ${fateLimit(ctx)}).`,
     addressees: [p.playerId],
     options,
     defaultOptionId: "0",
@@ -133,7 +137,7 @@ onResume("ROLL_FATE", (ctx, w, answers) => {
   if (!roll || roll.done) return;
   const p = ctx.s.players[roll.playerId];
   if (answers[roll.playerId] === "STORED" && p.storedResult !== null) {
-    setRollValue(ctx, roll, p.storedResult, `${p.nickname} uses a recorded result`);
+    setRollValue(ctx, roll, p.storedResult, m`${p.nickname} uses a recorded result`);
     p.storedResult = null;
     return reactionStage(ctx);
   }
@@ -144,7 +148,7 @@ onResume("ROLL_FATE", (ctx, w, answers) => {
     roll.fateSpent += n;
     roll.final = clampDie(roll.final + n);
     roll.tier = tierOf(roll.final);
-    log(ctx, `${p.nickname} spends ${n} Fate: ${roll.final - n} → ${roll.final}.`, "FATE", p.playerId);
+    log(ctx, m`${p.nickname} spends ${n} Fate: ${roll.final - n} → ${roll.final}.`, "FATE", p.playerId);
     cue(ctx, "FATE_SPEND", { playerId: p.playerId, amount: n, final: roll.final });
   }
   void w;
@@ -169,8 +173,8 @@ export function reactionStage(ctx: Ctx): void {
   }
   openWindow(ctx, {
     kind: "REACTION",
-    title: "Your ability can answer this",
-    prompt: `${ctx.s.players[roll.playerId].nickname} rolled ${roll.final} (${TIER_LABEL[roll.tier]}). Use your ability now? It's once per run.`,
+    title: m`Your ability can answer this`,
+    prompt: m`${ctx.s.players[roll.playerId].nickname} rolled ${roll.final} (${TIER_LABEL[roll.tier]}). Use your ability now? It's once per run.`,
     addressees: [next],
     options: reactions.options(ctx, next),
     defaultOptionId: "SKIP",
@@ -190,11 +194,11 @@ onResume("ROLL_REACTION", (ctx, w, answers) => {
 });
 
 /** Applies a new value to the roll in progress (rerolls, tier shifts). */
-export function setRollValue(ctx: Ctx, roll: Roll, value: number, why: string): void {
+export function setRollValue(ctx: Ctx, roll: Roll, value: number, why: Msg): void {
   const before = roll.final;
   roll.final = clampDie(value);
   roll.tier = tierOf(roll.final);
-  log(ctx, `${why}: ${before} → ${roll.final} (${TIER_LABEL[roll.tier]}).`, "ROLL", roll.playerId);
+  log(ctx, m`${why}: ${before} → ${roll.final} (${TIER_LABEL[roll.tier]}).`, "ROLL", roll.playerId);
   cue(ctx, "ROLL_CHANGED", { rollId: roll.id, final: roll.final });
 }
 
@@ -208,13 +212,13 @@ export function finishRoll(ctx: Ctx): void {
   if (roll.tier === "PERFECT") p.stats.perfects++;
   if (isSuccess(roll.tier)) p.stats.successes++;
   else p.stats.failures++;
-  log(ctx, `${p.nickname}'s ${roll.label}: ${roll.final}, ${TIER_LABEL[roll.tier]}.`, `ROLL_${roll.tier}`, p.playerId);
+  log(ctx, m`${p.nickname}'s ${roll.label}: ${roll.final}, ${TIER_LABEL[roll.tier]}.`, `ROLL_${roll.tier}`, p.playerId);
   if (roll.modifiable) recordRoll(ctx, p, roll);
   cue(ctx, "ROLL_DONE", { rollId: roll.id, playerId: p.playerId, final: roll.final, tier: roll.tier });
   ctx.s.rollContext = null;
   if (roll.tier === "PERFECT" && ctx.s.nightRule === "FULL_MOON" && roll.modifiable) {
     p.fate += 1;
-    log(ctx, `The full moon favours ${p.nickname}: +1 Fate.`, "FATE", p.playerId);
+    log(ctx, m`The full moon favours ${p.nickname}: +1 Fate.`, "FATE", p.playerId);
   }
   // whatever the outcome gives its roller counts as a reward
   const [gain] = measureRewards(ctx, [p.playerId], roll.label, () => OUTCOMES.get(rc.kind)?.(ctx, p, roll, rc));
@@ -225,10 +229,10 @@ export function finishRoll(ctx: Ctx): void {
  * A forced roll with no windows that still counts as `purpose` where the
  * player stands (Forced Advance, Parallel Tasks): its outcome and rewards apply.
  */
-export function resolveAs(ctx: Ctx, p: PlayerGameState, purpose: RollPurpose, value: number, label: string): void {
+export function resolveAs(ctx: Ctx, p: PlayerGameState, purpose: RollPurpose, value: number, label: Msg): void {
   const final = clampDie(value);
   const roll: Roll = { id: newId(ctx, "r"), playerId: p.playerId, purpose, label, raw: final, modifiers: [], fateSpent: 0, final, tier: tierOf(final), modifiable: false, done: true };
-  log(ctx, `${p.nickname}'s ${label}: ${final}, ${TIER_LABEL[roll.tier]}.`, `ROLL_${roll.tier}`, p.playerId);
+  log(ctx, m`${p.nickname}'s ${label}: ${final}, ${TIER_LABEL[roll.tier]}.`, `ROLL_${roll.tier}`, p.playerId);
   cue(ctx, "QUICK_ROLL", { playerId: p.playerId, value: final, tier: roll.tier });
   measureRewards(ctx, [p.playerId], label, () => OUTCOMES.get(purpose)?.(ctx, p, roll, { kind: purpose, carriageIndex: p.carriageIndex }));
 }
@@ -270,7 +274,7 @@ function settleStakes(ctx: Ctx, p: PlayerGameState, roll: Roll, rc: RollContext,
   const scope = { ownerId: "SYSTEM" as const, self: p.playerId, targets: [], label: roll.label };
   if (isSuccess(roll.tier)) {
     if (st.rewardMult > 1 && gain) {
-      if (gain.fate) gainFate(ctx, p, gain.fate * (st.rewardMult - 1), "a doubled reward");
+      if (gain.fate) gainFate(ctx, p, gain.fate * (st.rewardMult - 1), m`a doubled reward`);
       if (gain.item) p.items.push(gain.item);
     }
     if (st.onSuccess) applyEffects(ctx, st.onSuccess, scope);

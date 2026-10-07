@@ -2,7 +2,7 @@
 // carriages, items, night rules, obsessions and player-count tuning. Shared by
 // the server (rules) and the client (names, descriptions, art cues).
 import type { Effect } from "../effects.ts";
-import type { CarriageIdentity, FailReason, FragmentType, GameConfig, ItemId, NightRuleId, ObsessionId, Outcome } from "../state.ts";
+import type { AnchorId, CarriageIdentity, FailReason, FragmentType, GameConfig, ItemId, NightRuleId, ObsessionId, Outcome, TaskGoal } from "../state.ts";
 
 export const SCENARIO = {
   id: "S01_LAST_TRAIN",
@@ -181,6 +181,35 @@ export function tuningFor(playerCount: number): GameConfig {
     awayTurnSeconds: 15,
   };
 }
+
+/** Names of the three reality anchors and escape locks. */
+export const ANCHOR_NAMES: Record<AnchorId, string> = { POWER: "Power Anchor", IDENTITY: "Identity Anchor", MEMORY: "Memory Anchor" };
+export const LOCK_NAMES = { power: "Power Lock", route: "Route Lock", drive: "Drive Lock" } as const;
+
+/** Rule changes for one round (Rewrite the Rules, System Update). */
+export const RULE_CHANGES: Record<string, string> = {
+  ROLL_BONUS: "+1 to every roll this round",
+  EXTRA_AP: "+1 action point for everyone",
+  FATE_LIMIT: "Fate can add up to 3 to a roll this round",
+};
+
+/** Goals an ability can set (KPI, Long-Range Plan…). */
+export const TASK_GOALS: Record<TaskGoal, string> = {
+  REPAIR: "Succeed on a Repair roll",
+  FRAGMENT: "Recover a memory fragment",
+  HELP: "Help another passenger",
+  NEW_CARRIAGE: "Step into a carriage you haven't visited",
+};
+
+/** The instant boons a "choose one of two random effects" ability offers. */
+export const BOON_LABELS: Record<string, string> = {
+  FATE: "Gain 2 Fate",
+  SANITY: "Recover 1 Sanity",
+  ITEM: "Take a random item",
+  SHIELD: "Gain a shield",
+  AP: "Gain 1 action point",
+  CLEANSE: "Clear your negative statuses",
+};
 
 /** How each ending reads, on the ending screen and in the log. */
 export type EndingText = { kicker: string; title: string; lines: string[]; won: boolean };

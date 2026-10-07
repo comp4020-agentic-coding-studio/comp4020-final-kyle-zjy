@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { m } from "../src/shared/i18n/msg.ts";
 import { canUseSkill, playersWokenBy } from "../src/server/engine/skills.ts";
 import { getCharacterById, ROSTER } from "../src/shared/characters/roster/index.ts";
 import type { CharacterId, TargetRule } from "../src/shared/characters/types.ts";
@@ -20,12 +21,12 @@ function state(owner: CharacterId, extra: Partial<GameState> = {}): GameState {
 const windowFor = (kind: PendingWindow["kind"], to: string): PendingWindow => ({
   id: "w1",
   kind,
-  title: "test",
-  prompt: "test",
+  title: m`test`,
+  prompt: m`test`,
   addressees: [to],
   options: [
-    { id: "yes", label: "Use it" },
-    { id: "no", label: "Not now" },
+    { id: "yes", label: m`Use it` },
+    { id: "no", label: m`Not now` },
   ],
   defaultOptionId: "no",
   answers: {},

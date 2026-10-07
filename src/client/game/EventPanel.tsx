@@ -4,13 +4,16 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { EVENT_BY_ID } from "../../shared/game/scenario01/events.ts";
 import type { PlayerView } from "../../shared/game/state.ts";
+import { useFormat, useScenarioText, useT } from "../i18n/index.ts";
 import { EventArt } from "./EventArt.tsx";
 
-const BRAKE = { title: "Route error detected", text: "\"Engage the emergency brake?\" Everyone votes.", art: "brake_vote" as const, bias: "MIXED" };
-const BIAS: Record<string, string> = { REWARD: "Reward", CRISIS: "Crisis", MIXED: "Mixed" };
+const BIAS = { REWARD: "event.bias.REWARD", CRISIS: "event.bias.CRISIS", MIXED: "event.bias.MIXED" } as const;
 
 export function EventPanel({ g }: { g: PlayerView }) {
   const ev = g.currentEvent;
+  const t = useT();
+  const fmt = useFormat();
+  const events = useScenarioText().events;
   const [openKey, setOpenKey] = useState<string | null>(null);
   const key = ev ? `${ev.id}-${ev.round}` : null;
 
@@ -26,7 +29,11 @@ export function EventPanel({ g }: { g: PlayerView }) {
 
   if (!ev) return null;
   const card = EVENT_BY_ID.get(ev.id);
-  const info = card ? { title: card.title, text: card.text, art: card.art, bias: card.bias } : BRAKE;
+  // the emergency-brake vote isn't a deck card: its copy is the client's own
+  const words = card ? events[ev.id] : undefined;
+  const info = card
+    ? { title: words?.title ?? card.title, text: words?.text ?? card.text, art: card.art, bias: card.bias }
+    : { title: t("event.brake.title"), text: t("event.brake.text"), art: "brake_vote" as const, bias: "MIXED" as const };
   const voting = g.pending.some((w) => w.kind === "VOTE" || w.kind === "EVENT_CHOICE");
   const big = openKey === key && !voting;
 
@@ -48,11 +55,11 @@ export function EventPanel({ g }: { g: PlayerView }) {
             </div>
             <div className="p-3">
               <p className="label text-gold">
-                Event · Round {ev.round} · {BIAS[info.bias]}
+                {t("event.kicker", { n: ev.round, bias: t(BIAS[info.bias]) })}
               </p>
               <h3 className="mt-0.5 font-display text-xl font-semibold">{info.title}</h3>
               <p className="mt-1 text-sm text-mist">{info.text}</p>
-              {ev.resolved && ev.resultText && <p className="mt-2 rounded-lg border border-gold/25 bg-gold/5 px-2 py-1.5 text-sm text-moon">{ev.resultText}</p>}
+              {ev.resolved && ev.resultText && <p className="mt-2 rounded-lg border border-gold/25 bg-gold/5 px-2 py-1.5 text-sm text-moon">{fmt(ev.resultText)}</p>}
             </div>
           </motion.article>
         ) : (
@@ -61,8 +68,8 @@ export function EventPanel({ g }: { g: PlayerView }) {
               <EventArt art={info.art} />
             </span>
             <span className="min-w-0 truncate text-xs">
-              <span className="text-gold">R{ev.round} event:</span> {info.title}
-              {ev.resolved ? "" : " (unfolding)"}
+              <span className="text-gold">{t("event.chip", { n: ev.round })}</span> {info.title}
+              {ev.resolved ? "" : t("event.unfolding")}
             </span>
           </motion.button>
         )}

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { m } from "../src/shared/i18n/msg.ts";
 import { RuleError } from "../src/server/engine/context.ts";
 import { createGame } from "../src/server/engine/create.ts";
 import { applyGameAction, setAway, startGame, tickGame, hostSkip } from "../src/server/engine/engine.ts";
@@ -243,7 +244,7 @@ describe("engine: help, stabilise, trade", () => {
     t.act(a, { type: "END_TURN" });
     rejects(() => applyGameAction(t.state, b, { type: "HELP", targetId: b }, t.now), "ILLEGAL_TARGET");
     t.act(b, { type: "SEARCH" });
-    expect(t.state.roll!.modifiers).toContainEqual({ source: "Help", delta: 2 });
+    expect(t.state.roll!.modifiers).toContainEqual({ source: m`Help`, delta: 2 });
     expect(t.state.players[b].helpBonus).toBe(0);
   });
 
@@ -345,7 +346,7 @@ describe("engine: what each player can see", () => {
     const t = new Table(3);
     const [a, b] = t.state.turnOrder;
     const s = structuredClone(t.state);
-    s.secrets[b].messages.push({ id: "m1", text: "B's secret", isTrue: true, round: 1 });
+    s.secrets[b].messages.push({ id: "m1", text: m`B's secret`, isTrue: true, round: 1 });
     s.players[b].statuses.push({ id: "h1", kind: "MARKED", polarity: "NEGATIVE", sourceId: "SYSTEM", expiresAtRound: null, hidden: true, ordinary: true });
     const view = project(s, a);
     const json = JSON.stringify(view);
@@ -354,7 +355,7 @@ describe("engine: what each player can see", () => {
     expect(view.players[b].statuses.find((st) => st.id === "h1")).toBeUndefined();
     expect(json).not.toContain(s.seed);
     expect(view).not.toHaveProperty("eventDeck");
-    expect(project(s, b).mySecrets?.messages[0].text).toBe("B's secret");
+    expect(project(s, b).mySecrets?.messages[0].text).toEqual(m`B's secret`);
     expect(project(s, b).players[b].statuses.some((st) => st.id === "h1")).toBe(true);
   });
 
@@ -362,7 +363,7 @@ describe("engine: what each player can see", () => {
     const t = new Table(3);
     const s = structuredClone(t.state);
     const [a, b] = s.turnOrder;
-    s.pending.push({ id: "v1", kind: "VOTE", title: "t", prompt: "p", addressees: s.turnOrder, options: [{ id: "X", label: "X" }, { id: "Y", label: "Y" }], defaultOptionId: "Y", answers: { [b]: "X" }, resume: { kind: "BRAKE_VOTE" }, blocksTable: true });
+    s.pending.push({ id: "v1", kind: "VOTE", title: m`t`, prompt: m`p`, addressees: s.turnOrder, options: [{ id: "X", label: m`X` }, { id: "Y", label: m`Y` }], defaultOptionId: "Y", answers: { [b]: "X" }, resume: { kind: "BRAKE_VOTE" }, blocksTable: true });
     const view = project(s, a);
     expect(view.pending[0].answeredBy).toEqual([b]);
     expect(view.pending[0].myAnswer).toBeNull();
@@ -379,6 +380,6 @@ describe("engine: what each player can see", () => {
     const mine = project(t.state, t.active!).myActions;
     expect(mine.find((x) => x.type === "MOVE")).toMatchObject({ enabled: true, targets: [1] });
     expect(mine.find((x) => x.type === "REPAIR")).toMatchObject({ enabled: false });
-    expect(mine.find((x) => x.type === "REPAIR")!.reason).toMatch(/round 4/);
+    expect(mine.find((x) => x.type === "REPAIR")!.reason!.k).toMatch(/round 4/);
   });
 });

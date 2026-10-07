@@ -12,6 +12,7 @@ import "./outcomes.ts";
 import "./inspector.ts";
 import "./skill-effects.ts";
 import "./event-effects.ts";
+import { list, m } from "../../shared/i18n/msg.ts";
 
 export type Step = { state: GameState; events: GameEvent[] };
 
@@ -47,7 +48,7 @@ export function setAway(state: GameState, playerId: PlayerId, away: boolean, now
     const p = ctx.s.players[playerId];
     if (!p || p.away === away) return;
     p.away = away;
-    log(ctx, away ? `${p.nickname} has lost their connection.` : `${p.nickname} is back.`, "PRESENCE", playerId);
+    log(ctx, away ? m`${p.nickname} has lost their connection.` : m`${p.nickname} is back.`, "PRESENCE", playerId);
     const theirTurn = ctx.s.turnOrder[ctx.s.activeIndex] === playerId && ctx.s.step === "PLAYER_TURNS";
     if (theirTurn) ctx.s.turnDeadline = away ? now + ctx.s.config.awayTurnSeconds * 1000 : null;
     tick(ctx);
@@ -63,21 +64,21 @@ export function setAway(state: GameState, playerId: PlayerId, away: boolean, now
 export function hostSkip(state: GameState, now: number): Step {
   return run(state, now, (ctx) => {
     const s = ctx.s;
-    const names = (ids: PlayerId[]) => ids.map((id) => s.players[id]?.nickname ?? "someone").join(", ");
+    const names = (ids: PlayerId[]) => list(ids.map((id) => s.players[id]?.nickname ?? "?"));
     const w = s.pending.at(-1);
     const active = activePlayerId(s);
     if (w) {
       const waiting = w.addressees.filter((id) => w.answers[id] === undefined);
-      log(ctx, `The host moves things along: ${names(waiting)} ${waiting.length === 1 ? "takes" : "take"} the default for "${w.title}".`, "HOST");
+      log(ctx, waiting.length === 1 ? m`The host moves things along: ${names(waiting)} takes the default for "${w.title}".` : m`The host moves things along: ${names(waiting)} take the default for "${w.title}".`, "HOST");
       closeTop(ctx);
     } else if (s.sequence) {
-      log(ctx, "The host moves things along: the scene ends.", "HOST");
+      log(ctx, m`The host moves things along: the scene ends.`, "HOST");
       s.sequence.acks = s.turnOrder.slice();
     } else if (active) {
-      log(ctx, `The host moves things along: ${names([active])}'s turn passes.`, "HOST", active);
+      log(ctx, m`The host moves things along: ${names([active])}'s turn passes.`, "HOST", active);
       endTurn(ctx);
     } else {
-      throw new RuleError("INVALID", "Nobody is being waited for.");
+      throw new RuleError("INVALID", m`Nobody is being waited for.`);
     }
     advance(ctx);
   });

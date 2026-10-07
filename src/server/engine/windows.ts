@@ -4,6 +4,7 @@
 // registered for its `resume.kind` carries the game on.
 import type { PendingWindow, PlayerId } from "../../shared/game/state.ts";
 import { cue, newId, RuleError, type Ctx } from "./context.ts";
+import { m, ref } from "../../shared/i18n/msg.ts";
 
 export type Resumer = (ctx: Ctx, w: PendingWindow, answers: Record<PlayerId, string>) => void;
 
@@ -26,10 +27,10 @@ export function openWindow(ctx: Ctx, spec: WindowSpec): PendingWindow {
 
 export function answerWindow(ctx: Ctx, actorId: PlayerId, windowId: string, optionId: string): void {
   const w = ctx.s.pending.at(-1);
-  if (!w || w.id !== windowId) throw new RuleError("NOT_YOUR_WINDOW", "That decision has already closed.");
-  if (!w.addressees.includes(actorId)) throw new RuleError("NOT_YOUR_WINDOW", "This decision isn't yours to make.");
-  if (w.answers[actorId] !== undefined) throw new RuleError("INVALID", "You've already answered.");
-  if (!w.options.some((o) => o.id === optionId)) throw new RuleError("INVALID", "That isn't one of the options.");
+  if (!w || w.id !== windowId) throw new RuleError("NOT_YOUR_WINDOW", m`That decision has already closed.`);
+  if (!w.addressees.includes(actorId)) throw new RuleError("NOT_YOUR_WINDOW", m`This decision isn't yours to make.`);
+  if (w.answers[actorId] !== undefined) throw new RuleError("INVALID", m`You've already answered.`);
+  if (!w.options.some((o) => o.id === optionId)) throw new RuleError("INVALID", m`That isn't one of the options.`);
   w.answers[actorId] = optionId;
   cue(ctx, "ANSWER", { windowId: w.id, playerId: actorId });
   settleIfAnswered(ctx, w);

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { getCharacter } from "../../shared/characters/roster/index.ts";
 import type { MBTI, Zodiac } from "../../shared/characters/types.ts";
+import { useCharacterText, useT } from "../i18n/index.ts";
 import { Sigil } from "./Sigil.tsx";
 
 type Props = {
@@ -18,11 +19,13 @@ type Props = {
 export function Avatar({ zodiac, mbti, size = 64, dim = false, className = "", eager = false }: Props) {
   const c = getCharacter(zodiac, mbti);
   const [failed, setFailed] = useState(false);
+  const t = useT();
+  const text = useCharacterText();
   if (failed) return <Sigil zodiac={zodiac} size={size} dim={dim} className={className} />;
   return (
     <img
       src={c.avatar}
-      alt={`${c.nickname}, portrait`}
+      alt={t("card.portraitAlt", { title: text(c.id).title })}
       width={size}
       height={size}
       loading={eager ? "eager" : "lazy"}

@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import { CARRIAGES } from "../../shared/game/scenario01/content.ts";
 import type { AnchorId, Carriage, CarriageIdentity, PlayerView } from "../../shared/game/state.ts";
+import { useScenarioText, useT } from "../i18n/index.ts";
 import { Icon } from "./Icon.tsx";
 
 const ANCHOR_AT: Partial<Record<CarriageIdentity, AnchorId>> = { ENGINE_ROOM: "POWER", ARCHIVE: "IDENTITY", SLEEPER: "MEMORY", MIRROR: "MEMORY" };
@@ -20,6 +21,7 @@ type Props = {
 
 export function Train({ g, moveTargets = [], onPick }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
+  const t = useT();
   const me = g.players[g.viewerId];
   const focus = moveTargets.length ? moveTargets[0] : (me?.carriageIndex ?? 0);
 
@@ -29,7 +31,7 @@ export function Train({ g, moveTargets = [], onPick }: Props) {
   }, [focus]);
 
   return (
-    <section aria-label="The train" className="relative">
+    <section aria-label={t("train.aria")} className="relative">
       <div ref={scroller} className="no-scrollbar overflow-x-auto overscroll-x-contain px-3 pt-2 pb-3 sm:px-4">
         <LayoutGroup>
           <ol className="mx-auto flex w-max items-stretch gap-0">
@@ -55,7 +57,9 @@ const Coupler = () => (
 );
 
 function CarriageCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; target: boolean; onPick?: (i: number) => void }) {
-  const info = CARRIAGES[c.identity];
+  const t = useT();
+  const words = useScenarioText().carriages[c.identity];
+  const info = { ...CARRIAGES[c.identity], name: words.name, theme: words.theme };
   const here = g.turnOrder.map((id) => g.players[id]).filter((p) => p.carriageIndex === c.index);
   const activeId = g.step === "PLAYER_TURNS" ? g.turnOrder[g.activeIndex] : null;
   const mine = g.players[g.viewerId]?.carriageIndex === c.index;
@@ -71,7 +75,13 @@ function CarriageCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; ta
       data-carriage={c.index}
       layout
       onClick={target ? () => onPick?.(c.index) : undefined}
-      aria-label={`${info.name}${c.locked ? ", locked" : ""}${mine ? ", you are here" : ""}. ${here.length} passenger${here.length === 1 ? "" : "s"}.${target ? " Move here." : ""}`}
+      aria-label={t("train.carriageAria", {
+        name: info.name,
+        locked: c.locked ? t("train.lockedAria") : "",
+        mine: mine ? t("train.youHere") : "",
+        count: here.length === 1 ? t("train.passengers.one") : t("train.passengers.other", { n: here.length }),
+        move: target ? t("train.moveHere") : "",
+      })}
       className={`relative flex h-[168px] w-[132px] flex-col overflow-hidden rounded-[14px] border text-left sm:h-[184px] sm:w-[156px] ${
         target ? "cursor-pointer border-signal shadow-[var(--glow-signal)]" : mine ? "border-gold/70" : "border-[#262d55]"
       }`}
@@ -102,7 +112,7 @@ function CarriageCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; ta
           {anchor && <AnchorBadge g={g} id={anchor} />}
           {lock && (
             <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wider ${lockOn ? "bg-gold text-[#1a1206]" : "border border-gold/50 text-gold"}`}>
-              {lock.toUpperCase()} {lockOn ? "ON" : "OFF"}
+              {t(lockOn ? "train.lockOn" : "train.lockOff", { lock: t(`train.lock.${lock}`) })}
             </span>
           )}
         </div>
@@ -118,7 +128,7 @@ function CarriageCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; ta
               layoutId={`p-${p.playerId}`}
               transition={{ type: "spring", damping: 22, stiffness: 200 }}
               className={`relative block h-8 w-8 rounded-full sm:h-9 sm:w-9 ${p.playerId === activeId ? "ring-2 ring-signal" : p.playerId === g.viewerId ? "ring-2 ring-gold" : "ring-1 ring-white/20"}`}
-              title={`${p.nickname}${p.lost ? " (lost)" : ""}${p.away ? " (away)" : ""}`}
+              title={`${p.nickname}${p.lost ? t("train.lost") : ""}${p.away ? t("train.away") : ""}`}
             >
               <img src={ch.avatar} alt={p.nickname} className={`h-full w-full rounded-full ${p.lost || p.away ? "opacity-50 grayscale" : ""}`} draggable={false} />
               {p.playerId === activeId && <span className="absolute -top-1 -right-1 h-2.5 w-2.5 animate-pulse rounded-full bg-signal" />}
@@ -127,12 +137,12 @@ function CarriageCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; ta
         })}
         <AnimatePresence>
           {inspectorHere && (
-            <motion.span key="inspector" layoutId="inspector" className="ml-auto block" initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.6 }} title="The Faceless Inspector">
+            <motion.span key="inspector" layoutId="inspector" className="ml-auto block" initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.6 }} title={t("train.inspector")}>
               <InspectorFigure distortion={g.inspector.distortion} />
             </motion.span>
           )}
           {entities.map((e) => (
-            <motion.span key={e.id} layoutId={e.id} className="block" initial={{ opacity: 0 }} animate={{ opacity: [0.5, 0.9, 0.5] }} exit={{ opacity: 0, scale: 1.4 }} transition={{ duration: 2.4, repeat: Infinity }} title={e.kind === "SHADOW" ? `Shadow passenger (${e.hp})` : `Echo (${e.hp})`}>
+            <motion.span key={e.id} layoutId={e.id} className="block" initial={{ opacity: 0 }} animate={{ opacity: [0.5, 0.9, 0.5] }} exit={{ opacity: 0, scale: 1.4 }} transition={{ duration: 2.4, repeat: Infinity }} title={t(e.kind === "SHADOW" ? "train.shadow" : "train.echo", { hp: e.hp })}>
               <Ghost kind={e.kind} />
             </motion.span>
           ))}
@@ -142,7 +152,7 @@ function CarriageCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; ta
       {c.locked && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-[#05060d]/70 text-ash">
           <Icon name="LOCK" size={26} />
-          <span className="text-[10px] font-bold tracking-widest">LOCKED · R8</span>
+          <span className="text-[10px] font-bold tracking-widest">{t("train.lockedBadge")}</span>
         </div>
       )}
     </Tag>
@@ -152,23 +162,27 @@ function CarriageCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; ta
 function AnchorBadge({ g, id }: { g: PlayerView; id: AnchorId }) {
   const a = g.anchors[id];
   const pct = a.progress / a.required;
+  const t = useT();
+  const name = useScenarioText().anchors[id];
+  const short = t(`train.anchor.${id}`);
   return (
-    <span className="flex items-center gap-1" title={`${id.toLowerCase()} anchor ${a.progress}/${a.required}`}>
+    <span className="flex items-center gap-1" title={t("game.anchorTitle", { name, progress: a.progress, required: a.required })}>
       <svg width="16" height="16" viewBox="0 0 22 22" aria-hidden="true">
         <circle cx="11" cy="11" r="9" fill="none" stroke="#1d2657" strokeWidth="2.5" />
         <circle cx="11" cy="11" r="9" fill="none" stroke={a.repaired ? "#e8c97f" : "#c9a55a"} strokeWidth="2.5" strokeDasharray={`${pct * 56.5} 56.5`} transform="rotate(-90 11 11)" />
         <rect x="8" y="8" width="6" height="6" transform="rotate(45 11 11)" fill={a.repaired ? "#e8c97f" : "none"} stroke="#e8c97f" />
       </svg>
       <span className="font-mono text-[10px] text-gold">
-        {id} {a.repaired ? "OK" : `${a.progress}/${a.required}`}
+        {a.repaired ? t("train.anchorOk", { anchor: short }) : t("train.anchorProgress", { anchor: short, progress: a.progress, required: a.required })}
       </span>
     </span>
   );
 }
 
 function InspectorFigure({ distortion }: { distortion: number }) {
+  const t = useT();
   return (
-    <svg width="30" height="40" viewBox="0 0 30 40" aria-label={`Inspector, distortion ${distortion} of 3`}>
+    <svg width="30" height="40" viewBox="0 0 30 40" aria-label={t("train.inspectorAria", { n: distortion })}>
       <path d="M6 14h18l-2 26H8z" fill="#07080f" stroke="#c9a55a" strokeWidth=".8" />
       <path d="M5 13h20l-3-5H8z" fill="#0b0d18" stroke="#c9a55a" strokeWidth=".8" />
       <ellipse cx="15" cy="19" rx="5" ry="6" fill="#d9d9e3" />

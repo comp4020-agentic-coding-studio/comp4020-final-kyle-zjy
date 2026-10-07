@@ -1,6 +1,9 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState, type FormEvent } from "react";
 import { CodeInput } from "../components/CodeInput.tsx";
+import { LanguageSwitch } from "../components/LanguageSwitch.tsx";
+import { useT, type MessageKey, type TFunction } from "../i18n/index.ts";
+import { MAX_PLAYERS } from "../../shared/protocol.ts";
 import { PlatformScene } from "../components/PlatformScene.tsx";
 import { api, ApiError } from "../net/api.ts";
 import { session } from "../net/session.ts";
@@ -12,6 +15,7 @@ type Mode = null | "create" | "join";
 export function Landing({ initialCode }: { initialCode?: string }) {
   const [mode, setMode] = useState<Mode>(initialCode ? "join" : null);
   const [lastRoom, setLastRoom] = useState<string | null>(null);
+  const t = useT();
 
   useEffect(() => {
     const code = session.lastRoom();
@@ -35,7 +39,7 @@ export function Landing({ initialCode }: { initialCode?: string }) {
           <span className="led-amber text-lg sm:text-xl">00:17</span>
           <span className="led">N13</span>
           <span className="truncate text-mist">
-            TERMINUS <span className="led-amber tracking-widest">██████</span>
+            {t("landing.board.terminus")} <span className="led-amber tracking-widest">██████</span>
           </span>
         </div>
         <div className="mt-1 overflow-hidden whitespace-nowrap font-mono text-[11px] text-ash">
@@ -43,7 +47,7 @@ export function Landing({ initialCode }: { initialCode?: string }) {
             animate={{ x: ["100%", "-100%"] }}
             transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
           >
-            PASSENGERS WITH TICKETS, PLEASE BOARD NOW · PASSENGER COUNT IS BEING CONFIRMED · DO NOT FALL ASLEEP
+            {t("landing.board.ticker")}
           </motion.div>
         </div>
       </motion.header>
@@ -55,7 +59,7 @@ export function Landing({ initialCode }: { initialCode?: string }) {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9, duration: 1 }}
         >
-          A party game for 2–10 passengers
+          {t("landing.kicker")}
         </motion.p>
         <motion.h1
           className="mt-3 font-display text-[clamp(3rem,15vw,6.5rem)] leading-[0.9] font-semibold text-moon"
@@ -64,9 +68,9 @@ export function Landing({ initialCode }: { initialCode?: string }) {
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           transition={{ delay: 0.5, duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
         >
-          Fate
+          {t("landing.title1")}
           <br />
-          <span className="text-gold-bright italic">Instance</span>
+          <span className="text-gold-bright italic">{t("landing.title2")}</span>
         </motion.h1>
         <motion.p
           className="mt-4 max-w-sm text-[15px] leading-relaxed text-mist"
@@ -74,8 +78,7 @@ export function Landing({ initialCode }: { initialCode?: string }) {
           animate={{ opacity: 1 }}
           transition={{ delay: 1.3, duration: 1 }}
         >
-          Your zodiac sign and MBTI type become a character with exactly one ability. Spend it at the right moment, or
-          stay on the last train forever.
+          {t("landing.pitch")}
         </motion.p>
 
         <motion.div
@@ -86,18 +89,21 @@ export function Landing({ initialCode }: { initialCode?: string }) {
         >
           {lastRoom && (
             <button className="btn btn-signal w-full" onClick={() => navigate(`/room/${lastRoom}`)}>
-              Return to room <span className="font-mono tracking-widest">{lastRoom}</span>
+              {t("landing.return")} <span className="font-mono tracking-widest">{lastRoom}</span>
             </button>
           )}
           <button className="btn btn-gold w-full" onClick={() => setMode("create")}>
-            Create room
+            {t("landing.create")}
           </button>
           <button className="btn btn-ghost w-full" onClick={() => setMode("join")}>
-            Join room
+            {t("landing.join")}
           </button>
-          <a href="/readme/" className="mt-1 inline-flex min-h-12 items-center justify-center text-sm text-ash underline-offset-4 hover:text-mist hover:underline">
-            About this project
-          </a>
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <a href="/readme/" className="inline-flex min-h-12 items-center justify-center text-sm text-ash underline-offset-4 hover:text-mist hover:underline">
+              {t("landing.about")}
+            </a>
+            <LanguageSwitch />
+          </div>
         </motion.div>
       </section>
 
@@ -113,6 +119,7 @@ function EntrySheet({ mode, initialCode, onClose }: { mode: "create" | "join"; i
   const [code, setCode] = useState(initialCode ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
   const canSubmit = nickname.trim().length > 0 && (mode === "create" || code.length === 6) && !busy;
 
   useEffect(() => {
@@ -134,7 +141,7 @@ function EntrySheet({ mode, initialCode, onClose }: { mode: "create" | "join"; i
       if (location.pathname.toUpperCase() === target.toUpperCase()) reconnect();
       else navigate(target);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong.");
+      setError(apiErrorText(t, err));
       setBusy(false);
     }
   };
@@ -146,7 +153,7 @@ function EntrySheet({ mode, initialCode, onClose }: { mode: "create" | "join"; i
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <button aria-label="Close" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <button aria-label={t("common.close")} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <motion.form
         role="dialog"
         aria-modal="true"
@@ -158,15 +165,15 @@ function EntrySheet({ mode, initialCode, onClose }: { mode: "create" | "join"; i
         exit={{ y: 60, opacity: 0 }}
         transition={{ type: "spring", damping: 26, stiffness: 260 }}
       >
-        <p className="label text-gold">{mode === "create" ? "New departure" : "Board a train"}</p>
+        <p className="label text-gold">{t(mode === "create" ? "entry.kicker.create" : "entry.kicker.join")}</p>
         <h2 id="entry-title" className="mt-1 font-display text-3xl font-semibold">
-          {mode === "create" ? "Create a room" : "Join a room"}
+          {t(mode === "create" ? "entry.title.create" : "entry.title.join")}
         </h2>
 
         {mode === "join" && (
           <div className="mt-5">
             <label htmlFor="code" className="label mb-2 block">
-              Room code
+              {t("entry.code")}
             </label>
             <CodeInput id="code" value={code} onChange={setCode} />
           </div>
@@ -174,7 +181,7 @@ function EntrySheet({ mode, initialCode, onClose }: { mode: "create" | "join"; i
 
         <div className="mt-5">
           <label htmlFor="nickname" className="label mb-2 block">
-            Your name on the ticket
+            {t("entry.nickname")}
           </label>
           <input
             id="nickname"
@@ -183,7 +190,7 @@ function EntrySheet({ mode, initialCode, onClose }: { mode: "create" | "join"; i
             maxLength={16}
             autoComplete="nickname"
             autoFocus={mode === "create" || !!initialCode}
-            placeholder="Up to 16 characters"
+            placeholder={t("entry.nicknamePlaceholder")}
             onChange={(e) => setNickname(e.target.value)}
           />
         </div>
@@ -196,13 +203,30 @@ function EntrySheet({ mode, initialCode, onClose }: { mode: "create" | "join"; i
 
         <div className="mt-6 flex gap-3">
           <button type="button" className="btn btn-ghost flex-1" onClick={onClose}>
-            Back
+            {t("common.back")}
           </button>
           <button type="submit" className="btn btn-gold flex-[2]" disabled={!canSubmit}>
-            {busy ? "Boarding…" : mode === "create" ? "Create room" : "Join room"}
+            {busy ? t("entry.boarding") : t(mode === "create" ? "landing.create" : "landing.join")}
           </button>
         </div>
       </motion.form>
     </motion.div>
   );
+}
+
+const API_ERRORS: Record<string, MessageKey> = {
+  NETWORK: "api.error.NETWORK",
+  ROOM_NOT_FOUND: "api.error.ROOM_NOT_FOUND",
+  ROOM_FULL: "api.error.ROOM_FULL",
+  GAME_IN_PROGRESS: "api.error.GAME_IN_PROGRESS",
+  NICKNAME_TAKEN: "api.error.NICKNAME_TAKEN",
+  NOT_IN_ROOM: "api.error.NOT_IN_ROOM",
+  INVALID: "api.error.INVALID",
+};
+
+/** Create/join errors by their code, so they read in the player's language. */
+function apiErrorText(t: TFunction, err: unknown): string {
+  if (!(err instanceof ApiError)) return t("common.somethingWrong");
+  const key = API_ERRORS[err.code];
+  return key ? t(key, { n: MAX_PLAYERS }) : err.message;
 }

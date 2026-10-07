@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { en } from "../src/shared/i18n/format.ts";
 import type { Ctx } from "../src/server/engine/context.ts";
 import { inspectorPhase } from "../src/server/engine/inspector.ts";
 import { project } from "../src/server/engine/project.ts";
@@ -259,8 +260,8 @@ describe("results", () => {
     });
     const s = escape(t, me);
     const other = s.turnOrder.find((x) => x !== me)!;
-    expect(s.results!.find((r) => r.playerId === me)!.title).toBe("The Train's Mechanic");
-    expect(s.results!.find((r) => r.playerId === other)!.title).toBe("Fate's Favourite");
+    expect(en(s.results!.find((r) => r.playerId === me)!.title)).toBe("The Train's Mechanic");
+    expect(en(s.results!.find((r) => r.playerId === other)!.title)).toBe("Fate's Favourite");
   });
 
   it("a help on the final roll means it wasn't a lone-wolf task", () => {

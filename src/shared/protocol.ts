@@ -1,3 +1,4 @@
+import type { Msg } from "./i18n/types.ts";
 // WebSocket messages on /ws. The server always sends whole projected snapshots
 // (small at ≤ 10 players), so a missed message is fixed by the next one.
 import type { GameAction, LobbyAction, RejectCode } from "./game/actions.ts";
@@ -27,7 +28,7 @@ export type ServerMessage =
   | { t: "WELCOME"; playerId: PlayerId; snapshot: Snapshot }
   | { t: "STATE"; snapshot: Snapshot; events: GameEvent[] }
   | { t: "ACK"; actionId: string }
-  | { t: "REJECTED"; actionId: string; code: RejectCode; message: string }
+  | { t: "REJECTED"; actionId: string; code: RejectCode; message: string; msg?: Msg }
   | { t: "SESSION_REPLACED" }
   | { t: "KICKED" }
   | { t: "ROOM_CLOSED" }

@@ -6,11 +6,13 @@ import type { ItemId, PlayerId } from "../../shared/game/state.ts";
 import { log, type Ctx } from "./context.ts";
 import { gainFate, payBonds, present, removeStatus, statusOf } from "./players.ts";
 import { queueTrigger } from "./trigger-queue.ts";
+import type { Msg } from "../../shared/i18n/types.ts";
+import { m, ref } from "../../shared/i18n/msg.ts";
 
 type Gain = { playerId: PlayerId; fate: number; item?: ItemId };
 
 /** Runs `fn` and treats whatever the players in `pool` gained during it as rewards. Returns who gained. */
-export function measureRewards(ctx: Ctx, pool: PlayerId[], label: string, fn: () => void): Gain[] {
+export function measureRewards(ctx: Ctx, pool: PlayerId[], label: Msg, fn: () => void): Gain[] {
   const before = new Map(pool.map((id) => {
     const p = ctx.s.players[id];
     return [id, { fate: p.fate, sanity: p.sanity, items: p.items.length }];
@@ -26,13 +28,13 @@ export function measureRewards(ctx: Ctx, pool: PlayerId[], label: string, fn: ()
   return gains;
 }
 
-function rewarded(ctx: Ctx, g: Gain, label: string): void {
+function rewarded(ctx: Ctx, g: Gain, label: Msg): void {
   const p = ctx.s.players[g.playerId];
   const bonus = statusOf(p, "BONUS_NEXT_REWARD");
   if (bonus) {
     removeStatus(p, bonus.id);
-    log(ctx, `${p.nickname}'s mark pays out (${label}).`, "FATE", p.playerId);
-    gainFate(ctx, p, bonus.value ?? 1, "a marked reward");
+    log(ctx, m`${p.nickname}'s mark pays out (${label}).`, "FATE", p.playerId);
+    gainFate(ctx, p, bonus.value ?? 1, m`a marked reward`);
   }
   queueTrigger(ctx, { kind: "SELF_GAINS_REWARD", subjectId: g.playerId, amount: g.fate, item: g.item });
   queueTrigger(ctx, { kind: "PLAYER_GAINS_REWARDS", subjectId: g.playerId, sourceId: "SYSTEM", amount: g.fate, item: g.item });

@@ -14,13 +14,19 @@ import {
 } from "../../shared/protocol.ts";
 import { transaction, type Db } from "../db/db.ts";
 import type { GameStore } from "../game/store.ts";
+import { en } from "../../shared/i18n/format.ts";
+import { m } from "../../shared/i18n/msg.ts";
+import type { Msg } from "../../shared/i18n/types.ts";
 
 export class RoomError extends Error {
   code: RejectCode;
   status: 400 | 403 | 404 | 409;
-  constructor(code: RejectCode, message: string, status: 400 | 403 | 404 | 409 = 400) {
-    super(message);
+  /** Why, for each client to render in its own locale (`message` is the English). */
+  msg: Msg;
+  constructor(code: RejectCode, msg: Msg, status: 400 | 403 | 404 | 409 = 400) {
+    super(en(msg));
     this.code = code;
+    this.msg = msg;
     this.status = status;
   }
 }
@@ -53,11 +59,11 @@ export function normaliseCode(input: string): string {
 }
 
 export function normaliseNickname(input: unknown): string {
-  if (typeof input !== "string") throw new RoomError("INVALID", "Enter a nickname.");
+  if (typeof input !== "string") throw new RoomError("INVALID", m`Enter a nickname.`);
   // strip control characters, collapse whitespace
   const name = input.replace(/[\p{Cc}\p{Cf}]/gu, "").replace(/\s+/g, " ").trim();
-  if (name.length < 1) throw new RoomError("INVALID", "Enter a nickname.");
-  if ([...name].length > 16) throw new RoomError("INVALID", "Nicknames are at most 16 characters.");
+  if (name.length < 1) throw new RoomError("INVALID", m`Enter a nickname.`);
+  if ([...name].length > 16) throw new RoomError("INVALID", m`Nicknames are at most 16 characters.`);
   return name;
 }
 
@@ -95,16 +101,16 @@ export class RoomService {
   /** The seated member a socket's token belongs to, or an error. */
   authenticate(rawCode: string, token: unknown): PlayerId {
     const code = normaliseCode(rawCode);
-    if (typeof token !== "string") throw new RoomError("NOT_IN_ROOM", "Missing session.", 403);
+    if (typeof token !== "string") throw new RoomError("NOT_IN_ROOM", m`Missing session.`, 403);
     const room = this.room(code);
-    if (!room) throw new RoomError("ROOM_NOT_FOUND", "That room doesn't exist.", 404);
+    if (!room) throw new RoomError("ROOM_NOT_FOUND", m`That room doesn't exist.`, 404);
     const row = this.db
       .prepare(
         `SELECT m.player_id FROM room_members m JOIN players p ON p.id = m.player_id
          WHERE m.room_code = ? AND p.session_token_hash = ? AND m.left_at IS NULL`,
       )
       .get(code, hashToken(token));
-    if (!row) throw new RoomError("NOT_IN_ROOM", "You're not seated in this room.", 403);
+    if (!row) throw new RoomError("NOT_IN_ROOM", m`You're not seated in this room.`, 403);
     this.db.prepare("UPDATE players SET last_seen_at = ? WHERE id = ?").run(Date.now(), row.player_id as string);
     return row.player_id as string;
   }
@@ -141,20 +147,20 @@ export class RoomService {
     const code = normaliseCode(rawCode);
     return transaction(this.db, () => {
       const room = this.room(code);
-      if (!room || room.closed_at) throw new RoomError("ROOM_NOT_FOUND", "That room doesn't exist.", 404);
+      if (!room || room.closed_at) throw new RoomError("ROOM_NOT_FOUND", m`That room doesn't exist.`, 404);
       const who = this.identify(token);
       const existing = this.db
         .prepare("SELECT left_at, kicked FROM room_members WHERE room_code = ? AND player_id = ?")
         .get(code, who.playerId) as { left_at: number | null; kicked: number } | undefined;
-      if (existing?.kicked) throw new RoomError("NOT_IN_ROOM", "The host removed you from this room.", 403);
+      if (existing?.kicked) throw new RoomError("NOT_IN_ROOM", m`The host removed you from this room.`, 403);
       if (existing && existing.left_at === null) return { roomCode: code, ...who };
 
       const nickname = normaliseNickname(rawNickname);
-      if (room.phase !== "LOBBY") throw new RoomError("GAME_IN_PROGRESS", "That room has already started.", 409);
+      if (room.phase !== "LOBBY") throw new RoomError("GAME_IN_PROGRESS", m`That room has already started.`, 409);
       const members = this.members(code);
-      if (members.length >= MAX_PLAYERS) throw new RoomError("ROOM_FULL", `That room is full (${MAX_PLAYERS} players).`, 409);
+      if (members.length >= MAX_PLAYERS) throw new RoomError("ROOM_FULL", m`That room is full (${MAX_PLAYERS} players).`, 409);
       if (members.some((m) => m.nickname.toLowerCase() === nickname.toLowerCase())) {
-        throw new RoomError("NICKNAME_TAKEN", "Someone in that room already uses that nickname.", 409);
+        throw new RoomError("NICKNAME_TAKEN", m`Someone in that room already uses that nickname.`, 409);
       }
       const taken = new Set(members.map((m) => m.seat));
       const seat = [...Array(MAX_PLAYERS).keys()].find((s) => !taken.has(s))!;
@@ -190,17 +196,17 @@ export class RoomService {
     const code = normaliseCode(rawCode);
     return transaction(this.db, () => {
       const room = this.room(code);
-      if (!room) throw new RoomError("ROOM_NOT_FOUND", "That room doesn't exist.", 404);
+      if (!room) throw new RoomError("ROOM_NOT_FOUND", m`That room doesn't exist.`, 404);
       const members = this.members(code);
       const me = members.find((m) => m.player_id === actor);
-      if (!me) throw new RoomError("NOT_IN_ROOM", "You're not seated in this room.", 403);
+      if (!me) throw new RoomError("NOT_IN_ROOM", m`You're not seated in this room.`, 403);
       const isHost = room.host_player_id === actor;
       const inLobby = room.phase === "LOBBY";
       const requireLobby = () => {
-        if (!inLobby) throw new RoomError("WRONG_PHASE", "That's only possible in the lobby.");
+        if (!inLobby) throw new RoomError("WRONG_PHASE", m`That's only possible in the lobby.`);
       };
       const requireHost = () => {
-        if (!isHost) throw new RoomError("NOT_HOST", "Only the host can do that.", 403);
+        if (!isHost) throw new RoomError("NOT_HOST", m`Only the host can do that.`, 403);
       };
       const setMember = (sql: string, ...args: (string | number | null)[]) =>
         this.db.prepare(`UPDATE room_members SET ${sql} WHERE room_code = ? AND player_id = ?`).run(...args, code, actor);
@@ -211,29 +217,29 @@ export class RoomService {
           requireLobby();
           const nickname = normaliseNickname(action.nickname);
           if (members.some((m) => m.player_id !== actor && m.nickname.toLowerCase() === nickname.toLowerCase())) {
-            throw new RoomError("NICKNAME_TAKEN", "Someone here already uses that nickname.", 409);
+            throw new RoomError("NICKNAME_TAKEN", m`Someone here already uses that nickname.`, 409);
           }
           setMember("nickname = ?", nickname);
           break;
         }
         case "PICK_ZODIAC": {
           requireLobby();
-          if (!ZODIACS.includes(action.zodiac)) throw new RoomError("INVALID", "Unknown zodiac sign.");
+          if (!ZODIACS.includes(action.zodiac)) throw new RoomError("INVALID", m`Unknown zodiac sign.`);
           // a new sign starts the pick over: MBTI is chosen against the sign
           setMember("zodiac = ?, mbti = NULL, stage = 'ZODIAC_CHOSEN'", action.zodiac);
           break;
         }
         case "PICK_MBTI": {
           requireLobby();
-          if (!MBTIS.includes(action.mbti)) throw new RoomError("INVALID", "Unknown MBTI type.");
-          if (!me.zodiac) throw new RoomError("INVALID", "Choose a zodiac sign first.");
+          if (!MBTIS.includes(action.mbti)) throw new RoomError("INVALID", m`Unknown MBTI type.`);
+          if (!me.zodiac) throw new RoomError("INVALID", m`Choose a zodiac sign first.`);
           setMember("mbti = ?, stage = 'REVEALED'", action.mbti);
           break;
         }
         case "SET_READY": {
           requireLobby();
           if (action.ready && (!me.zodiac || !me.mbti)) {
-            throw new RoomError("INVALID", "Choose your sign and type before readying up.");
+            throw new RoomError("INVALID", m`Choose your sign and type before readying up.`);
           }
           setMember("stage = ?", action.ready ? "READY" : me.zodiac && me.mbti ? "REVEALED" : me.stage);
           break;
@@ -241,9 +247,9 @@ export class RoomService {
         case "KICK": {
           requireLobby();
           requireHost();
-          if (action.playerId === actor) throw new RoomError("ILLEGAL_TARGET", "You can't remove yourself; leave instead.");
+          if (action.playerId === actor) throw new RoomError("ILLEGAL_TARGET", m`You can't remove yourself; leave instead.`);
           if (!members.some((m) => m.player_id === action.playerId)) {
-            throw new RoomError("ILLEGAL_TARGET", "That player isn't in the room.");
+            throw new RoomError("ILLEGAL_TARGET", m`That player isn't in the room.`);
           }
           this.db
             .prepare("UPDATE room_members SET left_at = ?, kicked = 1 WHERE room_code = ? AND player_id = ?")
@@ -254,7 +260,7 @@ export class RoomService {
         case "SELECT_SCENARIO": {
           requireLobby();
           requireHost();
-          if (action.scenarioId !== "S01_LAST_TRAIN") throw new RoomError("INVALID", "That scenario isn't open yet.");
+          if (action.scenarioId !== "S01_LAST_TRAIN") throw new RoomError("INVALID", m`That scenario isn't open yet.`);
           this.db.prepare("UPDATE rooms SET scenario_id = ? WHERE code = ?").run(action.scenarioId, code);
           break;
         }
@@ -262,10 +268,10 @@ export class RoomService {
           requireLobby();
           requireHost();
           if (members.length < MIN_PLAYERS) {
-            throw new RoomError("NOT_ENOUGH_PLAYERS", `At least ${MIN_PLAYERS} players are needed to start.`);
+            throw new RoomError("NOT_ENOUGH_PLAYERS", m`At least ${MIN_PLAYERS} players are needed to start.`);
           }
-          if (members.some((m) => m.stage !== "READY" || !m.zodiac || !m.mbti)) throw new RoomError("NOT_ALL_READY", "Everyone has to be ready first.");
-          if (!this.games) throw new RoomError("INVALID", "Runs can't start on this server.");
+          if (members.some((m) => m.stage !== "READY" || !m.zodiac || !m.mbti)) throw new RoomError("NOT_ALL_READY", m`Everyone has to be ready first.`);
+          if (!this.games) throw new RoomError("INVALID", m`Runs can't start on this server.`);
           // the run is created in this same transaction: a room is never "started" without one
           this.games.create(
             code,
@@ -277,14 +283,14 @@ export class RoomService {
         }
         case "SKIP_WAITING": {
           requireHost();
-          if (inLobby) throw new RoomError("WRONG_PHASE", "There's nothing to skip in the lobby.");
+          if (inLobby) throw new RoomError("WRONG_PHASE", m`There's nothing to skip in the lobby.`);
           outcome = { skip: true };
           break;
         }
         case "BACK_TO_LOBBY":
         case "RESTART": {
           requireHost();
-          if (inLobby) throw new RoomError("WRONG_PHASE", "The room is already in the lobby.");
+          if (inLobby) throw new RoomError("WRONG_PHASE", m`The room is already in the lobby.`);
           this.db.prepare("UPDATE game_sessions SET ended_at = COALESCE(ended_at, ?) WHERE id = (SELECT current_session FROM rooms WHERE code = ?)").run(Date.now(), code);
           this.db.prepare("UPDATE rooms SET phase = 'LOBBY', current_session = NULL WHERE code = ?").run(code);
           outcome = { ended: true };
@@ -293,13 +299,13 @@ export class RoomService {
           break;
         }
         case "LEAVE": {
-          if (!inLobby) throw new RoomError("WRONG_PHASE", "You can't leave a run in progress; it keeps your seat.");
+          if (!inLobby) throw new RoomError("WRONG_PHASE", m`You can't leave a run in progress; it keeps your seat.`);
           setMember("left_at = ?", Date.now());
           outcome = { left: actor };
           break;
         }
         default:
-          throw new RoomError("INVALID", "Unknown action.");
+          throw new RoomError("INVALID", m`Unknown action.`);
       }
 
       if (outcome.kicked || outcome.left) this.reassignHostIfNeeded(code, connected);

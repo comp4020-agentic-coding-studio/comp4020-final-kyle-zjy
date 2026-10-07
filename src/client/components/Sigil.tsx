@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { ZODIAC_INFO } from "../../shared/characters/signs.ts";
 import type { Zodiac } from "../../shared/characters/types.ts";
+import { useScenarioText, useT } from "../i18n/index.ts";
 
 type Props = {
   zodiac: Zodiac | null;
@@ -17,6 +18,8 @@ const TICKS = Array.from({ length: 24 }, (_, i) => i);
 
 export function Sigil({ zodiac, size = 64, draw = false, dim = false, className = "" }: Props) {
   const info = zodiac ? ZODIAC_INFO[zodiac] : null;
+  const t = useT();
+  const text = useScenarioText();
   const accent = info?.accent ?? "#3a4270";
   const gid = `sg-${zodiac ?? "none"}-${size}`;
   return (
@@ -26,7 +29,7 @@ export function Sigil({ zodiac, size = 64, draw = false, dim = false, className 
       height={size}
       className={className}
       role="img"
-      aria-label={info ? `${info.name} sigil` : "Empty seat"}
+      aria-label={zodiac ? t("card.sigilAria", { sign: text.zodiac[zodiac].name }) : t("card.emptySeat")}
       style={{ opacity: dim ? 0.55 : 1 }}
     >
       <defs>

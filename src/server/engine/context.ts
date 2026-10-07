@@ -4,6 +4,9 @@
 import type { RejectCode } from "../../shared/game/actions.ts";
 import type { GameState, LogLine, PlayerGameState, PlayerId } from "../../shared/game/state.ts";
 import type { GameEvent } from "../../shared/protocol.ts";
+import { en } from "../../shared/i18n/format.ts";
+import type { Msg } from "../../shared/i18n/types.ts";
+import { m } from "../../shared/i18n/msg.ts";
 
 export type Ctx = {
   s: GameState;
@@ -13,9 +16,12 @@ export type Ctx = {
 
 export class RuleError extends Error {
   code: RejectCode;
-  constructor(code: RejectCode, message: string) {
-    super(message);
+  /** Why, for each client to render in its own locale (`message` is the English). */
+  msg: Msg;
+  constructor(code: RejectCode, msg: Msg) {
+    super(en(msg));
     this.code = code;
+    this.msg = msg;
   }
 }
 
@@ -27,9 +33,9 @@ function clock(seq: number): string {
   return `${String(Math.floor(minutes / 60) % 24).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
-export function log(ctx: Ctx, text: string, kind = "INFO", actorId?: PlayerId): void {
+export function log(ctx: Ctx, msg: Msg, kind = "INFO", actorId?: PlayerId): void {
   const s = ctx.s;
-  const line: LogLine = { seq: s.logSeq, clock: clock(s.logSeq), text, kind, actorId };
+  const line: LogLine = { seq: s.logSeq, clock: clock(s.logSeq), msg, text: en(msg), kind, actorId };
   s.logSeq++;
   s.log.push(line);
   if (s.log.length > LOG_LIMIT) s.log.splice(0, s.log.length - LOG_LIMIT);
@@ -41,7 +47,7 @@ export function cue(ctx: Ctx, kind: string, payload: Record<string, unknown> = {
 
 export function player(ctx: Ctx, id: PlayerId): PlayerGameState {
   const p = ctx.s.players[id];
-  if (!p) throw new RuleError("ILLEGAL_TARGET", "That player isn't in this run.");
+  if (!p) throw new RuleError("ILLEGAL_TARGET", m`That player isn't in this run.`);
   return p;
 }
 

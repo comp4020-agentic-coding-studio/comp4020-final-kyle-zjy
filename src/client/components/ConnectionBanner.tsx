@@ -2,6 +2,7 @@
 // keeps the seat; this only says what's happening and that it's being handled.
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { useT } from "../i18n/index.ts";
 import { useStore } from "../store.ts";
 
 function useOnline(): boolean {
@@ -22,6 +23,7 @@ function useOnline(): boolean {
 export function ConnectionBanner() {
   const status = useStore((s) => s.status);
   const online = useOnline();
+  const t = useT();
   const show = status === "reconnecting" || !online;
   return (
     <AnimatePresence>
@@ -34,7 +36,7 @@ export function ConnectionBanner() {
           animate={{ y: 0 }}
           exit={{ y: -24 }}
         >
-          {online ? "Signal lost. Reconnecting… your seat is kept." : "Offline. You'll rejoin when it's back."}
+          {t(online ? "connection.lost" : "connection.offline")}
         </motion.p>
       )}
     </AnimatePresence>

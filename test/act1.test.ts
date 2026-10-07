@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { en } from "../src/shared/i18n/format.ts";
+import { m } from "../src/shared/i18n/msg.ts";
 import { createGame } from "../src/server/engine/create.ts";
 import { applyEffects } from "../src/server/engine/effects.ts";
 import { next } from "../src/server/engine/rng.ts";
@@ -142,7 +144,7 @@ describe("act 1: moving and items", () => {
     t.act(me, { type: "USE_ITEM", item: "FLASHLIGHT" });
     expect(t.state.players[me].items).toEqual([]);
     t.act(me, { type: "INVESTIGATE" });
-    expect(t.state.roll!.modifiers).toContainEqual({ source: "Flashlight", delta: 2 });
+    expect(t.state.roll!.modifiers).toContainEqual({ source: { k: "@item", p: ["FLASHLIGHT"] }, delta: 2 });
   });
 
   it("the Spare Battery adds an action point; the Pocket Watch winds Collapse back", () => {
@@ -241,7 +243,7 @@ describe("act 1: public events", () => {
   it("a group roll resolves for everyone without stopping the table", () => {
     const t = withDeck(["FLICKERING_LIGHTS"]);
     t.playUntil((s) => !!s.currentEvent?.resolved);
-    expect(t.state.currentEvent!.resultText!.split("·")).toHaveLength(3);
+    expect(t.state.currentEvent!.resultText!.p).toHaveLength(3);
   });
 });
 
@@ -311,13 +313,13 @@ describe("night rules", () => {
       const s = structuredClone(t.state);
       s.nightRule = "MERCURY_RETROGRADE";
       for (let k = 0; k < i; k++) next(s); // a different point in the run's own generator
-      s.roll = { id: "r1", playerId: "a", purpose: "SEARCH", label: "a search", raw: 2, modifiers: [], fateSpent: 0, final: 2, tier: "FAIL", modifiable: true, done: false };
+      s.roll = { id: "r1", playerId: "a", purpose: "SEARCH", label: m`a search`, raw: 2, modifiers: [], fateSpent: 0, final: 2, tier: "FAIL", modifiable: true, done: false };
       const ctx = { s, now: t.now, events: [] };
-      applyEffects(ctx, [{ kind: "REROLL", who: "SELF", keep: "SECOND" }], { ownerId: "a", targets: [], label: "a reroll" });
+      applyEffects(ctx, [{ kind: "REROLL", who: "SELF", keep: "SECOND" }], { ownerId: "a", targets: [], label: m`a reroll` });
       const afterFirst = s.players.a.sanity;
       costs += 3 - afterFirst;
       s.roll.done = false;
-      applyEffects(ctx, [{ kind: "REROLL", who: "SELF", keep: "SECOND" }], { ownerId: "a", targets: [], label: "a reroll" });
+      applyEffects(ctx, [{ kind: "REROLL", who: "SELF", keep: "SECOND" }], { ownerId: "a", targets: [], label: m`a reroll` });
       expect(s.players.a.sanity).toBe(afterFirst);
     }
     expect(costs).toBeGreaterThan(0);

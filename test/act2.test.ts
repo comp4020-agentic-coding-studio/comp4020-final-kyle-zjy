@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { en } from "../src/shared/i18n/format.ts";
+import { m } from "../src/shared/i18n/msg.ts";
 import type { Ctx } from "../src/server/engine/context.ts";
 import { secretMessage } from "../src/server/engine/beats.ts";
 import { moveInspector } from "../src/server/engine/inspector.ts";
@@ -224,7 +226,7 @@ describe("act 2: anchors", () => {
     const s = structuredClone(t.state);
     for (const a of Object.values(s.anchors)) a.progress = a.id === "POWER" ? 1 : 0;
     const ctx = ctxOf(s);
-    applyEffects(ctx, [{ kind: "REPAIR_ANCHOR", which: "WEAKEST", amount: 2 }], { ownerId: "SYSTEM", targets: [], label: "test" });
+    applyEffects(ctx, [{ kind: "REPAIR_ANCHOR", which: "WEAKEST", amount: 2 }], { ownerId: "SYSTEM", targets: [], label: m`test` });
     const done = Object.values(s.anchors).filter((a) => a.repaired);
     expect(done).toHaveLength(1);
     expect(s.collapse).toBe(t.state.collapse - 1);
@@ -290,7 +292,7 @@ describe("act 2: round 5 secret messages", () => {
         setUp(s);
         for (let k = 0; k < i; k++) next(s);
         const text = secretMessage(ctxOf(s), s.players.a, truthful);
-        expect(holds(s, text), text).toBe(truthful);
+        expect(holds(s, en(text)), en(text)).toBe(truthful);
       }
     }
   });
@@ -303,7 +305,7 @@ describe("act 2: round 5 secret messages", () => {
       for (let k = 0; k < i; k++) next(s);
       dreamCard(ctxOf(s), s.players.a);
       const card = s.secrets.a.dreamCards.at(-1)!;
-      expect(holds(s, card.text), card.text).toBe(card.isTrue);
+      expect(holds(s, en(card.text)), en(card.text)).toBe(card.isTrue);
     }
   });
 });
@@ -339,7 +341,7 @@ describe("act 2: round 6 emergency brake", () => {
   it("a tie is settled by the seeded generator, the same way on replay", () => {
     const one = vote({ a: "BRAKE", b: "CONTINUE" }, 2).t.state.currentEvent!;
     const two = vote({ a: "BRAKE", b: "CONTINUE" }, 2).t.state.currentEvent!;
-    expect(one.resultText).toContain("tie, settled by chance");
+    expect(en(one.resultText!)).toContain("tie, settled by chance");
     expect(two.choice).toBe(one.choice);
   });
 });

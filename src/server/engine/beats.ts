@@ -13,6 +13,8 @@ import { inspectorAppears, moveInspector, spawnEchoes } from "./inspector.ts";
 import { everyone, present } from "./players.ts";
 import { int, pick, shuffle } from "./rng.ts";
 import { onResume, openWindow } from "./windows.ts";
+import { m, ref } from "../../shared/i18n/msg.ts";
+import type { Msg } from "../../shared/i18n/types.ts";
 
 export function onRoundStart(ctx: Ctx): void {
   const s = ctx.s;
@@ -28,7 +30,7 @@ export function onRoundStart(ctx: Ctx): void {
     let j = int(s, s.turnOrder.length - 1);
     if (j >= i) j++;
     [s.turnOrder[i], s.turnOrder[j]] = [s.turnOrder[j], s.turnOrder[i]];
-    log(ctx, `Displaced time: ${s.players[s.turnOrder[j]].nickname} and ${s.players[s.turnOrder[i]].nickname} swap places in the turn order.`, "RULE");
+    log(ctx, m`Displaced time: ${s.players[s.turnOrder[j]].nickname} and ${s.players[s.turnOrder[i]].nickname} swap places in the turn order.`, "RULE");
   }
 }
 
@@ -43,7 +45,7 @@ function drawSeatNeighbours(ctx: Ctx): void {
     else groups.push([ids[0]]);
   }
   s.seatNeighbours = groups;
-  log(ctx, `Seat neighbours: ${groups.map((g) => g.map((id) => s.players[id].nickname).join(" ↔ ")).join(" · ")}. Helping a neighbour in your carriage is stronger.`, "NEIGHBOURS");
+  log(ctx, m`Seat neighbours: ${groups.map((g) => g.map((id) => s.players[id].nickname).join(" ↔ ")).join(" · ")}. Helping a neighbour in your carriage is stronger.`, "NEIGHBOURS");
   cue(ctx, "NEIGHBOURS", { groups });
 }
 
@@ -54,7 +56,7 @@ export function neighboursOf(ctx: Ctx, id: PlayerId): PlayerId[] {
 /** Round 5: every player receives one private message. Two in three are true; there is no traitor. */
 function dealSecretMessages(ctx: Ctx): void {
   const s = ctx.s;
-  log(ctx, "\"Please confirm that your seat neighbour is still themselves.\" Every phone lights up with a private message.", "STORY");
+  log(ctx, m`"Please confirm that your seat neighbour is still themselves." Every phone lights up with a private message.`, "STORY");
   for (const p of everyone(ctx)) {
     const truthful = int(s, 3) > 0;
     const text = secretMessage(ctx, p, truthful);
@@ -65,7 +67,7 @@ function dealSecretMessages(ctx: Ctx): void {
 }
 
 /** One message about the table as it stands; a false one is always actually false. */
-export function secretMessage(ctx: Ctx, p: PlayerGameState, truthful: boolean): string {
+export function secretMessage(ctx: Ctx, p: PlayerGameState, truthful: boolean): Msg {
   const s = ctx.s;
   const nb = neighboursOf(ctx, p.playerId);
   const other = s.players[nb.length ? pick(s, nb) : pick(s, everyone(ctx).filter((x) => x.playerId !== p.playerId).map((x) => x.playerId).concat(p.playerId))];
@@ -73,14 +75,14 @@ export function secretMessage(ctx: Ctx, p: PlayerGameState, truthful: boolean): 
   if (kind === 0) {
     const real = other.skill.usesLeft > 0;
     const claim = truthful ? real : !real;
-    return `${other.nickname}'s ability is ${claim ? "still unused" : "already burned"}.`;
+    return claim ? m`${other.nickname}'s ability is still unused.` : m`${other.nickname}'s ability is already burned.`;
   }
   if (kind === 1) {
     const real = other.fate;
     const off = int(s, 2) ? 2 : -1;
     // a lie must differ from the truth, so with 0 Fate it can't round down to 0
     const claim = truthful ? real : real + off < 0 ? real + 1 : real + off;
-    return `${other.nickname} is carrying ${claim} Fate.`;
+    return m`${other.nickname} is carrying ${claim} Fate.`;
   }
   if (kind === 2) {
     const middle = s.carriages.filter((c) => c.identity !== "START" && c.identity !== "CAB");
@@ -88,12 +90,12 @@ export function secretMessage(ctx: Ctx, p: PlayerGameState, truthful: boolean): 
     const awake = middle.filter((c) => s.flags[`core_${c.identity}`]);
     // the truth names a sleeping carriage; a lie names an awake one, or claims all are awake
     const pool = truthful ? asleep : awake;
-    if (!pool.length) return "Every core memory on this train is awake.";
-    return `A core memory is still asleep in the ${CARRIAGES[pick(s, pool).identity].name}.`;
+    if (!pool.length) return m`Every core memory on this train is awake.`;
+    return m`A core memory is still asleep in the ${ref.carriage(pick(s, pool).identity)}.`;
   }
   const realSafe = present(ctx).every((x) => x.sanity >= 2);
   const claim = truthful ? realSafe : !realSafe;
-  return claim ? "Nobody on this train is close to getting lost. Yet." : "Someone on this train is about to get lost.";
+  return claim ? m`Nobody on this train is close to getting lost. Yet.` : m`Someone on this train is about to get lost.`;
 }
 
 /** Round 7: middle identities re-shuffle; nobody moves, but where they stand changes. */
@@ -104,7 +106,7 @@ function realityFold(ctx: Ctx): void {
   for (let tries = 0; tries < 10 && after.join() === before.join(); tries++) after = shuffle(s, before);
   after.forEach((identity, i) => (s.carriages[i + 1].identity = identity));
   s.sequence = { kind: "FOLD", acks: [] };
-  log(ctx, "REALITY FOLD. The train turns inside out. You are standing exactly where you were, in a different carriage.", "FOLD");
+  log(ctx, m`REALITY FOLD. The train turns inside out. You are standing exactly where you were, in a different carriage.`, "FOLD");
   cue(ctx, "FOLD", { before, after });
 }
 
@@ -113,16 +115,16 @@ export function scriptedRoundEvent(ctx: Ctx): boolean {
   const s = ctx.s;
   if (s.round !== 6) return false;
   s.currentEvent = { id: "EMERGENCY_BRAKE", round: s.round, resolved: false };
-  log(ctx, "\"Route error detected. Engage the emergency brake?\"", "EVENT");
+  log(ctx, m`"Route error detected. Engage the emergency brake?"`, "EVENT");
   cue(ctx, "EVENT", { id: "EMERGENCY_BRAKE" });
   openWindow(ctx, {
     kind: "VOTE",
-    title: "Route error detected",
-    prompt: "Engage the emergency brake? Everyone votes. A tie is settled by chance.",
+    title: m`Route error detected`,
+    prompt: m`Engage the emergency brake? Everyone votes. A tie is settled by chance.`,
     addressees: present(ctx).map((p) => p.playerId),
     options: [
-      { id: "BRAKE", label: "Engage the brake", detail: "Collapse −2, but the Inspector acts immediately." },
-      { id: "CONTINUE", label: "Keep going", detail: "Everyone gains 1 Fate, but Collapse +1." },
+      { id: "BRAKE", label: m`Engage the brake`, detail: m`Collapse −2, but the Inspector acts immediately.` },
+      { id: "CONTINUE", label: m`Keep going`, detail: m`Everyone gains 1 Fate, but Collapse +1.` },
     ],
     defaultOptionId: "CONTINUE",
     resume: { kind: "BRAKE_VOTE" },
@@ -142,20 +144,20 @@ export function tally(ctx: Ctx, answers: Record<PlayerId, string>, options: stri
 
 onResume("BRAKE_VOTE", (ctx, w, answers) => {
   const { winner, counts, tie } = tally(ctx, answers, w.options.map((o) => o.id));
-  const summary = `Brake ${counts.BRAKE} · Keep going ${counts.CONTINUE}${tie ? " (tie, settled by chance)" : ""}`;
+  const summary = tie ? m`Brake ${counts.BRAKE} · Keep going ${counts.CONTINUE} (tie, settled by chance)` : m`Brake ${counts.BRAKE} · Keep going ${counts.CONTINUE}`;
   if (winner === "BRAKE") {
-    log(ctx, `The brakes scream. ${summary}.`, "VOTE");
-    changeCollapse(ctx, -2, "the emergency brake");
+    log(ctx, m`The brakes scream. ${summary}.`, "VOTE");
+    changeCollapse(ctx, -2, m`the emergency brake`);
     moveInspector(ctx, 1);
   } else {
-    log(ctx, `The train keeps going. ${summary}.`, "VOTE");
-    applyEffects(ctx, [{ kind: "GAIN_FATE", who: "ALL", amount: 1 }], { ownerId: "SYSTEM", targets: [], label: "keeping going", group: true });
-    changeCollapse(ctx, 1, "an uncorrected route");
+    log(ctx, m`The train keeps going. ${summary}.`, "VOTE");
+    applyEffects(ctx, [{ kind: "GAIN_FATE", who: "ALL", amount: 1 }], { ownerId: "SYSTEM", targets: [], label: m`keeping going`, group: true });
+    changeCollapse(ctx, 1, m`an uncorrected route`);
   }
   if (ctx.s.currentEvent) {
     ctx.s.currentEvent.resolved = true;
     ctx.s.currentEvent.choice = winner;
-    ctx.s.currentEvent.resultText = `${winner === "BRAKE" ? "Brake engaged" : "Kept going"}. ${summary}.`;
+    ctx.s.currentEvent.resultText = winner === "BRAKE" ? m`Brake engaged. ${summary}.` : m`Kept going. ${summary}.`;
   }
   cue(ctx, "VOTE_RESULT", { winner, counts });
 });

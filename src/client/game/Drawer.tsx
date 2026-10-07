@@ -2,9 +2,11 @@
 // secrets and passenger cards: layer four, never in the centre of play.
 import { motion } from "motion/react";
 import { useEffect, type ReactNode } from "react";
+import { useT } from "../i18n/index.ts";
 import { Icon } from "./Icon.tsx";
 
 export function Drawer({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const t = useT();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -12,7 +14,7 @@ export function Drawer({ title, onClose, children }: { title: string; onClose: (
   }, [onClose]);
   return (
     <motion.div className="fixed inset-0 z-50 flex items-end justify-end sm:items-stretch" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <button className="absolute inset-0 bg-black/50" aria-label="Close" onClick={onClose} />
+      <button className="absolute inset-0 bg-black/50" aria-label={t("common.close")} onClick={onClose} />
       <motion.aside
         role="dialog"
         aria-modal="true"
@@ -24,8 +26,8 @@ export function Drawer({ title, onClose, children }: { title: string; onClose: (
         transition={{ type: "spring", damping: 28, stiffness: 260 }}
       >
         <header className="flex items-center justify-between border-b border-gold/15 px-4 py-3">
-          <h2 className="font-display text-2xl font-semibold">{title}</h2>
-          <button className="flex h-12 w-12 items-center justify-center rounded-full text-mist hover:text-moon" onClick={onClose} aria-label="Close">
+          <h2 className="min-w-0 truncate font-display text-2xl font-semibold">{title}</h2>
+          <button className="flex h-12 w-12 items-center justify-center rounded-full text-mist hover:text-moon" onClick={onClose} aria-label={t("common.close")}>
             <Icon name="CLOSE" />
           </button>
         </header>

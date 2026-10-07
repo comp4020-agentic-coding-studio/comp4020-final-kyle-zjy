@@ -10,6 +10,8 @@ import { cue, log, newId, type Ctx } from "./context.ts";
 import type { TriggerEvent } from "./skills.ts";
 import { clampDie, setRollValue, tierOf } from "./dice.ts";
 import { int, pick, shuffle } from "./rng.ts";
+import { list, m, ref } from "../../shared/i18n/msg.ts";
+import type { Msg } from "../../shared/i18n/types.ts";
 import {
   absorbs,
   addStatus,
@@ -30,7 +32,7 @@ export type Scope = {
   targets: PlayerId[];
   triggerSource?: PlayerId | "SYSTEM";
   triggerSubject?: PlayerId;
-  label: string;
+  label: Msg;
   /** A group effect hitting most players (some immunities only answer these). */
   group?: boolean;
   /** The event that woke the ability being resolved. */
@@ -119,11 +121,11 @@ function negativeSubjects(ctx: Ctx, e: Effect, scope: Scope, who: EffectSubject,
 
 const BUFF_ITEMS: ItemId[] = ["FLASHLIGHT", "OLD_KEY", "RED_UMBRELLA", "BLANK_TICKET", "PASSENGER_PASS"];
 
-export function grantItem(ctx: Ctx, playerId: PlayerId, pool: "ANY" | "CONSUMABLE" | "BUFF", why: string): ItemId {
+export function grantItem(ctx: Ctx, playerId: PlayerId, pool: "ANY" | "CONSUMABLE" | "BUFF", why: Msg): ItemId {
   const item = pick(ctx.s, pool === "BUFF" ? BUFF_ITEMS : ITEM_IDS);
   const p = ctx.s.players[playerId];
   p.items.push(item);
-  log(ctx, `${p.nickname} gains an item (${why}).`, "ITEM", playerId);
+  log(ctx, m`${p.nickname} gains an item (${why}).`, "ITEM", playerId);
   cue(ctx, "ITEM", { playerId, item });
   return item;
 }
@@ -132,7 +134,7 @@ export function grantFragment(ctx: Ctx, fragment: FragmentType, by?: PlayerId): 
   if (ctx.s.fragments.includes(fragment)) return false;
   ctx.s.fragments.push(fragment);
   if (by) ctx.s.players[by].stats.fragmentsFound++;
-  log(ctx, `Memory fragment recovered: ${FRAGMENTS[fragment].name}. "${FRAGMENTS[fragment].text}"`, "FRAGMENT", by);
+  log(ctx, m`Memory fragment recovered: ${ref.fragment(fragment)}. "${ref.fragmentText(fragment)}"`, "FRAGMENT", by);
   cue(ctx, "FRAGMENT", { fragment, by });
   return true;
 }
@@ -154,7 +156,7 @@ const H: Registry = {
       const moved = loseFate(ctx, ctx.s.players[from], e.amount);
       if (moved) {
         gainFate(ctx, ctx.s.players[to], moved);
-        log(ctx, `${ctx.s.players[from].nickname} passes ${moved} Fate to ${ctx.s.players[to].nickname} (${scope.label}).`, "FATE", to);
+        log(ctx, m`${ctx.s.players[from].nickname} passes ${moved} Fate to ${ctx.s.players[to].nickname} (${scope.label}).`, "FATE", to);
       }
     }
   },
@@ -169,12 +171,12 @@ const H: Registry = {
     if (step <= 0) return;
     spendFate(ctx, hi, step);
     lo.fate += step;
-    log(ctx, `${scope.label}: ${hi.nickname} → ${lo.nickname}, ${step} Fate.`, "FATE");
+    log(ctx, m`${scope.label}: ${hi.nickname} → ${lo.nickname}, ${step} Fate.`, "FATE");
   },
   LOCK_FATE: (ctx, e, scope) => {
     for (const id of subjects(ctx, scope, e.who)) {
       addStatus(ctx, ctx.s.players[id], { kind: "FATE_LOCKED", polarity: "POSITIVE", sourceId: scope.ownerId, expiresAtRound: ctx.s.round + e.rounds - 1, hidden: false, ordinary: true });
-      log(ctx, `${ctx.s.players[id].nickname}'s Fate is locked this round.`, "STATUS", id);
+      log(ctx, m`${ctx.s.players[id].nickname}'s Fate is locked this round.`, "STATUS", id);
     }
   },
   GAIN_SANITY: (ctx, e, scope) => {
@@ -187,7 +189,7 @@ const H: Registry = {
     for (const id of subjects(ctx, scope, e.who)) {
       const p = ctx.s.players[id];
       p.ap = Math.max(0, p.ap + e.amount);
-      log(ctx, e.amount > 0 ? `${p.nickname} gains ${e.amount} action point${e.amount > 1 ? "s" : ""} (${scope.label}).` : `${p.nickname} gives up their remaining actions (${scope.label}).`, "AP", id);
+      log(ctx, e.amount > 1 ? m`${p.nickname} gains ${e.amount} action points (${scope.label}).` : e.amount === 1 ? m`${p.nickname} gains 1 action point (${scope.label}).` : m`${p.nickname} gives up their remaining actions (${scope.label}).`, "AP", id);
     }
   },
   CHANGE_COLLAPSE: (ctx, e, scope) => changeCollapse(ctx, e.delta, scope.label),
@@ -204,7 +206,7 @@ const H: Registry = {
       const wanted = scope.trigger?.item ? victim.items.lastIndexOf(scope.trigger.item) : -1;
       const item = victim.items.splice(wanted >= 0 ? wanted : int(ctx.s, victim.items.length), 1)[0];
       ctx.s.players[thief].items.push(item);
-      log(ctx, `${ctx.s.players[thief].nickname} takes an item from ${victim.nickname} (${scope.label}).`, "ITEM", thief);
+      log(ctx, m`${ctx.s.players[thief].nickname} takes an item from ${victim.nickname} (${scope.label}).`, "ITEM", thief);
       return;
     }
   },
@@ -221,7 +223,7 @@ const H: Registry = {
         ordinary: true,
         value: e.value,
       });
-      if (!e.hidden) log(ctx, `${ctx.s.players[id].nickname} ${polarity === "NEGATIVE" ? "is afflicted with" : "gains"} ${statusName(e.status)} (${scope.label}).`, "STATUS", id);
+      if (!e.hidden) log(ctx, polarity === "NEGATIVE" ? m`${ctx.s.players[id].nickname} is afflicted with ${ref.status(e.status)} (${scope.label}).` : m`${ctx.s.players[id].nickname} gains ${ref.status(e.status)} (${scope.label}).`, "STATUS", id);
     }
   },
   REMOVE_STATUS: (ctx, e, scope) => {
@@ -230,7 +232,7 @@ const H: Registry = {
       const matches = p.statuses.filter((st) => (e.polarity === "ANY" || st.polarity === e.polarity) && (!e.ordinaryOnly || st.ordinary));
       const take = e.count === "ALL" ? matches : matches.slice(0, e.count);
       for (const st of take) removeStatus(p, st.id);
-      if (take.length) log(ctx, `${scope.label}: ${p.nickname} is cleared of ${take.map((st) => statusName(st.kind)).join(", ")}.`, "STATUS", id);
+      if (take.length) log(ctx, m`${scope.label}: ${p.nickname} is cleared of ${list(take.map((st) => ref.status(st.kind)))}.`, "STATUS", id);
     }
   },
   EXTEND_STATUS: (ctx, e, scope) => {
@@ -239,7 +241,7 @@ const H: Registry = {
     if (used && scope.trigger?.subjectId) {
       const p = ctx.s.players[scope.trigger.subjectId];
       addStatus(ctx, p, { ...used, expiresAtRound: ctx.s.round + e.rounds });
-      return log(ctx, `${scope.label}: ${p.nickname}'s ${statusName(used.kind)} lasts one more round.`, "STATUS", p.playerId);
+      return log(ctx, m`${scope.label}: ${p.nickname}'s ${ref.status(used.kind)} lasts one more round.`, "STATUS", p.playerId);
     }
     for (const id of subjects(ctx, scope, e.who)) {
       for (const st of ctx.s.players[id].statuses) if (st.polarity === e.polarity && st.expiresAtRound !== null) st.expiresAtRound += e.rounds;
@@ -250,10 +252,10 @@ const H: Registry = {
       const p = ctx.s.players[id];
       if (e.fromRound === "NEXT") {
         addStatus(ctx, p, { kind: "SHIELD_NEXT_ROUND", polarity: "POSITIVE", sourceId: scope.ownerId, expiresAtRound: null, hidden: false, ordinary: false, value: e.charges });
-        log(ctx, `${p.nickname} prepares a shield for next round (${scope.label}).`, "DEFENCE", id);
+        log(ctx, m`${p.nickname} prepares a shield for next round (${scope.label}).`, "DEFENCE", id);
       } else {
         p.shields += e.charges;
-        log(ctx, `${p.nickname} gains ${e.charges} shield (${scope.label}).`, "DEFENCE", id);
+        log(ctx, m`${p.nickname} gains ${e.charges} shield (${scope.label}).`, "DEFENCE", id);
       }
       cue(ctx, "SHIELD_UP", { playerId: id });
     }
@@ -262,7 +264,7 @@ const H: Registry = {
     const kind = e.scope === "NEGATIVE" ? "IMMUNE_NEGATIVE" : e.scope === "GROUP_NEGATIVE" ? "IMMUNE_GROUP" : e.scope === "DIRECT_ABILITY" ? "IMMUNE_ABILITY" : "UNTARGETABLE";
     for (const id of subjects(ctx, scope, e.who)) {
       addStatus(ctx, ctx.s.players[id], { kind, polarity: "POSITIVE", sourceId: scope.ownerId, expiresAtRound: ctx.s.round + Math.max(1, e.rounds) - 1, hidden: false, ordinary: false, value: e.charges ?? 1 });
-      log(ctx, `${ctx.s.players[id].nickname} is protected: ${statusName(kind)} (${scope.label}).`, "DEFENCE", id);
+      log(ctx, m`${ctx.s.players[id].nickname} is protected: ${ref.status(kind)} (${scope.label}).`, "DEFENCE", id);
     }
   },
   GRANT_FRAGMENT: (ctx, e, scope) => {
@@ -273,7 +275,7 @@ const H: Registry = {
   },
   GRANT_CORE_MEMORY: (ctx, e, scope) => {
     ctx.s.coreMemories += e.amount;
-    log(ctx, `A core memory surfaces (${scope.label}). Core memories: ${ctx.s.coreMemories}.`, "CORE", scope.self);
+    log(ctx, m`A core memory surfaces (${scope.label}). Core memories: ${ctx.s.coreMemories}.`, "CORE", scope.self);
     cue(ctx, "CORE_MEMORY", { total: ctx.s.coreMemories });
   },
   SPAWN_ENTITY: (ctx, e, scope) => {
@@ -281,7 +283,7 @@ const H: Registry = {
     const middle = ctx.s.carriages.filter((c) => c.identity !== "START" && !c.locked).map((c) => c.index);
     const where = e.where === "SUBJECT_CARRIAGE" && self ? self.carriageIndex : pick(ctx.s, middle);
     ctx.s.entities.push({ id: newId(ctx, "ent"), kind: e.entity, carriageIndex: where, hp: 2, targetId: null });
-    log(ctx, e.entity === "SHADOW" ? "A shadow passenger takes a seat that wasn't there before." : "An echo of a passenger starts walking the train.", "ENTITY");
+    log(ctx, e.entity === "SHADOW" ? m`A shadow passenger takes a seat that wasn't there before.` : m`An echo of a passenger starts walking the train.`, "ENTITY");
     cue(ctx, "ENTITY_SPAWN", { kind: e.entity, carriageIndex: where });
   },
   REPAIR_ANCHOR: (ctx, e, scope) => {
@@ -289,7 +291,7 @@ const H: Registry = {
     if (!open.length) return;
     const weakest = open.sort((a, b) => a.progress / a.required - b.progress / b.required)[0];
     weakest.progress = Math.min(weakest.required, weakest.progress + e.amount);
-    log(ctx, `${scope.label}: the ${weakest.id.toLowerCase()} anchor steadies (${weakest.progress}/${weakest.required}).`, "ANCHOR");
+    log(ctx, m`${scope.label}: the ${weakest.id.toLowerCase()} anchor steadies (${weakest.progress}/${weakest.required}).`, "ANCHOR");
     cue(ctx, "ANCHOR", { anchor: weakest.id, progress: weakest.progress, required: weakest.required });
     if (weakest.progress >= weakest.required) restoreAnchor(ctx, weakest);
   },
@@ -308,7 +310,7 @@ const H: Registry = {
       } else p.carriageIndex = e.to === "RANDOM" ? pick(ctx.s, ctx.s.carriages.filter((c) => !c.locked).map((c) => c.index)) : pick(ctx.s, options);
       visit(ctx, p);
       cue(ctx, "MOVE", { playerId: id, from, to: p.carriageIndex });
-      log(ctx, e.to === "TOWARD_SELF" ? `${p.nickname} moves one carriage closer (${scope.label}).` : `${p.nickname} is thrown into another carriage (${scope.label}).`, "MOVE", id);
+      log(ctx, e.to === "TOWARD_SELF" ? m`${p.nickname} moves one carriage closer (${scope.label}).` : m`${p.nickname} is thrown into another carriage (${scope.label}).`, "MOVE", id);
     }
   },
   MODIFY_RESULT: (ctx, e, scope) => {
@@ -333,12 +335,12 @@ const H: Registry = {
     const fresh = clampDie(1 + int(ctx.s, 6) + roll.modifiers.reduce((sum, m) => sum + m.delta, 0) + roll.fateSpent);
     const value = e.keep === "BEST" ? Math.max(before, fresh) : e.keep === "AVERAGE" ? Math.ceil((before + fresh) / 2) : fresh;
     roll.raw = fresh;
-    setRollValue(ctx, roll, value, `${scope.label} (rerolled ${fresh})`);
+    setRollValue(ctx, roll, value, m`${scope.label} (rerolled ${fresh})`);
     // Mercury Retrograde: each player's first reroll has a 1 in 3 chance of costing 1 Sanity
     const roller = ctx.s.players[roll.playerId];
     if (ctx.s.nightRule === "MERCURY_RETROGRADE" && !roller.counters.mercuryReroll) {
       roller.counters.mercuryReroll = 1;
-      if (int(ctx.s, 3) === 0) loseSanity(ctx, roller, 1, "Mercury Retrograde");
+      if (int(ctx.s, 3) === 0) loseSanity(ctx, roller, 1, m`Mercury Retrograde`);
     }
   },
   CONDITIONAL: (ctx, e, scope) => {
@@ -367,7 +369,7 @@ export function condition(ctx: Ctx, id: string, scope: Scope): boolean {
 }
 
 /** Objection's group reroll (round-events.ts registers it). */
-let rerollGroup: (ctx: Ctx, label: string) => boolean = () => false;
+let rerollGroup: (ctx: Ctx, label: Msg) => boolean = () => false;
 export const setGroupReroll = (fn: typeof rerollGroup) => (rerollGroup = fn);
 
 let extraConditions: (ctx: Ctx, id: string, scope: Scope) => boolean = () => false;
@@ -389,23 +391,22 @@ export function registerHandler<K extends EffectKind>(kind: K, fn: Handler<K>): 
   (H as Record<string, unknown>)[kind] = fn;
 }
 
-const ANCHOR_NAMES = { POWER: "Power Anchor", IDENTITY: "Identity Anchor", MEMORY: "Memory Anchor" } as const;
 
 /** An anchor reaching its required repairs: it holds, and Collapse eases by 1. */
 export function restoreAnchor(ctx: Ctx, a: Anchor): void {
   if (a.repaired) return;
   a.repaired = true;
-  log(ctx, `The ${ANCHOR_NAMES[a.id]} is restored. Reality holds a little tighter.`, "ANCHOR_DONE", a.lastRepairedBy ?? undefined);
+  log(ctx, m`The ${ref.anchor(a.id)} is restored. Reality holds a little tighter.`, "ANCHOR_DONE", a.lastRepairedBy ?? undefined);
   cue(ctx, "ANCHOR_DONE", { anchor: a.id });
-  changeCollapse(ctx, -1, `the ${ANCHOR_NAMES[a.id]} holding`);
+  changeCollapse(ctx, -1, m`the ${ref.anchor(a.id)} holding`);
 }
 
-export function changeCollapse(ctx: Ctx, delta: number, why: string): void {
+export function changeCollapse(ctx: Ctx, delta: number, why: Msg): void {
   if (!delta) return;
   const before = ctx.s.collapse;
   ctx.s.collapse = Math.max(0, Math.min(ctx.s.collapseMax, ctx.s.collapse + delta));
   if (ctx.s.collapse === before) return;
-  log(ctx, `Collapse ${delta > 0 ? "rises" : "falls"} to ${ctx.s.collapse} / ${ctx.s.collapseMax} (${why}).`, delta > 0 ? "COLLAPSE_UP" : "COLLAPSE_DOWN");
+  log(ctx, delta > 0 ? m`Collapse rises to ${ctx.s.collapse} / ${ctx.s.collapseMax} (${why}).` : m`Collapse falls to ${ctx.s.collapse} / ${ctx.s.collapseMax} (${why}).`, delta > 0 ? "COLLAPSE_UP" : "COLLAPSE_DOWN");
   cue(ctx, "COLLAPSE", { from: before, to: ctx.s.collapse });
 }
 

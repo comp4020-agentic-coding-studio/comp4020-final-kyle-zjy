@@ -103,7 +103,7 @@ export class Hub {
         }
       } catch (err) {
         if (err instanceof RoomError || err instanceof RuleError) {
-          send(ws, { t: "REJECTED", actionId, code: err.code, message: err.message });
+          send(ws, { t: "REJECTED", actionId, code: err.code, message: err.message, msg: err.msg });
         } else {
           log.error("action failed", { room: bound.code, player: bound.playerId, err: String(err), stack: (err as Error)?.stack?.split("\n").slice(0, 4).join(" | ") });
           send(ws, { t: "REJECTED", actionId, code: "INVALID", message: "Something went wrong." });

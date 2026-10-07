@@ -19,6 +19,8 @@ import { checkTasks } from "./event-effects.ts";
 import { processTriggers, roundTriggers, statusesExpiring } from "./resolver.ts";
 import { emptyRoundRecord } from "./create.ts";
 import { expireWindows } from "./windows.ts";
+import { m, ref } from "../../shared/i18n/msg.ts";
+import type { Msg } from "../../shared/i18n/types.ts";
 
 const GUARD = 500;
 
@@ -86,7 +88,7 @@ function stepOnce(ctx: Ctx): boolean {
       const p = s.players[id];
       // an away player keeps their turn until its (shortened) deadline, so a refresh doesn't cost it
       if (s.turnDeadline !== null && ctx.now >= s.turnDeadline) {
-        log(ctx, p.away ? `${p.nickname} is away and ran out of time; their turn passes.` : `${p.nickname} ran out of time; their turn passes.`, "TURN", id);
+        log(ctx, p.away ? m`${p.nickname} is away and ran out of time; their turn passes.` : m`${p.nickname} ran out of time; their turn passes.`, "TURN", id);
         endTurn(ctx);
         return true;
       }
@@ -119,9 +121,9 @@ function beginRound(ctx: Ctx): void {
   if (s.flags.skillsReturnRound && s.round >= s.flags.skillsReturnRound) {
     for (const p of everyone(ctx)) delete p.skill.borrowed;
     s.flags.skillsReturnRound = 0;
-    log(ctx, "Every borrowed ability returns to its owner.", "SKILL");
+    log(ctx, m`Every borrowed ability returns to its owner.`, "SKILL");
   }
-  log(ctx, `— Round ${s.round} of ${SCENARIO.rounds} —`, "ROUND");
+  log(ctx, m`— Round ${s.round} of ${SCENARIO.rounds} —`, "ROUND");
   cue(ctx, "ROUND", { round: s.round });
   for (const p of everyone(ctx)) {
     p.ap = (p.lost ? AP_WHEN_LOST : AP_PER_ROUND) + s.config.bonusAp + (s.act === 3 ? s.config.act3BonusAp : 0);
@@ -133,14 +135,14 @@ function beginRound(ctx: Ctx): void {
     if (prepared) {
       p.shields += prepared.value ?? 1;
       removeStatus(p, prepared.id);
-      log(ctx, `${p.nickname}'s prepared shield is up.`, "DEFENCE", p.playerId);
+      log(ctx, m`${p.nickname}'s prepared shield is up.`, "DEFENCE", p.playerId);
     }
     if (s.nightRule === "VOID_HOUR") {
       if (s.round === 1 && p.skill.state === "READY") p.skill.state = "LOCKED";
       if (s.round === 2 && p.skill.state === "LOCKED") p.skill.state = p.skill.usesLeft > 0 ? "READY" : "BURNED";
     }
   }
-  if (s.nightRule === "VOID_HOUR" && s.round === 1) log(ctx, "Void Hour: every ability is locked this round.", "RULE");
+  if (s.nightRule === "VOID_HOUR" && s.round === 1) log(ctx, m`Void Hour: every ability is locked this round.`, "RULE");
 
   const due = s.delayed.filter((d) => d.dueRound <= s.round);
   s.delayed = s.delayed.filter((d) => d.dueRound > s.round);
@@ -163,7 +165,7 @@ export function nextTurn(ctx: Ctx): void {
   // no clock on a connected player; one who is away gets a short grace
   s.turnDeadline = p.away ? ctx.now + s.config.awayTurnSeconds * 1000 : null;
   s.turnVersion = s.version + 1; // the version this step will commit as
-  log(ctx, `${p.nickname}'s turn.`, "TURN", id);
+  log(ctx, m`${p.nickname}'s turn.`, "TURN", id);
   cue(ctx, "TURN", { playerId: id });
 }
 
@@ -177,10 +179,10 @@ function endRound(ctx: Ctx): void {
   const s = ctx.s;
   if (s.escape.round === s.round && !s.outcome) {
     const set = [s.escape.power, s.escape.route, s.escape.drive].filter(Boolean).length;
-    if (set > 0) log(ctx, `The escape locks slip back: ${set}/3 is not enough. All three must hold in the same round.`, "LOCK_RESET");
+    if (set > 0) log(ctx, m`The escape locks slip back: ${set}/3 is not enough. All three must hold in the same round.`, "LOCK_RESET");
   }
   roundTriggers(ctx, "ROUND_END");
-  changeCollapse(ctx, 1, "the train runs on");
+  changeCollapse(ctx, 1, m`the train runs on`);
   statusesExpiring(ctx);
   const rr = s.roundRecord;
   for (const p of everyone(ctx)) {
@@ -202,16 +204,16 @@ function endRound(ctx: Ctx): void {
     s.phase = "ACT_2";
     s.act = 2;
     s.sequence = { kind: "BLACKOUT", acks: [] };
-    log(ctx, "The lights die. \"Identity registration complete. Anomaly detected.\"", "STORY");
-    log(ctx, `"Passengers on board: ${everyone(ctx).length + 1}."`, "STORY");
+    log(ctx, m`The lights die. "Identity registration complete. Anomaly detected."`, "STORY");
+    log(ctx, m`"Passengers on board: ${everyone(ctx).length + 1}."`, "STORY");
     cue(ctx, "BLACKOUT", {});
   } else if (s.round === 7) {
     s.phase = "ACT_3";
     s.act = 3;
     for (const c of s.carriages) c.locked = false;
     s.sequence = { kind: "CAB_OPEN", acks: [] };
-    log(ctx, "A lock turns somewhere at the front of the train. Driver's cab access restored.", "STORY");
-    log(ctx, "FINAL DEPARTURE PROTOCOL: engage the Power, Route and Drive locks in the same round.", "STORY");
+    log(ctx, m`A lock turns somewhere at the front of the train. Driver's cab access restored.`, "STORY");
+    log(ctx, m`FINAL DEPARTURE PROTOCOL: engage the Power, Route and Drive locks in the same round.`, "STORY");
     cue(ctx, "CAB_OPEN", {});
   }
   s.step = "ROUND_START";

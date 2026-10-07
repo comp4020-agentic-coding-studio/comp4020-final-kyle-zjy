@@ -5,6 +5,8 @@ import { create } from "zustand";
 import type { GameAction, LobbyAction } from "../shared/game/actions.ts";
 import type { Member } from "../shared/game/state.ts";
 import type { GameEvent, ServerMessage, Snapshot } from "../shared/protocol.ts";
+import { format } from "../shared/i18n/format.ts";
+import { getLocale, tNow } from "./i18n/index.ts";
 import { session } from "./net/session.ts";
 
 export type ConnStatus =
@@ -148,7 +150,7 @@ function handle(msg: ServerMessage): void {
         useStore.setState({ status: msg.code === "ROOM_NOT_FOUND" ? "missing" : "needs-join" });
         break;
       }
-      useStore.getState().toast(msg.message, "error");
+      useStore.getState().toast(msg.msg ? format(getLocale(), msg.msg) : msg.message, "error");
       pending.get(msg.actionId)?.(false);
       pending.delete(msg.actionId);
       break;
@@ -162,7 +164,7 @@ function handle(msg: ServerMessage): void {
 
 function sendIntent(message: (actionId: string) => object): Promise<boolean> {
   if (!ws || ws.readyState !== WebSocket.OPEN) {
-    useStore.getState().toast("Reconnecting… try again in a moment.", "error");
+    useStore.getState().toast(tNow("toast.reconnecting"), "error");
     return Promise.resolve(false);
   }
   const actionId = `c${Date.now().toString(36)}${(++seq).toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;

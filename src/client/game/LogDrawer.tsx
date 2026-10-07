@@ -2,6 +2,7 @@
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import type { PlayerView } from "../../shared/game/state.ts";
 import { Avatar } from "../components/Avatar.tsx";
+import { useFormat, useT } from "../i18n/index.ts";
 import { Drawer } from "./Drawer.tsx";
 
 const TONE: Record<string, string> = {
@@ -22,8 +23,10 @@ const TONE: Record<string, string> = {
 };
 
 export function LogDrawer({ g, onClose }: { g: PlayerView; onClose: () => void }) {
+  const t = useT();
+  const fmt = useFormat();
   return (
-    <Drawer title="Train log" onClose={onClose}>
+    <Drawer title={t("game.log")} onClose={onClose}>
       <ol className="space-y-2">
         {[...g.log].reverse().map((line) => {
           const p = line.actorId ? g.players[line.actorId] : null;
@@ -32,7 +35,7 @@ export function LogDrawer({ g, onClose }: { g: PlayerView; onClose: () => void }
             <li key={line.seq} className="flex gap-2 text-sm">
               <span className="w-11 shrink-0 font-mono text-[11px] text-ash">{line.clock}</span>
               {ch ? <Avatar zodiac={ch.zodiac} mbti={ch.mbti} size={22} className="mt-0.5 shrink-0" /> : <span className="w-[22px] shrink-0" />}
-              <span className={TONE[line.kind] ?? "text-mist"}>{line.text}</span>
+              <span className={`min-w-0 ${TONE[line.kind] ?? "text-mist"}`}>{line.msg ? fmt(line.msg) : line.text}</span>
             </li>
           );
         })}

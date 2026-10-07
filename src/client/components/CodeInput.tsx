@@ -2,12 +2,14 @@
 // keyboards and screen readers all behave like a normal text field.
 import { useRef } from "react";
 import { ROOM_CODE_LENGTH } from "../../shared/protocol.ts";
+import { useT } from "../i18n/index.ts";
 
 const clean = (s: string) =>
   s.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, ROOM_CODE_LENGTH);
 
 export function CodeInput({ value, onChange, id }: { value: string; onChange: (v: string) => void; id: string }) {
   const ref = useRef<HTMLInputElement>(null);
+  const t = useT();
   return (
     <div className="relative" onClick={() => ref.current?.focus()}>
       <input
@@ -20,7 +22,7 @@ export function CodeInput({ value, onChange, id }: { value: string; onChange: (v
         autoComplete="off"
         spellCheck={false}
         maxLength={ROOM_CODE_LENGTH}
-        aria-label="Room code, 6 characters"
+        aria-label={t("entry.codeAria")}
         className="peer absolute inset-0 h-full w-full cursor-text opacity-0"
       />
       <div className="grid grid-cols-6 gap-1.5 sm:gap-2" aria-hidden="true">

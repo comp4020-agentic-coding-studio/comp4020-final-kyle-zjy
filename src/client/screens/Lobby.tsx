@@ -1,11 +1,14 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { MBTI_INFO, ZODIAC_INFO } from "../../shared/characters/signs.ts";
+import { ZODIAC_INFO } from "../../shared/characters/signs.ts";
 import type { Member } from "../../shared/game/state.ts";
 import { MAX_PLAYERS, MIN_PLAYERS } from "../../shared/protocol.ts";
 import { CharacterCard } from "../components/CharacterCard.tsx";
 import { Avatar } from "../components/Avatar.tsx";
+import { LanguageSwitch } from "../components/LanguageSwitch.tsx";
 import { Sigil } from "../components/Sigil.tsx";
+import { useScenarioText, useT } from "../i18n/index.ts";
+import { rich } from "../i18n/rich.ts";
 import { sendLobby, useMe, useStore } from "../store.ts";
 import { CharacterPicker } from "./CharacterPicker.tsx";
 
@@ -14,21 +17,25 @@ export function Lobby() {
   const me = useMe()!;
   const [picker, setPicker] = useState<null | "zodiac" | "mbti" | "reveal">(null);
   const [inspect, setInspect] = useState<Member | null>(null);
+  const t = useT();
 
   const ready = room.members.filter((m) => m.stage === "READY").length;
   const startBlocker =
     room.members.length < MIN_PLAYERS
-      ? `Need at least ${MIN_PLAYERS} passengers`
+      ? t("lobby.needPlayers", { n: MIN_PLAYERS })
       : ready < room.members.length
-        ? `Waiting for ${room.members.length - ready} to be ready`
+        ? t("lobby.waitingReady", { n: room.members.length - ready })
         : null;
 
   return (
     <main className="night-sky vignette relative min-h-dvh pb-40">
       <TopBar code={room.code} count={room.members.length} />
+      <div className="relative z-10 mx-auto flex w-full max-w-5xl justify-end px-4 md:hidden">
+        <LanguageSwitch />
+      </div>
 
       <div className="relative z-10 mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 px-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
-        <section aria-label="Passengers" className="min-w-0">
+        <section aria-label={t("lobby.passengers")} className="min-w-0">
           <StarDial members={room.members} meId={me.playerId} readyCount={ready} onSelect={setInspect} />
         </section>
 
@@ -50,15 +57,15 @@ export function Lobby() {
                 aria-describedby="start-reason"
                 onClick={() => sendLobby({ type: "START_GAME" })}
               >
-                Depart
+                {t("lobby.depart")}
               </button>
               <p id="start-reason" className="mt-1 text-center text-xs text-ash sm:text-right">
-                {startBlocker ?? "Everyone is ready. The train is waiting for you."}
+                {startBlocker ?? t("lobby.allReadyHost")}
               </p>
             </div>
           ) : (
             <p className="flex-1 text-center text-sm text-mist sm:text-right">
-              {startBlocker ? `${startBlocker}.` : "Everyone is ready."} The host departs the train.
+              {startBlocker ? t("lobby.guestBlocked", { reason: startBlocker }) : t("lobby.guestReady")}
             </p>
           )}
         </div>
@@ -81,51 +88,56 @@ export function Lobby() {
 
 function TopBar({ code, count }: { code: string; count: number }) {
   const toast = useStore((s) => s.toast);
+  const t = useT();
   const copy = async (what: "code" | "link") => {
     const text = what === "code" ? code : `${location.origin}/room/${code}`;
     try {
       if (what === "link" && navigator.share) {
-        await navigator.share({ title: "Fate Instance", text: `Join my room ${code}`, url: text });
+        await navigator.share({ title: t("common.appName"), text: t("lobby.shareText", { code }), url: text });
         return;
       }
       await navigator.clipboard.writeText(text);
-      toast(what === "code" ? `Room code ${code} copied` : "Invite link copied");
+      toast(what === "code" ? t("lobby.codeCopied", { code }) : t("lobby.linkCopied"));
     } catch {
       /* share sheet dismissed, or clipboard blocked */
     }
   };
   const leave = () => {
-    if (confirm("Leave this room? Your seat will be given up.")) sendLobby({ type: "LEAVE" });
+    if (confirm(t("lobby.leaveConfirm"))) sendLobby({ type: "LEAVE" });
   };
 
   return (
     <header className="relative z-10 mx-auto flex w-full max-w-5xl items-center gap-3 px-4 pt-4 pb-2">
-      <button className="btn btn-ghost min-h-12 min-w-12 shrink-0 px-3 text-sm" onClick={leave} aria-label="Leave room">
+      <button className="btn btn-ghost min-h-12 min-w-12 shrink-0 px-3 text-sm" onClick={leave} aria-label={t("lobby.leaveAria")}>
         <span aria-hidden="true">←</span>
-        <span className="hidden sm:inline">Leave</span>
+        <span className="hidden sm:inline">{t("lobby.leave")}</span>
       </button>
       <div className="ticket flex min-w-0 flex-1 items-center justify-between gap-1 py-2 pr-2 pl-5">
         <div className="min-w-0">
-          <p className="label text-[10px]">Room</p>
+          <p className="label text-[10px]">{t("lobby.room")}</p>
           <button
             className="min-h-12 font-mono text-[26px] leading-tight tracking-[0.18em] text-gold-bright sm:text-4xl sm:tracking-[0.25em]"
             onClick={() => copy("code")}
-            aria-label={`Room code ${code.split("").join(" ")}. Copy`}
+            aria-label={t("lobby.codeAria", { code: code.split("").join(" ") })}
           >
             {code}
           </button>
         </div>
         <div className="flex shrink-0 gap-1">
           <button className="hidden min-h-12 rounded-full px-3 text-xs font-bold tracking-wider text-mist hover:text-moon sm:block" onClick={() => copy("code")}>
-            COPY
+            {t("lobby.copy")}
           </button>
           <button className="min-h-12 rounded-full px-3 text-xs font-bold tracking-wider text-mist hover:text-moon" onClick={() => copy("link")}>
-            INVITE
+            {t("lobby.invite")}
           </button>
         </div>
       </div>
+      {/* narrow screens: the switch gets its own row under the bar (see Lobby) */}
+      <div className="hidden shrink-0 md:block">
+        <LanguageSwitch />
+      </div>
       <div className="hidden shrink-0 text-right sm:block">
-        <p className="label text-[10px]">Passengers</p>
+        <p className="label text-[10px]">{t("lobby.passengers")}</p>
         <p className="font-mono text-xl">
           {count}
           <span className="text-ash"> / {MAX_PLAYERS}</span>
@@ -148,6 +160,7 @@ function StarDial({
   onSelect: (m: Member) => void;
 }) {
   const bySeat = new Map(members.map((m) => [m.seat, m]));
+  const t = useT();
   return (
     <div className="relative mx-auto mt-2 aspect-square w-full max-w-[min(560px,calc(100vw-32px))]">
       {/* rings (spinning; clipped to the circle so the rotated box never overflows) */}
@@ -195,13 +208,13 @@ function StarDial({
 
       {/* centre readout */}
       <div className="absolute inset-[32%] flex flex-col items-center justify-center rounded-full text-center">
-        <p className="label text-[10px]">Boarding</p>
+        <p className="label text-[10px]">{t("lobby.boarding")}</p>
         <p className="font-mono text-3xl text-moon sm:text-4xl">
           {members.length}
           <span className="text-ash">/{MAX_PLAYERS}</span>
         </p>
         <p className="mt-1 text-xs text-mist">
-          <span className="text-moss">{readyCount}</span> ready
+          {rich(t("lobby.readyCount"), { n: <span className="text-moss">{readyCount}</span> })}
         </p>
       </div>
 
@@ -220,7 +233,7 @@ function StarDial({
               ) : (
                 <motion.div key={`empty-${seat}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center">
                   <Sigil zodiac={null} size={44} dim />
-                  <span className="sr-only">Empty seat {seat + 1}</span>
+                  <span className="sr-only">{t("lobby.emptySeat", { n: seat + 1 })}</span>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -235,6 +248,8 @@ const seatAngle = (seat: number) => ((seat * 36 - 90) * Math.PI) / 180;
 
 function SeatToken({ member, isMe, onSelect }: { member: Member; isMe: boolean; onSelect: () => void }) {
   const isReady = member.stage === "READY";
+  const t = useT();
+  const text = useScenarioText();
   return (
     <motion.button
       type="button"
@@ -244,9 +259,15 @@ function SeatToken({ member, isMe, onSelect }: { member: Member; isMe: boolean; 
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.4 }}
       transition={{ type: "spring", damping: 18, stiffness: 220 }}
-      aria-label={`${member.nickname}${isMe ? " (you)" : ""}${member.isHost ? ", host" : ""}, ${
-        member.zodiac ? ZODIAC_INFO[member.zodiac].name : "no sign yet"
-      }${member.mbti ? ` ${member.mbti}` : ""}, ${isReady ? "ready" : "not ready"}${member.connected ? "" : ", offline"}`}
+      aria-label={t("lobby.seat.aria", {
+        name: member.nickname,
+        you: isMe ? t("lobby.seat.you") : "",
+        host: member.isHost ? t("lobby.seat.host") : "",
+        sign: member.zodiac ? text.zodiac[member.zodiac].name : t("lobby.seat.noSign"),
+        mbti: member.mbti ? ` ${member.mbti}` : "",
+        ready: t(isReady ? "lobby.seat.ready" : "lobby.seat.notReady"),
+        offline: member.connected ? "" : t("lobby.seat.offline"),
+      })}
     >
       <span className="relative">
         <span
@@ -262,7 +283,7 @@ function SeatToken({ member, isMe, onSelect }: { member: Member; isMe: boolean; 
         </span>
         {member.isHost && (
           <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-gold px-1.5 text-[9px] font-extrabold tracking-wider text-[#1a1206]">
-            HOST
+            {t("lobby.hostBadge")}
           </span>
         )}
         {isReady && (
@@ -275,45 +296,47 @@ function SeatToken({ member, isMe, onSelect }: { member: Member; isMe: boolean; 
         {member.nickname}
       </span>
       <span className="font-mono text-[10px] tracking-wider text-mist">
-        {member.mbti ?? (member.zodiac ? ZODIAC_INFO[member.zodiac].name.slice(0, 3).toUpperCase() : "· · ·")}
-        {!member.connected && <span className="ml-1 text-ember">OFF</span>}
-        {isReady && <span className="sr-only"> ready</span>}
+        {member.mbti ?? (member.zodiac ? text.zodiac[member.zodiac].name.slice(0, 3).toUpperCase() : "· · ·")}
+        {!member.connected && <span className="ml-1 text-ember">{t("lobby.off")}</span>}
+        {isReady && <span className="sr-only">{t("lobby.seat.srReady")}</span>}
       </span>
     </motion.button>
   );
 }
 
 function MyTicket({ me, onPick }: { me: Member; onPick: (s: "zodiac" | "mbti") => void }) {
+  const t = useT();
+  const text = useScenarioText();
   return (
     <div className="glass rounded-2xl p-4">
       <div className="mb-3 flex items-center justify-between">
-        <p className="label text-gold">Your ticket</p>
-        <p className="text-xs text-ash">{me.nickname}</p>
+        <p className="label text-gold">{t("lobby.yourTicket")}</p>
+        <p className="min-w-0 truncate text-xs text-ash">{me.nickname}</p>
       </div>
       {me.zodiac && me.mbti ? (
         <>
           <CharacterCard zodiac={me.zodiac} mbti={me.mbti} />
           <button className="mt-3 min-h-12 w-full text-sm text-mist underline-offset-4 hover:text-moon hover:underline" onClick={() => onPick("zodiac")}>
-            Change character
+            {t("lobby.changeCharacter")}
           </button>
         </>
       ) : me.zodiac ? (
         <div className="flex items-center gap-4">
           <Sigil zodiac={me.zodiac} size={64} />
-          <div className="flex-1">
-            <p className="font-display text-2xl">{ZODIAC_INFO[me.zodiac].name}</p>
-            <p className="text-sm text-mist">One step left: your type.</p>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-2xl">{text.zodiac[me.zodiac].name}</p>
+            <p className="text-sm text-mist">{t("lobby.oneStepLeft")}</p>
           </div>
           <button className="btn btn-gold px-4" onClick={() => onPick("mbti")}>
-            Type
+            {t("lobby.typeButton")}
           </button>
         </div>
       ) : (
         <button onClick={() => onPick("zodiac")} className="tarot flex w-full items-center gap-4 p-4 text-left">
           <Sigil zodiac={null} size={56} />
-          <span className="flex-1">
-            <span className="block font-display text-2xl text-gold-bright">Who are you tonight?</span>
-            <span className="block text-sm text-mist">Choose your sign and type to receive a character.</span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-2xl text-gold-bright">{t("lobby.whoTonight")}</span>
+            <span className="block text-sm text-mist">{t("lobby.chooseHint")}</span>
           </span>
           <span className="text-2xl text-gold" aria-hidden="true">
             →
@@ -325,10 +348,11 @@ function MyTicket({ me, onPick }: { me: Member; onPick: (s: "zodiac" | "mbti") =
 }
 
 function ReadyButton({ me, onPick }: { me: Member; onPick: () => void }) {
+  const t = useT();
   if (!me.zodiac || !me.mbti) {
     return (
       <button className="btn btn-ghost w-full sm:w-auto sm:min-w-48" onClick={onPick}>
-        Choose character
+        {t("lobby.chooseCharacter")}
       </button>
     );
   }
@@ -339,7 +363,7 @@ function ReadyButton({ me, onPick }: { me: Member; onPick: () => void }) {
       aria-pressed={ready}
       onClick={() => sendLobby({ type: "SET_READY", ready: !ready })}
     >
-      {ready ? "✓ Ready (tap to undo)" : "I'm ready"}
+      {t(ready ? "lobby.readyUndo" : "lobby.imReady")}
     </button>
   );
 }
@@ -347,20 +371,22 @@ function ReadyButton({ me, onPick }: { me: Member; onPick: () => void }) {
 const SCENARIOS = Array.from({ length: 10 }, (_, i) => i + 1);
 
 function ScenarioStrip() {
+  const t = useT();
+  const { scenario } = useScenarioText();
   return (
     <div className="glass rounded-2xl p-4">
-      <p className="label mb-3 text-gold">Scenario</p>
+      <p className="label mb-3 text-gold">{t("lobby.scenario")}</p>
       <div className="tarot overflow-hidden p-4">
-        <p className="font-mono text-xs text-signal">01 · ROUTE N13</p>
-        <p className="mt-1 font-display text-2xl leading-tight font-semibold">00:17 — The Last Train That Doesn't Exist</p>
-        <p className="mt-2 text-sm text-mist italic">"All passengers without names, prepare for ticket inspection."</p>
-        <p className="mt-3 text-xs text-ash">2–10 players · 12 rounds · cooperative</p>
+        <p className="font-mono text-xs text-signal">{t("lobby.scenarioRoute")}</p>
+        <p className="mt-1 font-display text-2xl leading-tight font-semibold">{scenario.title}</p>
+        <p className="mt-2 text-sm text-mist italic">{t("common.quote", { text: scenario.tagline })}</p>
+        <p className="mt-3 text-xs text-ash">{t("lobby.scenarioMeta")}</p>
       </div>
-      <ul className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Other scenarios">
+      <ul className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label={t("lobby.otherScenarios")}>
         {SCENARIOS.slice(1).map((n) => (
           <li key={n} className="flex h-16 w-14 shrink-0 flex-col items-center justify-center rounded-md border border-dashed border-indigo text-center">
             <span className="font-mono text-sm text-ash">{String(n).padStart(2, "0")}</span>
-            <span className="text-[8px] font-bold tracking-wider text-ash">COMING SOON</span>
+            <span className="text-center text-[8px] leading-tight font-bold tracking-wider text-ash">{t("lobby.comingSoon")}</span>
           </li>
         ))}
       </ul>
@@ -372,53 +398,55 @@ function PassengerSheet({ member, me, onClose }: { member: Member; me: Member; o
   const live = useStore((s) => s.snapshot?.room.members.find((m) => m.playerId === member.playerId)) ?? null;
   const m = live ?? member;
   const canKick = me.isHost && m.playerId !== me.playerId && !!live;
+  const t = useT();
+  const text = useScenarioText();
   return (
     <motion.div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <button aria-label="Close" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <button aria-label={t("common.close")} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <motion.div
         role="dialog"
         aria-modal="true"
-        aria-label={`${m.nickname}'s ticket`}
+        aria-label={t("lobby.sheet.aria", { name: m.nickname })}
         className="tarot safe-bottom relative w-full max-w-md rounded-b-none px-5 pt-6 sm:rounded-b-[var(--r-md)] sm:pb-6"
         initial={{ y: 60 }}
         animate={{ y: 0 }}
         exit={{ y: 60 }}
         transition={{ type: "spring", damping: 26, stiffness: 260 }}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <div>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <p className="label">
-              Seat {m.seat + 1}
-              {m.isHost && " · Host"}
-              {m.playerId === me.playerId && " · You"}
+              {t("lobby.sheet.seat", { n: m.seat + 1 })}
+              {m.isHost && t("lobby.sheet.host")}
+              {m.playerId === me.playerId && t("lobby.sheet.you")}
             </p>
-            <h2 className="font-display text-3xl font-semibold">{m.nickname}</h2>
+            <h2 className="truncate font-display text-3xl font-semibold">{m.nickname}</h2>
           </div>
-          <span className={`rounded-full px-3 py-1 text-xs font-bold tracking-wider ${m.stage === "READY" ? "bg-moss/15 text-moss" : "bg-indigo/60 text-mist"}`}>
-            {m.stage === "READY" ? "✓ READY" : "NOT READY"}
+          <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold tracking-wider ${m.stage === "READY" ? "bg-moss/15 text-moss" : "bg-indigo/60 text-mist"}`}>
+            {t(m.stage === "READY" ? "lobby.sheet.ready" : "lobby.sheet.notReady")}
           </span>
         </div>
         {m.zodiac && m.mbti ? (
           <CharacterCard zodiac={m.zodiac} mbti={m.mbti} />
         ) : (
           <p className="text-mist">
-            {m.zodiac ? `${ZODIAC_INFO[m.zodiac].name}, still choosing a type.` : "Still choosing a sign."}
-            {m.mbti && ` ${MBTI_INFO[m.mbti].title}`}
+            {m.zodiac ? t("lobby.sheet.choosingType", { sign: text.zodiac[m.zodiac].name }) : t("lobby.sheet.choosingSign")}
+            {m.mbti && ` ${text.mbti[m.mbti].title}`}
           </p>
         )}
-        {!m.connected && <p className="mt-3 text-sm text-ember">Offline. Their seat is kept until they return.</p>}
+        {!m.connected && <p className="mt-3 text-sm text-ember">{t("lobby.sheet.offline")}</p>}
         <div className="mt-5 flex gap-3">
           <button className="btn btn-ghost flex-1" onClick={onClose}>
-            Close
+            {t("common.close")}
           </button>
           {canKick && (
             <button
               className="btn flex-1 border border-ember/60 text-ember hover:bg-ember/10"
               onClick={async () => {
-                if (confirm(`Remove ${m.nickname} from the room?`) && (await sendLobby({ type: "KICK", playerId: m.playerId }))) onClose();
+                if (confirm(t("lobby.sheet.kickConfirm", { name: m.nickname })) && (await sendLobby({ type: "KICK", playerId: m.playerId }))) onClose();
               }}
             >
-              Remove from room
+              {t("lobby.sheet.kick")}
             </button>
           )}
         </div>

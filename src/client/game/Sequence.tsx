@@ -2,39 +2,34 @@
 // connected passenger has pressed Continue (or the host skips): no clock.
 import { motion } from "motion/react";
 import type { PlayerView } from "../../shared/game/state.ts";
+import { useT } from "../i18n/index.ts";
 import { sendGame } from "../store.ts";
 import { notYet } from "./waiting.ts";
 
+// Each scene's copy lives under scene.<KIND>.{kicker,title,line1..3} in the catalogs.
 const SCENES = {
-  BLACKOUT: {
-    kicker: "End of Act I",
-    title: "Identity registration complete.",
-    lines: ["The lights die all at once.", "\"Anomaly detected.\"", "A conductor's whistle, somewhere up front."],
-    tint: "#000000",
-  },
-  FOLD: {
-    kicker: "Round 7 · Reality Fold",
-    title: "The train turns inside out.",
-    lines: ["You haven't moved.", "The carriage around you has.", "Check the map: every middle carriage is somewhere new."],
-    tint: "#1a0f3a",
-  },
-  CAB_OPEN: {
-    kicker: "Act III · Departure Protocol",
-    title: "Driver's cab access restored.",
-    lines: ["Engage the Power, Route and Drive locks.", "All three. In the same round.", "Echoes start walking the train."],
-    tint: "#2a1a05",
-  },
+  BLACKOUT: { tint: "#000000" },
+  FOLD: { tint: "#1a0f3a" },
+  CAB_OPEN: { tint: "#2a1a05" },
 } as const;
 
 export function SequenceOverlay({ g }: { g: PlayerView }) {
+  const t = useT();
   const seq = g.sequence;
   if (!seq || !(seq.kind in SCENES)) return null;
-  const scene = SCENES[seq.kind as keyof typeof SCENES];
+  const kind = seq.kind as keyof typeof SCENES;
+  const scene = { ...SCENES[kind], kicker: t(`scene.${kind}.kicker`), title: t(`scene.${kind}.title`) };
+  const base = [t(`scene.${kind}.line1`), t(`scene.${kind}.line2`), t(`scene.${kind}.line3`)];
   const acked = seq.acks.includes(g.viewerId);
+  const bonus = g.config.act3BonusAp;
   const lines: readonly string[] =
-    seq.kind !== "CAB_OPEN"
-      ? scene.lines
-      : [...scene.lines, g.config.inspectorStepsAct3 > 1 ? "The Inspector now walks twice as fast." : "", g.config.act3BonusAp ? `There are only ${g.config.playerCount} of you: +${g.config.act3BonusAp} action point each round.` : ""].filter(Boolean);
+    kind !== "CAB_OPEN"
+      ? base
+      : [
+          ...base,
+          g.config.inspectorStepsAct3 > 1 ? t("scene.CAB_OPEN.faster") : "",
+          bonus ? t(bonus === 1 ? "scene.CAB_OPEN.smallTable.one" : "scene.CAB_OPEN.smallTable.other", { n: g.config.playerCount, ap: bonus }) : "",
+        ].filter(Boolean);
   return (
     <motion.div
       key={seq.kind}
@@ -73,7 +68,7 @@ export function SequenceOverlay({ g }: { g: PlayerView }) {
           animate={{ opacity: 1 }}
           transition={{ delay: 2.6 }}
         >
-          {acked ? `Waiting for ${notYet(g)}…` : "Continue"}
+          {acked ? t("common.waitingFor", { names: notYet(g, t) }) : t("common.continue")}
         </motion.button>
       </div>
     </motion.div>

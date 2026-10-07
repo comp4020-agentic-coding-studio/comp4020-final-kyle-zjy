@@ -9,6 +9,7 @@ import type { GameState, PlayerId } from "../../shared/game/state.ts";
 import type { GameEvent } from "../../shared/protocol.ts";
 import { transaction, type Db } from "../db/db.ts";
 import { activePlayerId, RuleError } from "../engine/context.ts";
+import { m } from "../../shared/i18n/msg.ts";
 import { TURN_ACTIONS } from "../engine/actions.ts";
 import { applyGameAction, hostSkip, setAway, startGame, tickGame, type Step } from "../engine/engine.ts";
 import { nextDeadline } from "../engine/flow.ts";
@@ -50,16 +51,16 @@ export class GameRunner {
 
   apply(roomCode: string, actorId: PlayerId, actionId: string, stateVersion: unknown, action: GameAction): { duplicate: boolean } {
     const state = this.state(roomCode);
-    if (!state) throw new RuleError("WRONG_PHASE", "No run is in progress in this room.");
-    if (typeof actionId !== "string" || !actionId || actionId.length > 64) throw new RuleError("INVALID", "Missing action id.");
+    if (!state) throw new RuleError("WRONG_PHASE", m`No run is in progress in this room.`);
+    if (typeof actionId !== "string" || !actionId || actionId.length > 64) throw new RuleError("INVALID", m`Missing action id.`);
     if (this.store.hasAction(state.sessionId, actionId)) return { duplicate: true };
     if (action && VERSIONED.has(action.type) && stateVersion !== state.version) {
-      throw new RuleError("STALE_VERSION", "The table changed while you were deciding. Take another look and try again.");
+      throw new RuleError("STALE_VERSION", m`The table changed while you were deciding. Take another look and try again.`);
     }
     // a turn action pressed before this turn began (a double tap, a slow link) mustn't spend the new turn
     // (only for the active player: anyone else is simply told it isn't their turn)
     if (action && TURN_ACTIONS.includes(action.type) && activePlayerId(state) === actorId && !(typeof stateVersion === "number" && stateVersion >= state.turnVersion)) {
-      throw new RuleError("STALE_VERSION", "That was pressed before this turn began. Take a look and try again.");
+      throw new RuleError("STALE_VERSION", m`That was pressed before this turn began. Take a look and try again.`);
     }
     const now = this.clock();
     const step = applyGameAction(state, actorId, action, now);
@@ -78,7 +79,7 @@ export class GameRunner {
   /** The host moved a stalled table along (the room service checked they are the host). */
   hostSkip(roomCode: string, hostId: PlayerId): void {
     const state = this.state(roomCode);
-    if (!state) throw new RuleError("WRONG_PHASE", "No run is in progress in this room.");
+    if (!state) throw new RuleError("WRONG_PHASE", m`No run is in progress in this room.`);
     const now = this.clock();
     this.commit(roomCode, hostSkip(state, now), { kind: "SKIP", actorId: hostId, at: now });
   }

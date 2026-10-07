@@ -8,6 +8,7 @@ import { startRoll } from "./dice.ts";
 import { registerHandler } from "./effects.ts";
 import { absorbs, addStatus, present, removeStatus, statusOf, useUpStatus } from "./players.ts";
 import { pick } from "./rng.ts";
+import { list, m, ref } from "../../shared/i18n/msg.ts";
 
 const lastMiddle = (ctx: Ctx) => ctx.s.carriages.length - 2;
 
@@ -27,7 +28,7 @@ export function inspectorAppears(ctx: Ctx): void {
   insp.active = true;
   insp.carriageIndex = lastMiddle(ctx);
   insp.distortion = 0;
-  log(ctx, "A figure in a conductor's uniform steps out of the front carriage. Where its face should be, there is nothing.", "INSPECTOR");
+  log(ctx, m`A figure in a conductor's uniform steps out of the front carriage. Where its face should be, there is nothing.`, "INSPECTOR");
   cue(ctx, "INSPECTOR_APPEARS", { carriageIndex: insp.carriageIndex });
 }
 
@@ -37,11 +38,11 @@ export function moveInspector(ctx: Ctx, steps: number): void {
   const insp = s.inspector;
   if (!insp.active) return;
   if (insp.banishedUntilRound !== null) {
-    if (s.round <= insp.banishedUntilRound) return log(ctx, "The Inspector is nowhere to be seen. Yet.", "INSPECTOR");
+    if (s.round <= insp.banishedUntilRound) return log(ctx, m`The Inspector is nowhere to be seen. Yet.`, "INSPECTOR");
     insp.banishedUntilRound = null;
     const middle = s.carriages.filter((c) => c.identity !== "START" && c.identity !== "CAB").map((c) => c.index);
     insp.carriageIndex = pick(s, middle);
-    log(ctx, "The Inspector steps out of a door that wasn't there. It has come back.", "INSPECTOR");
+    log(ctx, m`The Inspector steps out of a door that wasn't there. It has come back.`, "INSPECTOR");
     cue(ctx, "INSPECTOR_APPEARS", { carriageIndex: insp.carriageIndex });
   }
   const target = inspectorTarget(ctx);
@@ -53,7 +54,7 @@ export function moveInspector(ctx: Ctx, steps: number): void {
   }
   if (insp.carriageIndex !== from) {
     cue(ctx, "INSPECTOR_MOVE", { from, to: insp.carriageIndex });
-    log(ctx, `The Inspector walks toward ${target.nickname}.`, "INSPECTOR");
+    log(ctx, m`The Inspector walks toward ${target.nickname}.`, "INSPECTOR");
   }
   queueTicketChecks(ctx);
 }
@@ -65,7 +66,7 @@ function queueTicketChecks(ctx: Ctx): void {
     .sort((a, b) => b.fate - a.fate || b.items.length - a.items.length)
     .slice(0, s.config.inspectorTargets);
   if (!here.length) return;
-  log(ctx, `"Tickets, please." The Inspector stops beside ${here.map((p) => p.nickname).join(" and ")}.`, "INSPECTOR");
+  log(ctx, m`"Tickets, please." The Inspector stops beside ${list(here.map((p) => p.nickname))}.`, "INSPECTOR");
   for (const p of here) s.jobs.push({ kind: "TICKET_CHECK", playerId: p.playerId });
 }
 
@@ -109,16 +110,16 @@ export function runInspectorJob(ctx: Ctx, job: Job): void {
     const pass = statusOf(p, "TEMP_PASS") ?? statusOf(p, "PASS");
     if (pass) {
       useUpStatus(ctx, p, pass.id);
-      log(ctx, `${p.nickname} shows a pass. The Inspector moves on.`, "TICKET", p.playerId);
+      log(ctx, m`${p.nickname} shows a pass. The Inspector moves on.`, "TICKET", p.playerId);
       return;
     }
-    startRoll(ctx, p, "TICKET_CHECK", "ticket check", { kind: "TICKET_CHECK", carriageIndex: p.carriageIndex });
+    startRoll(ctx, p, "TICKET_CHECK", m`ticket check`, { kind: "TICKET_CHECK", carriageIndex: p.carriageIndex });
     return;
   }
   // ECHO_STRIKE
-  if (absorbs(ctx, p, "an echo's touch")) return;
+  if (absorbs(ctx, p, m`an echo's touch`)) return;
   addStatus(ctx, p, { kind: "CHILL", polarity: "NEGATIVE", sourceId: "SYSTEM", expiresAtRound: null, hidden: false, ordinary: true });
-  log(ctx, `An echo brushes past ${p.nickname}. They feel a round slip away (−1 action point next round).`, "ENTITY", p.playerId);
+  log(ctx, m`An echo brushes past ${p.nickname}. They feel a round slip away (−1 action point next round).`, "ENTITY", p.playerId);
   cue(ctx, "ECHO_STRIKE", { playerId: p.playerId });
 }
 
@@ -128,11 +129,11 @@ export function spawnEchoes(ctx: Ctx): void {
     const middle = s.carriages.filter((c) => c.identity !== "START").map((c) => c.index);
     s.entities.push({ id: `echo${s.round}_${i}`, kind: "ECHO", carriageIndex: pick(s, middle), hp: 2, targetId: null });
   }
-  log(ctx, `Passenger echoes start walking the train: ${s.config.echoes}. They follow whoever matters most right now.`, "ENTITY");
+  log(ctx, m`Passenger echoes start walking the train: ${s.config.echoes}. They follow whoever matters most right now.`, "ENTITY");
   cue(ctx, "ENTITY_SPAWN", { kind: "ECHO", count: s.config.echoes });
 }
 
 registerHandler("INSPECTOR_STEP", (ctx, e) => {
-  if (!ctx.s.inspector.active) return log(ctx, "A whistle sounds, but nobody answers it. Not yet.", "INSPECTOR");
+  if (!ctx.s.inspector.active) return log(ctx, m`A whistle sounds, but nobody answers it. Not yet.`, "INSPECTOR");
   moveInspector(ctx, e.steps);
 });

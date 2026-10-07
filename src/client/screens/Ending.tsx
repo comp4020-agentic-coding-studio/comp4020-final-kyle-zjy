@@ -1,15 +1,18 @@
 // ENDING phase: the closing scene everyone sees at once. The results follow
 // when every connected passenger has pressed Continue (or the host skips).
 import { motion } from "motion/react";
-import { endingText } from "../../shared/game/scenario01/content.ts";
+import { endingKey, endingWon } from "../game/ending.ts";
 import { HostSkip } from "../game/HostSkip.tsx";
+import { useScenarioText, useT } from "../i18n/index.ts";
 import { notYet } from "../game/waiting.ts";
 import { sendGame, useGame } from "../store.ts";
 
 export function Ending() {
   const g = useGame();
+  const t = useT();
+  const endings = useScenarioText().endings;
   if (!g?.outcome) return null;
-  const text = endingText(g.outcome, g.failReason);
+  const text = { ...endings[endingKey(g.outcome, g.failReason)], won: endingWon(g.outcome) };
   const acked = g.sequence?.acks.includes(g.viewerId) ?? false;
   const tint = text.won ? (g.outcome === "NORMAL" ? "#1b2a4a" : "#2a1f05") : "#2a0707";
   return (
@@ -44,7 +47,7 @@ export function Ending() {
           animate={{ opacity: 1 }}
           transition={{ delay: 1.8 + text.lines.length * 0.7 }}
         >
-          {acked ? `Waiting for ${notYet(g)}…` : "See the results"}
+          {acked ? t("common.waitingFor", { names: notYet(g, t) }) : t("ending.results")}
         </motion.button>
       </div>
       <HostSkip g={g} />
