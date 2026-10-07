@@ -138,13 +138,27 @@ describe("engine: turns and action points", () => {
     expect(t.active).not.toBe(first);
   });
 
-  it("an away passenger's turn passes quickly, and they're back as soon as they act", () => {
+  it("a passenger who drops on their turn keeps it for a short grace; back in time, they carry on", () => {
     const t = new Table(3);
     const first = t.active!;
     let step = setAway(t.state, first, true, t.now);
     expect(step.state.players[first].away).toBe(true);
+    expect(step.state.turnOrder[step.state.activeIndex]).toBe(first); // a refresh doesn't cost the turn
+    step = tickGame(step.state, t.now + 5_000);
+    expect(step.state.turnOrder[step.state.activeIndex]).toBe(first);
+    // back after 5 s: at least 30 s more to act, and the turn is still theirs
+    const back = setAway(step.state, first, false, t.now + 5_000).state;
+    expect(back.turnDeadline).toBeGreaterThanOrEqual(t.now + 35_000);
+    expect(applyGameAction(back, first, { type: "SEARCH" }, t.now + 6_000).state.players[first].ap).toBe(1);
+  });
+
+  it("a passenger who stays away loses the turn once the grace runs out", () => {
+    const t = new Table(3);
+    const first = t.active!;
+    let step = setAway(t.state, first, true, t.now);
     step = tickGame(step.state, t.now + 16_000);
     expect(step.state.turnOrder[step.state.activeIndex]).not.toBe(first);
+    expect(step.state.log.some((l) => l.text.includes("ran out of time"))).toBe(true);
   });
 });
 

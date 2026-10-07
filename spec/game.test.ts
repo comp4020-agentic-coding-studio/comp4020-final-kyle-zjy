@@ -112,6 +112,21 @@ describe("a run over WebSocket", () => {
     again.ws.close();
   });
 
+  it("the active passenger refreshing keeps their turn", async () => {
+    const { code, seats } = await startedRun(2);
+    const view = await intoRound1(seats);
+    const active = seats.find((s) => s.join.playerId === view.turnOrder[view.activeIndex])!;
+    const other = seats.find((s) => s !== active)!;
+    active.c.ws.close();
+    await gameOf(other.c, (g) => g.players[active.join.playerId].away === true);
+    const again = await connect(code, active.join.sessionToken);
+    const w = await welcome(again);
+    expect(w.snapshot.game?.turnOrder[w.snapshot.game.activeIndex]).toBe(active.join.playerId);
+    expect(await again.play({ type: "SEARCH" })).toMatchObject({ t: "ACK" });
+    other.c.ws.close();
+    again.ws.close();
+  });
+
   it("refuses a stale view for decisions that depend on it", async () => {
     const { seats } = await startedRun(2);
     const view = await intoRound1(seats);

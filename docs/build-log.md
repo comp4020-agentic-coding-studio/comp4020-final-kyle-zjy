@@ -266,3 +266,18 @@ problems. Details and numbers: docs/simulation-report.md.
   used-up buff now ends like an expiring one (Can't Let Go, Something to Show).
 - Left as a design choice for the user: 11 counter-abilities that answer one
   player hurting another are rare at a co-operative table (all tested).
+
+### After PHASE 11: first deployment
+
+Deployed to https://comp4020-final-kyle-zjy.fly.dev/ by hand (`flyctl deploy
+--remote-only --ha=false`, the repo is still private). Checked live: `/`,
+`/readme/`, health and avatars return 200; two browsers played to act 2 over
+TLS WebSockets at 320 px.
+
+Fixed (found while checking the live run): the active player dropping —
+a refresh included — lost their turn at once; the flow skipped away players
+before the shortened deadline in `setAway` could apply. Now the turn passes
+only when the deadline does: a player who drops keeps it for
+`awayTurnSeconds` (15 s), and one who comes back mid-turn gets at least 30 s.
+Tests: engine (grace, return, timeout) and spec (the active player refreshes
+and still acts).

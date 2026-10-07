@@ -84,8 +84,9 @@ function stepOnce(ctx: Ctx): boolean {
         return true;
       }
       const p = s.players[id];
-      if (p.away || (s.turnDeadline !== null && ctx.now >= s.turnDeadline)) {
-        log(ctx, p.away ? `${p.nickname} is away; their turn passes.` : `${p.nickname} ran out of time; their turn passes.`, "TURN", id);
+      // an away player keeps their turn until its (shortened) deadline, so a refresh doesn't cost it
+      if (s.turnDeadline !== null && ctx.now >= s.turnDeadline) {
+        log(ctx, p.away ? `${p.nickname} is away and ran out of time; their turn passes.` : `${p.nickname} ran out of time; their turn passes.`, "TURN", id);
         endTurn(ctx);
         return true;
       }

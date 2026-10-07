@@ -36,16 +36,20 @@ export function tickGame(state: GameState, now: number): Step {
   return run(state, now, (ctx) => tick(ctx));
 }
 
-/** A player's connection dropped or came back. Away players' turns pass quickly. */
+/**
+ * A player's connection dropped or came back. A player who drops on their
+ * own turn keeps it for a short grace (awayTurnSeconds), long enough for a
+ * refresh; one who comes back mid-turn gets at least 30 s to act.
+ */
 export function setAway(state: GameState, playerId: PlayerId, away: boolean, now: number): Step {
   return run(state, now, (ctx) => {
     const p = ctx.s.players[playerId];
     if (!p || p.away === away) return;
     p.away = away;
     log(ctx, away ? `${p.nickname} has lost their connection.` : `${p.nickname} is back.`, "PRESENCE", playerId);
-    if (away && ctx.s.turnOrder[ctx.s.activeIndex] === playerId && ctx.s.step === "PLAYER_TURNS" && ctx.s.turnDeadline !== null) {
-      ctx.s.turnDeadline = Math.min(ctx.s.turnDeadline, now + ctx.s.config.awayTurnSeconds * 1000);
-    }
+    const theirTurn = ctx.s.turnOrder[ctx.s.activeIndex] === playerId && ctx.s.step === "PLAYER_TURNS" && ctx.s.turnDeadline !== null;
+    if (theirTurn && away) ctx.s.turnDeadline = Math.min(ctx.s.turnDeadline!, now + ctx.s.config.awayTurnSeconds * 1000);
+    if (theirTurn && !away) ctx.s.turnDeadline = Math.max(ctx.s.turnDeadline!, now + Math.min(30, ctx.s.config.turnSeconds) * 1000);
     tick(ctx);
   });
 }
