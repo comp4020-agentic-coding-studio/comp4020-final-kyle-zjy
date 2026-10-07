@@ -8,7 +8,7 @@ import type { GameAction } from "../../shared/game/actions.ts";
 import type { GameState, PlayerId } from "../../shared/game/state.ts";
 import type { GameEvent } from "../../shared/protocol.ts";
 import { transaction, type Db } from "../db/db.ts";
-import { RuleError } from "../engine/context.ts";
+import { activePlayerId, RuleError } from "../engine/context.ts";
 import { TURN_ACTIONS } from "../engine/actions.ts";
 import { applyGameAction, hostSkip, setAway, startGame, tickGame, type Step } from "../engine/engine.ts";
 import { nextDeadline } from "../engine/flow.ts";
@@ -57,7 +57,8 @@ export class GameRunner {
       throw new RuleError("STALE_VERSION", "The table changed while you were deciding. Take another look and try again.");
     }
     // a turn action pressed before this turn began (a double tap, a slow link) mustn't spend the new turn
-    if (action && TURN_ACTIONS.includes(action.type) && !(typeof stateVersion === "number" && stateVersion >= state.turnVersion)) {
+    // (only for the active player: anyone else is simply told it isn't their turn)
+    if (action && TURN_ACTIONS.includes(action.type) && activePlayerId(state) === actorId && !(typeof stateVersion === "number" && stateVersion >= state.turnVersion)) {
       throw new RuleError("STALE_VERSION", "That was pressed before this turn began. Take a look and try again.");
     }
     const now = this.clock();
