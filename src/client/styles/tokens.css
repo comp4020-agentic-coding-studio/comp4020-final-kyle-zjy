@@ -1,0 +1,106 @@
+/* Design tokens — the only place colours, type, radii and motion are defined.
+   Rationale and usage: docs/visual-direction.md. Dark only: the game is set at
+   midnight, so there is deliberately no light theme. */
+
+:root {
+  color-scheme: dark;
+
+  /* colour — base */
+  --c-void: #05060d;
+  --c-night: #0a0f22;
+  --c-deep: #121a3a;
+  --c-indigo: #1d2657;
+  --c-violet: #6a4fd8;
+  --c-violet-soft: #9c86ff;
+  --c-gold: #c9a55a;
+  --c-gold-bright: #e8c97f;
+  --c-moon: #e7eaf6;
+  --c-mist: #a3a9c7;
+  --c-ash: #6b7194;
+  --c-signal: #5ce1e6;
+  --c-ember: #e2563f;
+  --c-moss: #5bc489;
+
+  /* colour — zodiac accents */
+  --z-aries: #e0533d;
+  --z-taurus: #c9a55a;
+  --z-gemini: #8f7bff;
+  --z-cancer: #b9d3f0;
+  --z-leo: #f2b544;
+  --z-virgo: #c7cedb;
+  --z-libra: #e9e3d2;
+  --z-scorpio: #9b1b30;
+  --z-sagittarius: #5b7cfa;
+  --z-capricorn: #8c7a5b;
+  --z-aquarius: #38e1d8;
+  --z-pisces: #7fa8e8;
+
+  /* materials */
+  --glass-bg: rgb(13 19 44 / 0.9);
+  --glass-border: rgb(201 165 90 / 0.18);
+  --glass-blur: 14px;
+  --hairline-gold: 1px solid rgb(201 165 90 / 0.45);
+  --foil: conic-gradient(from 210deg, #6a4fd8, #38e1d8, #e8c97f, #9c86ff, #6a4fd8);
+  --vignette: radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 0.65) 100%);
+  --grain-opacity: 0.05;
+
+  /* type */
+  --f-display: "Cormorant Garamond", "Times New Roman", serif;
+  --f-ui: "Manrope", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+  --t-xs: 0.75rem;
+  --t-sm: 0.875rem;
+  --t-md: 1rem;
+  --t-lg: 1.25rem;
+  --t-xl: 1.75rem;
+  --t-2xl: 2.5rem;
+  --t-hero: clamp(3rem, 12vw, 7.5rem);
+  --tracking-label: 0.14em;
+
+  /* space & shape */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --gutter: 16px;
+  --r-sm: 6px;
+  --r-md: 12px;
+  --r-lg: 20px;
+  --r-pill: 999px;
+  --touch: 48px;
+
+  /* depth */
+  --shadow-card: 0 12px 32px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(201 165 90 / 0.12);
+  --glow-gold: 0 0 24px rgb(232 201 127 / 0.35);
+  --glow-signal: 0 0 18px rgb(92 225 230 / 0.45);
+  --glow-violet: 0 0 28px rgb(106 79 216 / 0.5);
+
+  /* motion */
+  --m-fast: 120ms;
+  --m-base: 220ms;
+  --m-slow: 480ms;
+  --m-cinematic: 1200ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* layers */
+  --z-train: 10;
+  --z-hud: 20;
+  --z-sheet: 30;
+  --z-event: 40;
+  --z-toast: 50;
+  --z-grain: 60;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --m-fast: 0ms;
+    --m-base: 100ms;
+    --m-slow: 150ms;
+    --m-cinematic: 150ms;
+  }
+}

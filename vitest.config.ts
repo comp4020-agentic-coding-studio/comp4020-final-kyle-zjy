@@ -1,10 +1,15 @@
 import { defineConfig } from "vitest/config";
 
-// Every test in spec/ runs against the running app, which spec/global-setup.ts
-// finds. Only spec/ runs: a test anywhere else needs adding to `include`.
+// Two projects:
+// - spec: every test in spec/ runs against the RUNNING app, which
+//   spec/global-setup.ts finds (the course harness).
+// - unit: test/ checks pure code and data (roster, skill engine) with no
+//   server needed.
 export default defineConfig({
   test: {
-    include: ["spec/**/*.test.ts"],
-    globalSetup: ["./spec/global-setup.ts"],
+    projects: [
+      { test: { name: "spec", include: ["spec/**/*.test.ts"], globalSetup: ["./spec/global-setup.ts"] } },
+      { test: { name: "unit", include: ["test/**/*.test.ts"] } },
+    ],
   },
 });

@@ -1,18 +1,34 @@
 # syntax = docker/dockerfile:1
 
-# A placeholder, and yours to replace: it serves one page, plus README.md
-# verbatim at /readme/, which is enough to prove the deploy path end to end.
-# Whatever your app is built with, the image that replaces this one must serve
-# HTTP on 0.0.0.0:$PORT (fly.toml sets PORT) and publish README.md at /readme/
-# (spec/README.md says what's checked).
+# The app: one Node process serves the built client, /readme/, the API and the
+# WebSocket on 0.0.0.0:$PORT (fly.toml sets PORT=8080), and keeps its SQLite
+# database on the /data volume. Node 24 runs the server's .ts files directly,
+# so only the client needs a build step.
 
-FROM docker.io/library/busybox:1.38.0
-COPY placeholder/ /src/
-COPY README.md /src/
-# README.md goes into the page as-is, HTML-escaped, in place of @README@;
-# rendering it properly is your app's job
-RUN mkdir -p /site/readme \
-    && cp /src/index.html /site/ \
-    && sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' /src/README.md > /src/body \
-    && sed -e '/@README@/{r /src/body' -e 'd}' /src/readme.html > /site/readme/index.html
-CMD ["sh", "-c", "exec httpd -f -p 0.0.0.0:${PORT:-8080} -h /site"]
+FROM node:24.21.0-slim AS build
+WORKDIR /app
+RUN npm install -g pnpm@11.9.0
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY tsconfig.json vite.config.ts ./
+COPY public ./public
+COPY src ./src
+RUN pnpm build
+
+FROM node:24.21.0-slim AS deps
+WORKDIR /app
+RUN npm install -g pnpm@11.9.0
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
+
+FROM node:24.21.0-slim
+WORKDIR /app
+ENV NODE_ENV=production DATA_DIR=/data
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY package.json README.md ./
+COPY src/server ./src/server
+COPY src/shared ./src/shared
+COPY docs ./docs
+# a small heap keeps the process well inside the 256 MB machine
+CMD ["node", "--max-old-space-size=160", "src/server/index.ts"]
