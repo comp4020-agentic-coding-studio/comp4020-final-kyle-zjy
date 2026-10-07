@@ -131,6 +131,19 @@ describe("a run over WebSocket", () => {
     again.ws.close();
   }, 20_000);
 
+  it("nothing has a time limit; the host, and only the host, can pass a stalled turn", async () => {
+    const { seats } = await startedRun(2);
+    const view = await intoRound1(seats);
+    const [host, guest] = seats;
+    const active = view.turnOrder[view.activeIndex];
+    expect(view.turnDeadline).toBeNull();
+    expect(await guest.c.act({ type: "SKIP_WAITING" })).toMatchObject({ t: "REJECTED", code: "NOT_HOST" });
+    expect(await host.c.act({ type: "SKIP_WAITING" })).toMatchObject({ t: "ACK" });
+    const after = await gameOf(guest.c, (g) => g.turnOrder[g.activeIndex] !== active);
+    expect(after.log.some((l) => l.text.includes("The host moves things along"))).toBe(true);
+    close(seats);
+  });
+
   it("refuses a stale view for decisions that depend on it", async () => {
     const { seats } = await startedRun(2);
     const view = await intoRound1(seats);

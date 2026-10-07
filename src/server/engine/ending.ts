@@ -3,7 +3,7 @@
 // round, Collapse below 12, and at least half the passengers not lost.
 // Failure: Collapse 12, round 12 over, or everyone lost at once.
 // With 6 core memories the passengers face one last choice (true endings).
-import { endingText, OBSESSIONS, SEQUENCE_MS, TRUE_ENDING_CORE_MEMORIES, WINDOW_MS } from "../../shared/game/scenario01/content.ts";
+import { endingText, OBSESSIONS, TRUE_ENDING_CORE_MEMORIES } from "../../shared/game/scenario01/content.ts";
 import type { FailReason, GameState, Outcome, PlayerGameState, PlayerResult } from "../../shared/game/state.ts";
 import { cue, log, type Ctx } from "./context.ts";
 import { tally } from "./beats.ts";
@@ -64,7 +64,6 @@ export function checkEnd(ctx: Ctx): boolean {
       defaultOptionId: "TICKET",
       resume: { kind: "ENDING_CHOICE" },
       blocksTable: true,
-      ms: WINDOW_MS.ENDING_CHOICE,
     });
     return true;
   }
@@ -92,7 +91,7 @@ export function startEnding(ctx: Ctx, outcome: Outcome, reason?: FailReason): vo
   if (s.roll && !s.roll.done) s.roll.done = true;
   s.rollContext = null;
   s.turnDeadline = null;
-  s.sequence = { kind: "ENDING", until: ctx.now + SEQUENCE_MS.ENDING, acks: [] };
+  s.sequence = { kind: "ENDING", acks: [] };
   s.results = computeResults(ctx);
   const text = endingText(outcome, s.failReason);
   log(ctx, `${text.title} ${text.lines.join(" ")}`, text.won ? "ENDING_WIN" : "ENDING_FAIL");

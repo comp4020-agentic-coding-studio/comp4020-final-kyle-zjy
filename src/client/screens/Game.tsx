@@ -10,6 +10,7 @@ import { DiceOverlay } from "../game/Dice.tsx";
 import { Dock, type Mode } from "../game/Dock.tsx";
 import { CarriageInfo } from "../game/CarriageInfo.tsx";
 import { CueFeed } from "../game/CueFeed.tsx";
+import { HostSkip } from "../game/HostSkip.tsx";
 import { InspectorLine, Objective } from "../game/Objective.tsx";
 import { EventPanel } from "../game/EventPanel.tsx";
 import { LogDrawer } from "../game/LogDrawer.tsx";
@@ -56,6 +57,7 @@ export function Game() {
       <CueFeed g={g} />
       <DiceOverlay g={g} />
       <DecisionLayer g={g} />
+      <HostSkip g={g} />
       <AnimatePresence>{g.sequence && g.sequence.kind !== "INTRO" && g.sequence.kind !== "ENDING" && <SequenceOverlay key={g.sequence.kind} g={g} />}</AnimatePresence>
       <AnimatePresence>
         {drawer === "log" && <LogDrawer key="log" g={g} onClose={() => setDrawer(null)} />}

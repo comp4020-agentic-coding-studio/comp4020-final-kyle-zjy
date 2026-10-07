@@ -4,7 +4,7 @@
 //
 //   INTRO → ACT_1 (rounds 1–3) → ACT_2 (4–7) → ACT_3 (8–12) → ENDING → RESULTS
 //   each round: ROUND_START → PLAYER_TURNS → INSPECTOR → ROUND_EVENT → ROUND_END
-import { AP_PER_ROUND, AP_WHEN_LOST, SCENARIO, SEQUENCE_MS } from "../../shared/game/scenario01/content.ts";
+import { AP_PER_ROUND, AP_WHEN_LOST, SCENARIO } from "../../shared/game/scenario01/content.ts";
 import type { Job } from "../../shared/game/state.ts";
 import { activePlayerId, cue, log, type Ctx } from "./context.ts";
 import { finishRoll } from "./dice.ts";
@@ -49,7 +49,7 @@ export function advance(ctx: Ctx): void {
     if (s.sequence) {
       const seq = s.sequence;
       const present = everyone(ctx).filter((p) => !p.away).map((p) => p.playerId);
-      if (ctx.now < seq.until && !present.every((id) => seq.acks.includes(id))) return;
+      if (!present.every((id) => seq.acks.includes(id))) return;
       endSequence(ctx);
       continue;
     }
@@ -160,8 +160,8 @@ export function nextTurn(ctx: Ctx): void {
   const id = s.turnOrder[s.activeIndex];
   if (!id) return;
   const p = s.players[id];
-  const seconds = p.away ? s.config.awayTurnSeconds : s.config.turnSeconds;
-  s.turnDeadline = ctx.now + seconds * 1000;
+  // no clock on a connected player; one who is away gets a short grace
+  s.turnDeadline = p.away ? ctx.now + s.config.awayTurnSeconds * 1000 : null;
   s.turnVersion = s.version + 1; // the version this step will commit as
   log(ctx, `${p.nickname}'s turn.`, "TURN", id);
   cue(ctx, "TURN", { playerId: id });
@@ -201,7 +201,7 @@ function endRound(ctx: Ctx): void {
   if (s.round === 3) {
     s.phase = "ACT_2";
     s.act = 2;
-    s.sequence = { kind: "BLACKOUT", until: ctx.now + SEQUENCE_MS.BLACKOUT, acks: [] };
+    s.sequence = { kind: "BLACKOUT", acks: [] };
     log(ctx, "The lights die. \"Identity registration complete. Anomaly detected.\"", "STORY");
     log(ctx, `"Passengers on board: ${everyone(ctx).length + 1}."`, "STORY");
     cue(ctx, "BLACKOUT", {});
@@ -209,7 +209,7 @@ function endRound(ctx: Ctx): void {
     s.phase = "ACT_3";
     s.act = 3;
     for (const c of s.carriages) c.locked = false;
-    s.sequence = { kind: "CAB_OPEN", until: ctx.now + SEQUENCE_MS.CAB_OPEN, acks: [] };
+    s.sequence = { kind: "CAB_OPEN", acks: [] };
     log(ctx, "A lock turns somewhere at the front of the train. Driver's cab access restored.", "STORY");
     log(ctx, "FINAL DEPARTURE PROTOCOL: engage the Power, Route and Drive locks in the same round.", "STORY");
     cue(ctx, "CAB_OPEN", {});
@@ -237,8 +237,7 @@ export function tick(ctx: Ctx): void {
 export function nextDeadline(s: Ctx["s"]): number | null {
   const times: number[] = [];
   const top = s.pending.at(-1);
-  if (top) times.push(top.deadlineAt);
-  else if (s.sequence) times.push(s.sequence.until);
-  else if (s.turnDeadline !== null && s.step === "PLAYER_TURNS") times.push(s.turnDeadline);
+  // windows and scenes wait for people, not clocks; only an away player's turn runs out
+  if (!top && !s.sequence && s.turnDeadline !== null && s.step === "PLAYER_TURNS") times.push(s.turnDeadline);
   return times.length ? Math.min(...times) : null;
 }

@@ -178,24 +178,9 @@ export function tuningFor(playerCount: number): GameConfig {
     bonusAp: playerCount <= 2 ? 1 : 0,
     act3BonusAp: playerCount <= 2 ? 1 : 0,
     echoes: tier === "SMALL" ? 1 : tier === "STANDARD" ? 2 : 3,
-    turnSeconds: 90,
     awayTurnSeconds: 15,
   };
 }
-
-/** Window timings in ms. */
-export const WINDOW_MS = {
-  FATE_SPEND: 15_000,
-  REACTION: 12_000,
-  PASSIVE_CONFIRM: 12_000,
-  TARGET_CHOICE: 20_000,
-  EVENT_CHOICE: 30_000,
-  VOTE: 30_000,
-  TRADE_OFFER: 20_000,
-  ENDING_CHOICE: 45_000,
-} as const;
-
-export const SEQUENCE_MS = { INTRO: 14_000, BLACKOUT: 9_000, FOLD: 7_000, CAB_OPEN: 6_000, ENDING: 16_000 } as const;
 
 /** How each ending reads, on the ending screen and in the log. */
 export type EndingText = { kicker: string; title: string; lines: string[]; won: boolean };

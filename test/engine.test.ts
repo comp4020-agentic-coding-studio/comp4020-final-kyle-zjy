@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { RuleError } from "../src/server/engine/context.ts";
 import { createGame } from "../src/server/engine/create.ts";
-import { applyGameAction, setAway, startGame, tickGame } from "../src/server/engine/engine.ts";
+import { applyGameAction, setAway, startGame, tickGame, hostSkip } from "../src/server/engine/engine.ts";
 import { project } from "../src/server/engine/project.ts";
 import type { GameAction } from "../src/shared/game/actions.ts";
 import type { GameState } from "../src/shared/game/state.ts";
@@ -82,7 +82,7 @@ describe("engine: a new run", () => {
     record(t.active!, { type: "MOVE", toCarriage: 1 });
 
     let replay = startGame(createGame("g_test", seatsFor(3), SEED, T0), T0).state;
-    replay = tickGame(replay, T0 + 60_000).state;
+    replay.turnOrder.forEach((id, i) => (replay = applyGameAction(replay, id, { type: "ACK_SEQUENCE" }, T0 + 1000 * (i + 1)).state));
     for (const i of inputs) replay = applyGameAction(replay, i.actor, i.action, i.now).state;
     expect(replay).toEqual(t.state);
   });
@@ -131,11 +131,29 @@ describe("engine: turns and action points", () => {
     expect(Object.values(t.state.players).every((p) => p.ap === (p.lost ? 1 : 2))).toBe(true);
   });
 
-  it("a turn that runs out of time passes on its own", () => {
+  it("a connected passenger's turn has no time limit; only the host's skip passes it", () => {
     const t = new Table(3);
     const first = t.active!;
-    t.tick(91_000);
+    expect(t.state.turnDeadline).toBeNull();
+    t.tick(10 * 60_000);
+    expect(t.active).toBe(first);
+    t.skip();
     expect(t.active).not.toBe(first);
+    expect(t.state.log.some((l) => l.text.includes("The host moves things along"))).toBe(true);
+  });
+
+  it("the host's skip closes a waiting decision with the default, then a scene, then a turn", () => {
+    const t = new Table(3);
+    expect(() => {
+      const s = structuredClone(t.state);
+      s.step = "ROUND_END";
+      hostSkip(s, t.now);
+    }).toThrow(/Nobody is being waited for/);
+    t.act(t.active!, { type: "SEARCH" });
+    if (t.state.pending.length) {
+      t.skip();
+      expect(t.state.pending).toHaveLength(0);
+    }
   });
 
   it("a passenger who drops on their turn keeps it for a short grace; back in time, they carry on", () => {
@@ -146,9 +164,9 @@ describe("engine: turns and action points", () => {
     expect(step.state.turnOrder[step.state.activeIndex]).toBe(first); // a refresh doesn't cost the turn
     step = tickGame(step.state, t.now + 5_000);
     expect(step.state.turnOrder[step.state.activeIndex]).toBe(first);
-    // back after 5 s: at least 30 s more to act, and the turn is still theirs
+    // back after 5 s: the turn is still theirs, with as long as they need
     const back = setAway(step.state, first, false, t.now + 5_000).state;
-    expect(back.turnDeadline).toBeGreaterThanOrEqual(t.now + 35_000);
+    expect(back.turnDeadline).toBeNull(); // back at the screen: no clock again
     expect(applyGameAction(back, first, { type: "SEARCH" }, t.now + 6_000).state.players[first].ap).toBe(1);
   });
 
@@ -205,10 +223,12 @@ describe("engine: dice and Fate", () => {
     rejects(() => applyGameAction(t.state, w.addressees[0], { type: "RESPOND", windowId: w.id, optionId: "0" }, t.now), "NOT_YOUR_WINDOW");
   });
 
-  it("an unanswered Fate window times out to 'keep it'", () => {
+  it("an unanswered Fate window waits; the host's skip keeps the die as rolled", () => {
     const t = fateWindowTable();
     const roll = t.state.roll!;
-    t.tick(16_000);
+    t.tick(10 * 60_000);
+    expect(t.state.pending.at(-1)?.kind).toBe("FATE_SPEND");
+    t.skip();
     expect(t.state.roll).toMatchObject({ id: roll.id, fateSpent: 0, done: true });
   });
 });
@@ -342,7 +362,7 @@ describe("engine: what each player can see", () => {
     const t = new Table(3);
     const s = structuredClone(t.state);
     const [a, b] = s.turnOrder;
-    s.pending.push({ id: "v1", kind: "VOTE", title: "t", prompt: "p", addressees: s.turnOrder, options: [{ id: "X", label: "X" }, { id: "Y", label: "Y" }], defaultOptionId: "Y", deadlineAt: t.now + 30_000, answers: { [b]: "X" }, resume: { kind: "BRAKE_VOTE" }, blocksTable: true });
+    s.pending.push({ id: "v1", kind: "VOTE", title: "t", prompt: "p", addressees: s.turnOrder, options: [{ id: "X", label: "X" }, { id: "Y", label: "Y" }], defaultOptionId: "Y", answers: { [b]: "X" }, resume: { kind: "BRAKE_VOTE" }, blocksTable: true });
     const view = project(s, a);
     expect(view.pending[0].answeredBy).toEqual([b]);
     expect(view.pending[0].myAnswer).toBeNull();

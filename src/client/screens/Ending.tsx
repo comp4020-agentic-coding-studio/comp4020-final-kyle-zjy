@@ -1,13 +1,13 @@
 // ENDING phase: the closing scene everyone sees at once. The results follow
-// when every passenger has pressed Continue or the scene's time runs out.
+// when every connected passenger has pressed Continue (or the host skips).
 import { motion } from "motion/react";
 import { endingText } from "../../shared/game/scenario01/content.ts";
-import { useCountdown } from "../game/useCountdown.ts";
+import { HostSkip } from "../game/HostSkip.tsx";
+import { notYet } from "../game/waiting.ts";
 import { sendGame, useGame } from "../store.ts";
 
 export function Ending() {
   const g = useGame();
-  const left = useCountdown(g?.sequence?.until);
   if (!g?.outcome) return null;
   const text = endingText(g.outcome, g.failReason);
   const acked = g.sequence?.acks.includes(g.viewerId) ?? false;
@@ -44,9 +44,10 @@ export function Ending() {
           animate={{ opacity: 1 }}
           transition={{ delay: 1.8 + text.lines.length * 0.7 }}
         >
-          {acked ? `Waiting for the others… ${left ?? ""}s` : "See the results"}
+          {acked ? `Waiting for ${notYet(g)}…` : "See the results"}
         </motion.button>
       </div>
+      <HostSkip g={g} />
     </main>
   );
 }

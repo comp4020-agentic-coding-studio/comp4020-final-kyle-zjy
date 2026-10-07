@@ -6,7 +6,6 @@
 // raw → Fate → final.
 import type { RollTier } from "../../shared/characters/types.ts";
 import { MAX_FATE_PER_ROLL } from "../../shared/game/scenario01/content.ts";
-import { WINDOW_MS } from "../../shared/game/scenario01/content.ts";
 import type { ItemId, PlayerGameState, PlayerId, Roll, RollContext, RollPurpose, WindowOption } from "../../shared/game/state.ts";
 import { cue, log, newId, type Ctx } from "./context.ts";
 import { d6 } from "./rng.ts";
@@ -126,7 +125,6 @@ function offerFate(ctx: Ctx, p: PlayerGameState, roll: Roll): void {
     resume: { kind: "ROLL_FATE" },
     blocksTable: true,
     ownerId: p.playerId,
-    ms: WINDOW_MS.FATE_SPEND,
   });
 }
 
@@ -179,7 +177,6 @@ export function reactionStage(ctx: Ctx): void {
     resume: { kind: "ROLL_REACTION" },
     blocksTable: true,
     ownerId: owner.playerId,
-    ms: WINDOW_MS.REACTION,
   });
 }
 

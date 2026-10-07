@@ -7,7 +7,6 @@
 // resolves with whatever they changed. Extra events from abilities use the
 // same resolution for their own participants, without touching the deck.
 import { EVENT_BY_ID, EVENT_IDS, EVENTS, type EventCard } from "../../shared/game/scenario01/events.ts";
-import { WINDOW_MS } from "../../shared/game/scenario01/content.ts";
 import type { Effect } from "../../shared/game/effects.ts";
 import type { PlayerId } from "../../shared/game/state.ts";
 import { cue, log, type Ctx } from "./context.ts";
@@ -144,7 +143,6 @@ export function runCard(ctx: Ctx, card: EventCard, run: EventRun): void {
         defaultOptionId: options[options.length - 1].id,
         resume: { kind: voting ? "EVENT_VOTE" : "EVENT_CHOICE", payload: { run: JSON.stringify(run) } },
         blocksTable: true,
-        ms: voting ? WINDOW_MS.VOTE : WINDOW_MS.EVENT_CHOICE,
       });
       return;
     }

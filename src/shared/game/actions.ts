@@ -14,7 +14,9 @@ export type LobbyAction =
   | { type: "START_GAME" }
   | { type: "LEAVE" }
   | { type: "RESTART" }
-  | { type: "BACK_TO_LOBBY" };
+  | { type: "BACK_TO_LOBBY" }
+  /** Host only, during a run: move a stalled table along one step (nothing has a time limit). */
+  | { type: "SKIP_WAITING" };
 
 export type TradeOffer = { items: ItemId[]; fate: number };
 

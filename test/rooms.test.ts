@@ -48,6 +48,15 @@ describe("room codes", () => {
 });
 
 describe("the host's crown", () => {
+  it("only the host can move a stalled run along, and only during a run", () => {
+    const { rooms } = service();
+    const { code, ids } = readyRoom(rooms, 2);
+    expect(() => rooms.applyLobbyAction(code, ids[0], { type: "SKIP_WAITING" }, new Set(ids))).toThrow(/nothing to skip in the lobby/);
+    rooms.applyLobbyAction(code, ids[0], { type: "START_GAME" }, new Set(ids));
+    expect(() => rooms.applyLobbyAction(code, ids[1], { type: "SKIP_WAITING" }, new Set(ids))).toThrow(/Only the host/);
+    expect(rooms.applyLobbyAction(code, ids[0], { type: "SKIP_WAITING" }, new Set(ids)).skip).toBe(true);
+  });
+
   it("a host who drops passes it to the next connected seat once the grace period ends", () => {
     const { db, rooms } = service();
     const { code, ids } = readyRoom(rooms, 3);

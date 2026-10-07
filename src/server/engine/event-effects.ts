@@ -4,7 +4,6 @@
 // the ability's scope from its payload (owner, targets, label).
 import type { Effect } from "../../shared/game/effects.ts";
 import { EVENT_BY_ID, type EventCard } from "../../shared/game/scenario01/events.ts";
-import { WINDOW_MS } from "../../shared/game/scenario01/content.ts";
 import type { PlayerId, TaskGoal, WindowOption } from "../../shared/game/state.ts";
 import { cue, log, newId, type Ctx } from "./context.ts";
 import { isSuccess, quickRoll, resolveAs, TIER_LABEL, tierOf } from "./dice.ts";
@@ -40,7 +39,6 @@ function choose(ctx: Ctx, scope: Scope, prompt: string, options: WindowOption[],
     resume: { kind: "SKILL_CHOICE", payload: { action, scope: JSON.stringify(save(scope)), data: JSON.stringify(data) } },
     blocksTable: true,
     ownerId: owner,
-    ms: WINDOW_MS.TARGET_CHOICE,
   });
 }
 
@@ -225,7 +223,6 @@ registerHandler("VOTE", (ctx, e, scope) => {
     defaultOptionId: e.question === "PICK_PLAYER" ? selfOf(scope)! : options[options.length - 1].id,
     resume: { kind: "SKILL_VOTE", payload: { question: e.question, scope: JSON.stringify(save(scope)), reward: JSON.stringify(e.reward ?? []) } },
     blocksTable: true,
-    ms: WINDOW_MS.VOTE,
   });
 });
 

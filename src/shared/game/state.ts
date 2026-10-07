@@ -227,7 +227,6 @@ export type PendingWindow = {
   addressees: PlayerId[];
   options: WindowOption[];
   defaultOptionId: string;
-  deadlineAt: number;
   /** Answers received so far (votes collect several). */
   answers: Record<PlayerId, string>;
   /** Engine continuation once the window closes. Opaque to clients. */
@@ -336,7 +335,8 @@ export type Bond = {
 };
 
 /** A short cinematic everyone sees at once (intro, blackout, fold, ending). */
-export type Sequence = { kind: "INTRO" | "BLACKOUT" | "FOLD" | "CAB_OPEN" | "ENDING"; until: number; acks: PlayerId[] };
+/** A scene everyone sees at once; it ends when every connected passenger has pressed Continue (or the host skips). */
+export type Sequence = { kind: "INTRO" | "BLACKOUT" | "FOLD" | "CAB_OPEN" | "ENDING"; acks: PlayerId[] };
 
 export type ActiveEvent = {
   id: string;
@@ -401,7 +401,6 @@ export type GameConfig = {
   /** Extra action points per round in act 3: two passengers can't otherwise reach three locks in one round. */
   act3BonusAp: number;
   echoes: number;
-  turnSeconds: number;
   awayTurnSeconds: number;
 };
 

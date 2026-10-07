@@ -1,9 +1,9 @@
 // Cinematics everyone sees at once. The server holds the table until every
-// present passenger has pressed Continue or the scene's time runs out.
+// connected passenger has pressed Continue (or the host skips): no clock.
 import { motion } from "motion/react";
 import type { PlayerView } from "../../shared/game/state.ts";
 import { sendGame } from "../store.ts";
-import { useCountdown } from "./useCountdown.ts";
+import { notYet } from "./waiting.ts";
 
 const SCENES = {
   BLACKOUT: {
@@ -28,7 +28,6 @@ const SCENES = {
 
 export function SequenceOverlay({ g }: { g: PlayerView }) {
   const seq = g.sequence;
-  const left = useCountdown(seq?.until);
   if (!seq || !(seq.kind in SCENES)) return null;
   const scene = SCENES[seq.kind as keyof typeof SCENES];
   const acked = seq.acks.includes(g.viewerId);
@@ -74,7 +73,7 @@ export function SequenceOverlay({ g }: { g: PlayerView }) {
           animate={{ opacity: 1 }}
           transition={{ delay: 2.6 }}
         >
-          {acked ? `Waiting for the others… ${left ?? ""}s` : "Continue"}
+          {acked ? `Waiting for ${notYet(g)}…` : "Continue"}
         </motion.button>
       </div>
     </motion.div>

@@ -1,11 +1,12 @@
 // INTRO phase: the boarding broadcast. Everyone's ticket is dealt; the run
-// starts when every passenger has boarded (or the broadcast ends).
+// starts when every connected passenger has boarded: nobody is rushed.
 import { motion } from "motion/react";
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import { ZODIAC_INFO } from "../../shared/characters/signs.ts";
 import { NIGHT_RULES, SCENARIO } from "../../shared/game/scenario01/content.ts";
 import { Avatar } from "../components/Avatar.tsx";
-import { useCountdown } from "../game/useCountdown.ts";
+import { HostSkip } from "../game/HostSkip.tsx";
+import { notYet } from "../game/waiting.ts";
 import { sendGame, useGame } from "../store.ts";
 
 const LINES: { text: string; broadcast?: boolean }[] = [
@@ -22,7 +23,6 @@ const STEP = 0.9;
 
 export function Intro() {
   const g = useGame();
-  const left = useCountdown(g?.sequence?.until);
   if (!g) return null;
   const after = LINES.length * STEP + 0.4;
   const boarded = g.sequence?.acks.includes(g.viewerId) ?? false;
@@ -69,10 +69,11 @@ export function Intro() {
             <p className="mt-1 text-sm text-mist">{NIGHT_RULES[g.nightRule].text}</p>
           </div>
           <button className="btn btn-gold mt-6 w-full" disabled={boarded} onClick={() => void sendGame({ type: "ACK_SEQUENCE" })}>
-            {boarded ? `Boarded. Waiting for the others… ${left ?? ""}s` : "Board the train"}
+            {boarded ? `Boarded. Waiting for ${notYet(g)}…` : "Board the train"}
           </button>
         </motion.section>
       </div>
+      <HostSkip g={g} />
     </main>
   );
 }

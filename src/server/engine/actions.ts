@@ -5,7 +5,7 @@
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import type { ActionAvailability, GameAction, GameActionType, RejectCode, TradeOffer } from "../../shared/game/actions.ts";
 import { AP_COST } from "../../shared/game/actions.ts";
-import { CARRIAGES, ITEMS, MAX_HELP_BONUS, MAX_SANITY, WINDOW_MS } from "../../shared/game/scenario01/content.ts";
+import { CARRIAGES, ITEMS, MAX_HELP_BONUS, MAX_SANITY } from "../../shared/game/scenario01/content.ts";
 import type { GameState, PlayerGameState, PlayerId } from "../../shared/game/state.ts";
 import { neighboursOf } from "./beats.ts";
 import { activePlayerId, cue, log, RuleError, type Ctx } from "./context.ts";
@@ -23,7 +23,6 @@ type Fail = { code: RejectCode; reason: string };
 const fail = (code: RejectCode, reason: string): Fail => ({ code, reason });
 
 const IN_RUN = new Set(["ACT_1", "ACT_2", "ACT_3"]);
-const WRAP_UP_MS = 20_000;
 
 /** Shared gate for anything done on your own turn. */
 function turnGate(s: GameState, actorId: PlayerId, cost: number): Fail | null {
@@ -185,7 +184,6 @@ const TRADE: Spec<Extract<GameAction, { type: "TRADE" }>> = {
       resume: { kind: "TRADE", payload: { from: p.playerId, to: t.playerId, give: JSON.stringify(a.give), want: JSON.stringify(a.want) } },
       blocksTable: true,
       ownerId: p.playerId,
-      ms: WINDOW_MS.TRADE_OFFER,
     });
   },
 };
@@ -357,9 +355,6 @@ export function applyAction(ctx: Ctx, actorId: PlayerId, action: GameAction): vo
   if (gate) throw new RuleError(gate.code, gate.reason);
   p.ap -= cost;
   spec.apply(ctx, p, action);
-  if (cost && p.ap === 0 && activePlayerId(s) === actorId && s.turnDeadline !== null) {
-    s.turnDeadline = Math.min(s.turnDeadline, ctx.now + WRAP_UP_MS);
-  }
 }
 
 /** What the viewer can do right now, with a reason for everything they can't. */

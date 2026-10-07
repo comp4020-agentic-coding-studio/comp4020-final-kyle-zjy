@@ -10,7 +10,7 @@ import type { GameEvent } from "../../shared/protocol.ts";
 import { transaction, type Db } from "../db/db.ts";
 import { RuleError } from "../engine/context.ts";
 import { TURN_ACTIONS } from "../engine/actions.ts";
-import { applyGameAction, setAway, startGame, tickGame, type Step } from "../engine/engine.ts";
+import { applyGameAction, hostSkip, setAway, startGame, tickGame, type Step } from "../engine/engine.ts";
 import { nextDeadline } from "../engine/flow.ts";
 import { log } from "../log.ts";
 import type { GameStore, LogEntry } from "./store.ts";
@@ -72,6 +72,14 @@ export class GameRunner {
     if (!state || !p || p.away === !connected || state.phase === "RESULTS") return;
     const now = this.clock();
     this.commit(roomCode, setAway(state, playerId, !connected, now), { kind: connected ? "BACK" : "AWAY", actorId: playerId, at: now });
+  }
+
+  /** The host moved a stalled table along (the room service checked they are the host). */
+  hostSkip(roomCode: string, hostId: PlayerId): void {
+    const state = this.state(roomCode);
+    if (!state) throw new RuleError("WRONG_PHASE", "No run is in progress in this room.");
+    const now = this.clock();
+    this.commit(roomCode, hostSkip(state, now), { kind: "SKIP", actorId: hostId, at: now });
   }
 
   tick(roomCode: string): void {

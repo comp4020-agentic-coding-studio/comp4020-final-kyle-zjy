@@ -7,7 +7,7 @@ import type { Db } from "../db/db.ts";
 import { createGame, type Seat } from "../engine/create.ts";
 import { newSeed } from "../engine/rng.ts";
 
-export type LogEntry = { kind: "START" | "ACTION" | "TICK" | "AWAY" | "BACK"; actionId?: string; actorId?: string; action?: unknown; at: number };
+export type LogEntry = { kind: "START" | "ACTION" | "TICK" | "AWAY" | "BACK" | "SKIP"; actionId?: string; actorId?: string; action?: unknown; at: number };
 
 export class GameStore {
   db: Db;

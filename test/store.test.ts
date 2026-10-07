@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { openDb } from "../src/server/db/db.ts";
-import { applyGameAction, setAway, startGame, tickGame } from "../src/server/engine/engine.ts";
+import { applyGameAction, hostSkip, setAway, startGame, tickGame } from "../src/server/engine/engine.ts";
 import { GameRunner } from "../src/server/game/runner.ts";
 import { GameStore } from "../src/server/game/store.ts";
 import { RoomService } from "../src/server/rooms/service.ts";
@@ -31,6 +31,11 @@ function setup() {
   return { db, store, runner, code: host.roomCode, advance: (ms: number) => (now += ms), clock };
 }
 
+/** Everyone presses "Board the train", ending the intro (it has no time limit). */
+function boardAll(runner: GameRunner, code: string): void {
+  for (const id of runner.state(code)!.turnOrder) runner.apply(code, id, `board-${id}`, runner.state(code)!.version, { type: "ACK_SEQUENCE" });
+}
+
 describe("game persistence", () => {
   it("starting a run creates exactly one session and moves the room out of its lobby", () => {
     const { db, code, runner } = setup();
@@ -41,9 +46,8 @@ describe("game persistence", () => {
   });
 
   it("a restarted server resumes the run exactly where it was", () => {
-    const { db, store, runner, code, advance, clock } = setup();
-    advance(20_000);
-    runner.tick(code);
+    const { db, store, runner, code, clock } = setup();
+    boardAll(runner, code);
     const s = runner.state(code)!;
     const active = s.turnOrder[s.activeIndex];
     runner.apply(code, active, "a1", s.version, { type: "MOVE", toCarriage: 1 });
@@ -56,9 +60,8 @@ describe("game persistence", () => {
   });
 
   it("a turn action pressed before that turn began is refused; one pressed after it is applied", () => {
-    const { runner, code, advance } = setup();
-    advance(20_000);
-    runner.tick(code);
+    const { runner, code } = setup();
+    boardAll(runner, code);
     const first = runner.state(code)!;
     const [a, b] = [first.turnOrder[first.activeIndex], first.turnOrder[first.activeIndex + 1]];
     // both press End turn on the same view: a's lands first, which hands the turn to b
@@ -83,9 +86,8 @@ describe("game persistence", () => {
   });
 
   it("an action id is only ever applied once, even across a restart", () => {
-    const { db, store, runner, code, advance, clock } = setup();
-    advance(20_000);
-    runner.tick(code);
+    const { db, store, runner, code, clock } = setup();
+    boardAll(runner, code);
     const s = runner.state(code)!;
     const active = s.turnOrder[s.activeIndex];
     expect(runner.apply(code, active, "dup", s.version, { type: "MOVE", toCarriage: 1 }).duplicate).toBe(false);
@@ -98,8 +100,7 @@ describe("game persistence", () => {
 
   it("the stored history replays to the stored state", () => {
     const { store, runner, code, advance } = setup();
-    advance(20_000);
-    runner.tick(code);
+    boardAll(runner, code);
     let s = runner.state(code)!;
     runner.apply(code, s.turnOrder[s.activeIndex], "x1", s.version, { type: "SEARCH" });
     s = runner.state(code)!;
@@ -108,6 +109,7 @@ describe("game persistence", () => {
     runner.presence(code, s.turnOrder[1], false);
     advance(30_000);
     runner.tick(code);
+    runner.hostSkip(code, s.turnOrder[0]); // the host moves the table along: logged, and replayed
 
     const { initial, entries } = store.history(s.sessionId);
     let replay: GameState = initial;
@@ -115,6 +117,7 @@ describe("game persistence", () => {
       if (e.kind === "START") replay = startGame(replay, e.at).state;
       else if (e.kind === "TICK") replay = tickGame(replay, e.at).state;
       else if (e.kind === "AWAY" || e.kind === "BACK") replay = setAway(replay, e.actorId!, e.kind === "AWAY", e.at).state;
+      else if (e.kind === "SKIP") replay = hostSkip(replay, e.at).state;
       else replay = applyGameAction(replay, e.actorId!, e.action as never, e.at).state;
     }
     expect(replay).toEqual(runner.state(code));

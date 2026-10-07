@@ -28,7 +28,6 @@ const windowFor = (kind: PendingWindow["kind"], to: string): PendingWindow => ({
     { id: "no", label: "Not now" },
   ],
   defaultOptionId: "no",
-  deadlineAt: Date.now() + 12_000,
   answers: {},
   resume: { kind: "TEST" },
   blocksTable: true,

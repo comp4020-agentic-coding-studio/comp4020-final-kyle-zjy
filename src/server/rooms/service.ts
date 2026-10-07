@@ -44,7 +44,7 @@ type RoomRow = {
 };
 
 /** What the hub must do after a lobby action besides broadcasting. */
-export type LobbyOutcome = { kicked?: PlayerId; left?: PlayerId; started?: boolean; ended?: boolean };
+export type LobbyOutcome = { kicked?: PlayerId; left?: PlayerId; started?: boolean; ended?: boolean; skip?: boolean };
 
 const hashToken = (token: string): string => createHash("sha256").update(token).digest("hex");
 
@@ -273,6 +273,12 @@ export class RoomService {
             Date.now(),
           );
           outcome = { started: true };
+          break;
+        }
+        case "SKIP_WAITING": {
+          requireHost();
+          if (inLobby) throw new RoomError("WRONG_PHASE", "There's nothing to skip in the lobby.");
+          outcome = { skip: true };
           break;
         }
         case "BACK_TO_LOBBY":

@@ -37,7 +37,8 @@ export function Banner({ g }: { g: PlayerView }) {
           {ch && h.tone !== "table" && <Avatar zodiac={ch.zodiac} mbti={ch.mbti} size={34} />}
           <p className={`min-w-0 flex-1 truncate font-display text-xl font-semibold sm:text-2xl ${h.tone === "you" ? "text-signal" : "text-moon"}`}>{h.text}</p>
           {h.tone === "you" && active && <span className="font-mono text-sm text-gold-bright">{active.ap} AP</span>}
-          {left !== null && <span className={`font-mono text-sm ${left <= 10 ? "text-ember" : "text-mist"}`}>{left}s</span>}
+          {/* only an away player's turn has a clock: the grace before it passes */}
+          {left !== null && active?.away && <span className="font-mono text-sm text-ember">away · {left}s</span>}
         </motion.div>
       </AnimatePresence>
     </div>

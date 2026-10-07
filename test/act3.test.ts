@@ -163,7 +163,9 @@ describe("endings", () => {
     expect(s.sequence?.kind).toBe("ENDING");
     expect(s.results).toHaveLength(3);
     expect(() => t.act(me, { type: "END_TURN" })).toThrow();
-    t.tick(20_000);
+    t.tick(10 * 60_000);
+    expect(t.state.phase).toBe("ENDING"); // the scene waits for everyone
+    t.ackAll();
     expect(t.state.phase).toBe("RESULTS");
   });
 
@@ -202,11 +204,13 @@ describe("endings", () => {
     expect(t.state).toMatchObject({ outcome: "TRUE_DELETE", endingChoice: "DELETE", phase: "ENDING" });
   });
 
-  it("nobody answering the last choice gives it a ticket", () => {
+  it("an unanswered last choice waits; the host's skip gives it a ticket", () => {
     const { t, me } = lastLock(3, (s) => (s.coreMemories = 6));
     t.act(me, { type: "REPAIR" });
     while (t.state.pending.at(-1) && t.state.pending.at(-1)!.kind !== "ENDING_CHOICE") t.answerAll();
-    t.tick(46_000);
+    t.tick(10 * 60_000);
+    expect(t.state.outcome).toBeNull(); // nobody is rushed
+    t.skip();
     expect(t.state.outcome).toBe("TRUE_TICKET");
   });
 

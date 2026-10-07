@@ -5,7 +5,7 @@
 //   R7  Reality Fold: the middle carriages re-shuffle under everyone's feet
 //   R8  passenger echoes board (act 3)
 // Round-3 blackout and the act-3 cab opening happen at round end (flow.ts).
-import { CARRIAGES, MIDDLE, SEQUENCE_MS, WINDOW_MS } from "../../shared/game/scenario01/content.ts";
+import { CARRIAGES, MIDDLE } from "../../shared/game/scenario01/content.ts";
 import type { PlayerGameState, PlayerId } from "../../shared/game/state.ts";
 import { cue, log, newId, type Ctx } from "./context.ts";
 import { applyEffects, changeCollapse } from "./effects.ts";
@@ -103,7 +103,7 @@ function realityFold(ctx: Ctx): void {
   let after = before;
   for (let tries = 0; tries < 10 && after.join() === before.join(); tries++) after = shuffle(s, before);
   after.forEach((identity, i) => (s.carriages[i + 1].identity = identity));
-  s.sequence = { kind: "FOLD", until: ctx.now + SEQUENCE_MS.FOLD, acks: [] };
+  s.sequence = { kind: "FOLD", acks: [] };
   log(ctx, "REALITY FOLD. The train turns inside out. You are standing exactly where you were, in a different carriage.", "FOLD");
   cue(ctx, "FOLD", { before, after });
 }
@@ -127,7 +127,6 @@ export function scriptedRoundEvent(ctx: Ctx): boolean {
     defaultOptionId: "CONTINUE",
     resume: { kind: "BRAKE_VOTE" },
     blocksTable: true,
-    ms: WINDOW_MS.VOTE,
   });
   return true;
 }

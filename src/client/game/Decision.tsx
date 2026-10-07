@@ -9,7 +9,6 @@ import type { PlayerView, PublicWindow } from "../../shared/game/state.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { sendGame } from "../store.ts";
 import { EventArt } from "./EventArt.tsx";
-import { useCountdown } from "./useCountdown.ts";
 
 const KIND_LABEL: Record<PublicWindow["kind"], string> = {
   FATE_SPEND: "Fate",
@@ -28,21 +27,6 @@ export function DecisionLayer({ g }: { g: PlayerView }) {
   if (!w || w.kind === "FATE_SPEND") return null;
   const mine = w.addressees.includes(g.viewerId) && !w.myAnswer;
   return <AnimatePresence>{mine ? <DecisionCard key={w.id} g={g} w={w} /> : <Waiting key={`wait-${w.id}`} g={g} w={w} />}</AnimatePresence>;
-}
-
-function Ring({ w }: { w: PublicWindow }) {
-  const left = useCountdown(w.deadlineAt) ?? 0;
-  const total = Math.max(1, Math.round((w.deadlineAt - (w.deadlineAt - 30_000)) / 1000));
-  const pct = Math.min(1, left / total);
-  return (
-    <span className="relative flex h-11 w-11 items-center justify-center" aria-label={`${left} seconds left`}>
-      <svg width="44" height="44" viewBox="0 0 44 44" className="absolute inset-0 -rotate-90" aria-hidden="true">
-        <circle cx="22" cy="22" r="19" fill="none" stroke="#1d2657" strokeWidth="3" />
-        <circle cx="22" cy="22" r="19" fill="none" stroke={left <= 5 ? "#e2563f" : "#5ce1e6"} strokeWidth="3" strokeDasharray={`${pct * 119.4} 119.4`} />
-      </svg>
-      <span className="font-mono text-sm">{left}</span>
-    </span>
-  );
 }
 
 function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
@@ -75,7 +59,6 @@ function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
                 {w.title}
               </h2>
             </div>
-            <Ring w={w} />
           </div>
           {(w.kind === "REACTION" || w.kind === "PASSIVE_CONFIRM") && ownerChar && (
             <div className="mt-3 flex items-center gap-3 rounded-xl border border-violet/40 bg-violet/10 p-2">
@@ -111,7 +94,6 @@ function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
 }
 
 function Waiting({ g, w }: { g: PlayerView; w: PublicWindow }) {
-  const left = useCountdown(w.deadlineAt);
   const waitingOn = w.addressees.filter((id) => !w.answeredBy.includes(id)).map((id) => g.players[id]?.nickname ?? "someone");
   const answered = w.myAnswer ? w.options.find((o) => o.id === w.myAnswer)?.label : null;
   return (
@@ -122,7 +104,6 @@ function Waiting({ g, w }: { g: PlayerView; w: PublicWindow }) {
           {answered ? `You chose "${answered}". ` : ""}
           {w.kind === "VOTE" || w.kind === "EVENT_CHOICE" ? `${w.title}: ${w.answeredBy.length}/${w.addressees.length} answered` : `Waiting for ${waitingOn.join(", ")}`}
         </span>
-        <span className="font-mono text-xs text-mist">{left}s</span>
       </div>
     </motion.div>
   );

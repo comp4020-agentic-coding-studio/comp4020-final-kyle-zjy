@@ -11,7 +11,6 @@
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import type { CharacterId, Skill, TargetRule, TriggerKind } from "../../shared/characters/types.ts";
 import { walkEffects } from "../../shared/characters/validate.ts";
-import { WINDOW_MS } from "../../shared/game/scenario01/content.ts";
 import type { PendingEffect, PlayerId, Roll, WindowOption } from "../../shared/game/state.ts";
 import { cue, log, newId, type Ctx } from "./context.ts";
 import { setRollReactions } from "./dice.ts";
@@ -257,7 +256,6 @@ export function askNext(ctx: Ctx, events: TriggerEvent[], asked: PlayerId[], why
     resume: { kind: "SKILL_ASK", payload: { event: JSON.stringify(next.event) } },
     blocksTable: true,
     ownerId: next.id,
-    ms: WINDOW_MS.REACTION,
   });
   return true;
 }
@@ -384,7 +382,6 @@ setBeforeClose((ctx, w) => {
     resume: { kind: "REVISE", payload: { under: w.id } },
     blocksTable: true,
     ownerId: holder,
-    ms: WINDOW_MS.REACTION,
   });
   return true;
 });

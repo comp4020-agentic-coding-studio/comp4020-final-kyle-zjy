@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "../store.ts";
 
-/** Seconds left until a server timestamp, ticking every 250 ms. */
+/** Seconds left until a server timestamp, ticking every 250 ms (only an away player's turn has one). */
 export function useCountdown(deadline: number | null | undefined): number | null {
   const skew = useStore((s) => s.skew);
   const [now, setNow] = useState(() => Date.now());

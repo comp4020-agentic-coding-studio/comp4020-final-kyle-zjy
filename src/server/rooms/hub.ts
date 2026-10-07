@@ -89,6 +89,7 @@ export class Hub {
       try {
         if (msg.t === "LOBBY_ACTION") {
           const outcome = this.rooms.applyLobbyAction(bound.code, bound.playerId, msg.action, this.connected(bound.code));
+          if (outcome.skip) this.games.hostSkip(bound.code, bound.playerId);
           send(ws, { t: "ACK", actionId });
           if (outcome.kicked) this.dropPlayer(bound.code, outcome.kicked, "KICKED");
           if (outcome.left) this.dropPlayer(bound.code, outcome.left, "LEFT");

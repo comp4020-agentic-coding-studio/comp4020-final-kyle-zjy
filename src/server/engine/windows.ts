@@ -13,11 +13,10 @@ export function onResume(kind: string, fn: Resumer): void {
   RESUMERS.set(kind, fn);
 }
 
-export type WindowSpec = Omit<PendingWindow, "id" | "answers" | "deadlineAt"> & { ms: number };
+export type WindowSpec = Omit<PendingWindow, "id" | "answers">;
 
 export function openWindow(ctx: Ctx, spec: WindowSpec): PendingWindow {
-  const { ms, ...rest } = spec;
-  const w: PendingWindow = { ...rest, id: newId(ctx, "w"), answers: {}, deadlineAt: ctx.now + ms };
+  const w: PendingWindow = { ...spec, id: newId(ctx, "w"), answers: {} };
   ctx.s.pending.push(w);
   cue(ctx, "WINDOW", { kind: w.kind, id: w.id, addressees: w.addressees });
   // nobody present to answer: close at once with defaults
@@ -59,12 +58,16 @@ export function closeTop(ctx: Ctx): void {
   resume(ctx, w, answers);
 }
 
-/** Closes every window whose deadline has passed (or whose remaining addressees are all away). */
+/**
+ * Closes windows nobody connected is still answering (the rest are away).
+ * There are no time limits: a connected player is always waited for, and
+ * only the host can move a stalled table along (hostSkip in engine.ts).
+ */
 export function expireWindows(ctx: Ctx): boolean {
   let changed = false;
   for (let guard = 0; guard < 50; guard++) {
     const w = ctx.s.pending.at(-1);
-    if (!w || (w.deadlineAt > ctx.now && !allAnswered(ctx, w))) break;
+    if (!w || !allAnswered(ctx, w)) break;
     closeTop(ctx);
     changed = true;
   }

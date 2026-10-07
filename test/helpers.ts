@@ -4,7 +4,7 @@ import type { MBTI, Zodiac } from "../src/shared/characters/types.ts";
 import type { GameAction } from "../src/shared/game/actions.ts";
 import type { GameState, PlayerId } from "../src/shared/game/state.ts";
 import { createGame, type Seat } from "../src/server/engine/create.ts";
-import { applyGameAction, startGame, tickGame, type Step } from "../src/server/engine/engine.ts";
+import { applyGameAction, hostSkip, startGame, tickGame, type Step } from "../src/server/engine/engine.ts";
 import { activePlayerId } from "../src/server/engine/context.ts";
 import { next as nextFloat } from "../src/server/engine/rng.ts";
 
@@ -30,13 +30,12 @@ export function seatsFor(n: number, chars: [Zodiac, MBTI][] = DEFAULT_CHARS): Se
   return ids(n).map((id, i) => ({ playerId: id, nickname: id.toUpperCase(), seat: i, zodiac: chars[i % chars.length][0], mbti: chars[i % chars.length][1] }));
 }
 
-/** A run past the intro, at the start of round 1. */
+/** A run past the intro (everyone has boarded), at the start of round 1. */
 export function newRun(n = 3, opts: { seed?: string; chars?: [Zodiac, MBTI][] } = {}): { state: GameState; now: number } {
   const created = createGame("g_test", seatsFor(n, opts.chars), opts.seed ?? SEED, T0);
   let now = T0;
   let step: Step = startGame(created, now);
-  now += 60_000; // past the intro
-  step = tickGame(step.state, now);
+  for (const id of step.state.turnOrder) step = applyGameAction(step.state, id, { type: "ACK_SEQUENCE" }, (now += 1000));
   return { state: step.state, now };
 }
 
@@ -67,11 +66,24 @@ export class Table {
   playUntil(done: (s: GameState) => boolean, answer?: string): void {
     for (let guard = 0; guard < 2000 && !done(this.state); guard++) {
       if (this.state.pending.length) this.answerAll(answer);
-      else if (this.state.sequence) this.tick(20_000);
+      else if (this.state.sequence) this.ackAll();
       else if (this.active) this.act(this.active, { type: "END_TURN" });
       else this.tick(1000);
     }
     if (!done(this.state)) throw new Error("condition never reached");
+  }
+  /** The host moves the table along one step (the only way past someone who doesn't answer). */
+  skip(ms = 1000): Step {
+    this.now += ms;
+    const step = hostSkip(this.state, this.now);
+    this.state = step.state;
+    return step;
+  }
+  /** Everyone still watching the current scene presses Continue. */
+  ackAll(): void {
+    for (const id of this.state.turnOrder) {
+      if (this.state.sequence && !this.state.sequence.acks.includes(id) && !this.state.players[id].away) this.act(id, { type: "ACK_SEQUENCE" });
+    }
   }
   /** Answers the top window for everyone it's addressed to with the given option (or the default). */
   answerAll(option?: string): void {

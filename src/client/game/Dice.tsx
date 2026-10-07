@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import type { RollTier } from "../../shared/characters/types.ts";
 import type { PlayerView, PublicWindow } from "../../shared/game/state.ts";
 import { sendGame } from "../store.ts";
-import { useCountdown } from "./useCountdown.ts";
 
 export const TIER: Record<RollTier, { word: string; color: string }> = {
   DISASTER: { word: "Disaster", color: "#e2563f" },
@@ -123,9 +122,8 @@ export function DiceOverlay({ g }: { g: PlayerView }) {
 }
 
 function FateChoice({ g, w }: { g: PlayerView; w: PublicWindow }) {
-  const left = useCountdown(w.deadlineAt);
   const mine = w.addressees.includes(g.viewerId) && !w.myAnswer;
-  if (!mine) return <p className="mt-2 text-sm text-mist">Deciding whether to spend Fate… {left}s</p>;
+  if (!mine) return <p className="mt-2 text-sm text-mist">Deciding whether to spend Fate…</p>;
   return (
     <div className="mt-3">
       <p className="text-sm text-mist">{w.prompt}</p>
@@ -137,7 +135,6 @@ function FateChoice({ g, w }: { g: PlayerView; w: PublicWindow }) {
           </button>
         ))}
       </div>
-      <p className="mt-1 font-mono text-xs text-ash">{left}s</p>
     </div>
   );
 }

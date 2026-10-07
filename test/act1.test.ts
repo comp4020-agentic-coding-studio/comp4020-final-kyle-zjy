@@ -229,10 +229,12 @@ describe("act 1: public events", () => {
     expect(t.state.players[b]).toMatchObject({ fate: fate[b], sanity: 3 });
   });
 
-  it("an unanswered vote closes on time with the default", () => {
+  it("an unanswered vote waits as long as it takes; the host's skip gives the default", () => {
     const t = withDeck(["WRONG_PLATFORM"]);
     t.playUntil((s) => s.pending.at(-1)?.kind === "VOTE");
-    t.tick(31_000);
+    t.tick(10 * 60_000);
+    expect(t.state.pending.at(-1)?.kind).toBe("VOTE");
+    t.skip();
     expect(t.state.currentEvent).toMatchObject({ resolved: true, choice: "QUIET" });
   });
 
