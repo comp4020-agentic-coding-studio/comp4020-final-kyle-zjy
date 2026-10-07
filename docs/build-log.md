@@ -281,3 +281,12 @@ only when the deadline does: a player who drops keeps it for
 `awayTurnSeconds` (15 s), and one who comes back mid-turn gets at least 30 s.
 Tests: engine (grace, return, timeout) and spec (the active player refreshes
 and still acts).
+
+Live note: through Fly's proxy a closing WebSocket takes about 5 s to be
+reported (locally it is immediate), so the server marks a dropped player away
+~5 s late. The turn grace (15 s) covers it; verified live by hard-dropping the
+active player for 8 s, reconnecting, and acting. The spec's waits for a player
+to show as away now allow 10 s, so `spec/game.test.ts` also passes against
+the live app. Three lobby specs that wait for a server-side close code still
+time out against the live app for the same reason; CI runs them against the
+local container, where they pass.

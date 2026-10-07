@@ -39,6 +39,10 @@ async function intoRound1(seats: Seat[]): Promise<PlayerView> {
   return gameOf(seats[0].c, (g) => g.phase === "ACT_1" && g.step === "PLAYER_TURNS");
 }
 
+// a dropped socket is reported in milliseconds locally, but takes about 5 s
+// through Fly's proxy; these waits also hold when the spec runs against the live app
+const AWAY_MS = 10_000;
+
 const close = (seats: Seat[]) => seats.forEach(({ c }) => c.ws.close());
 
 describe("a run over WebSocket", () => {
@@ -101,16 +105,16 @@ describe("a run over WebSocket", () => {
     await intoRound1(seats);
     const [a, b] = seats;
     b.c.ws.close();
-    await gameOf(a.c, (g) => g.players[b.join.playerId].away === true);
+    await gameOf(a.c, (g) => g.players[b.join.playerId].away === true, AWAY_MS);
     const again = await connect(code, b.join.sessionToken);
     const w = await welcome(again);
     expect(w.playerId).toBe(b.join.playerId);
     expect(w.snapshot.room.members).toHaveLength(2);
     expect(w.snapshot.game?.phase).toBe("ACT_1");
-    await gameOf(a.c, (g) => g.players[b.join.playerId].away === false);
+    await gameOf(a.c, (g) => g.players[b.join.playerId].away === false, AWAY_MS);
     a.c.ws.close();
     again.ws.close();
-  });
+  }, 20_000);
 
   it("the active passenger refreshing keeps their turn", async () => {
     const { code, seats } = await startedRun(2);
@@ -118,14 +122,14 @@ describe("a run over WebSocket", () => {
     const active = seats.find((s) => s.join.playerId === view.turnOrder[view.activeIndex])!;
     const other = seats.find((s) => s !== active)!;
     active.c.ws.close();
-    await gameOf(other.c, (g) => g.players[active.join.playerId].away === true);
+    await gameOf(other.c, (g) => g.players[active.join.playerId].away === true, AWAY_MS);
     const again = await connect(code, active.join.sessionToken);
     const w = await welcome(again);
     expect(w.snapshot.game?.turnOrder[w.snapshot.game.activeIndex]).toBe(active.join.playerId);
     expect(await again.play({ type: "SEARCH" })).toMatchObject({ t: "ACK" });
     other.c.ws.close();
     again.ws.close();
-  });
+  }, 20_000);
 
   it("refuses a stale view for decisions that depend on it", async () => {
     const { seats } = await startedRun(2);
