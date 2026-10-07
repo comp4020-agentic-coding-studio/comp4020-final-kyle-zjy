@@ -1,0 +1,7 @@
+# Crit 10 Reflection
+
+Deploying the project changed how I think about the boundary between local correctness and real-world correctness. Locally, the reconnect behaviour looked reliable, but after deploying to Fly.io I found that the proxy took about five seconds to report a dropped WebSocket. More importantly, checking the live run exposed a bug: when the active player disconnected, even for a refresh, an older offline check bypassed the intended 15-second reconnect grace period. The fix only felt complete after I reproduced the problem in a test, changed the engine, added regression tests, redeployed, and then disconnected the active player online for eight seconds to verify that the turn was preserved.
+
+This experience made deployment feel like part of development rather than the final administrative step. I also saw why deterministic logs and a simple architecture mattered: with one Node process, SQLite on `/data`, and seeded game logic, I could reason about failures without introducing more infrastructure than the course environment needed.
+
+The kind of software developer I want to become is someone who is comfortable using powerful automation but still checks assumptions against the real environment and the player's experience. I want to be less impressed by code volume and more interested in whether the system behaves correctly under failure, concurrency, and actual use.
