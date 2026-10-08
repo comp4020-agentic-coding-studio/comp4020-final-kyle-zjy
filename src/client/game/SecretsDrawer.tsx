@@ -2,6 +2,8 @@
 // anything your ability let you peek at. Sent to you and nobody else.
 import type { PlayerView } from "../../shared/game/state.ts";
 import { useFormat, useScenario02Text, useScenarioText, useT } from "../i18n/index.ts";
+import { ZONES } from "../../shared/game/scenario02/map.ts";
+import { NPCS } from "../../shared/game/scenario02/npcs.ts";
 import { Drawer } from "./Drawer.tsx";
 
 export function SecretsDrawer({ g, onClose }: { g: PlayerView; onClose: () => void }) {
@@ -32,6 +34,20 @@ export function SecretsDrawer({ g, onClose }: { g: PlayerView; onClose: () => vo
                 <p className="mt-1 text-sm text-moon">{(g.city.holdings[g.viewerId]?.parts ?? []).map((p) => city.parts[p].name).join(t("common.listSep")) || t("s2.secrets.none")}</p>
               </section>
               <Section title={t("s2.secrets.intel")} empty={t("s2.secrets.intelEmpty")} items={s.peeks.map((p) => ({ id: p.id, text: fmt(p.text), meta: t("secrets.round", { n: p.round }) }))} />
+              <Section
+                title={t("s2.secrets.shared")}
+                empty={t("s2.secrets.sharedEmpty")}
+                items={g.city.shared.map((x, i) => ({ id: `shared-${i}`, text: t("s2.secrets.sharedBy", { name: g.players[x.from]?.nickname ?? "?", text: fmt(x.text) }), meta: t("secrets.round", { n: x.round }) }))}
+              />
+              <Section
+                title={t("s2.secrets.people")}
+                empty=""
+                items={g.city.npcs.map((n) => ({
+                  id: n.id,
+                  text: t("s2.secrets.person", { name: city.npcs[n.id].name, zone: city.zones[ZONES[n.zone].id].name, reward: t(`s2.reward.${NPCS.find((d) => d.id === n.id)!.reward}`) }),
+                  meta: t(`s2.npc.${n.state}`),
+                }))}
+              />
             </>
           ) : (
             <>

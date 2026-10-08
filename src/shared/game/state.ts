@@ -587,6 +587,8 @@ export type CityState = {
   /** Server only: which pass sources are live this run (more passes than seats, never all of them). */
   passSources: string[];
   rescues: Record<PlayerId, number>;
+  /** Intel players chose to read out: everyone keeps it in their secrets drawer. */
+  shared: { from: PlayerId; text: Msg; round: number }[];
   /** The round the pumps were last run (once a round). */
   pumpedRound: number;
   holdings: Record<PlayerId, Holding>;
@@ -606,4 +608,6 @@ export type PublicCity = Omit<CityState, "zones" | "edges" | "holdings" | "passS
   holdings: Record<PlayerId, PublicHolding>;
   /** Capacity is null until revealed. */
   boat: Omit<Boat, "capacity"> & { capacity: number | null };
+  /** Passes the evacuation office has left; null until it opens (act 2). */
+  officePasses: number | null;
 };

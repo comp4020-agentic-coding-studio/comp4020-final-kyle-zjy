@@ -127,12 +127,12 @@ describe("working together", () => {
     expect(play(blast.s, blast.ids[0], { type: "REPAIR" }).collapse).toBe(blast.s.collapse + 1);
   });
 
-  it("the pumps run only once repaired, once a round, and each run holds back part of the next rise", () => {
+  it("the pumps run only once repaired, once a round, and each run holds back up to 2 of the next rise", () => {
     const { s, ids } = table("PUMP_STATION");
     expect(() => applyGameAction(s, ids[0], { type: "OPERATE" }, clock++)).toThrow(/need repairing/);
     s.city!.facilities.PUMP_STATION.done = true;
     const x = play(s, ids[0], { type: "OPERATE" });
-    expect(x.city!.hold).toBe(1);
+    expect(x.city!.hold).toBe(2);
     expect(() => applyGameAction(x, ids[0], { type: "OPERATE" }, clock++)).toThrow(/already running/);
   });
 });

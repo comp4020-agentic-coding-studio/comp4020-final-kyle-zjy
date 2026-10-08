@@ -30,14 +30,14 @@ const BANDS: [number, Msg][] = [
 ];
 
 /**
- * Round-end water. It rises by 1 half the time, holds a third of the time and
- * surges by 2 otherwise (about 0.8 a round), so nobody can count the rounds left; held rounds (pumps, good
+ * Round-end water. It holds half the time, rises by 1 a third of the time and
+ * surges by 2 otherwise (about 0.67 a round), so nobody can count the rounds left; held rounds (pumps, good
  * events) cancel part of a rise.
  */
 function roundWater(ctx: Ctx): void {
   const city = ctx.s.city!;
   const d = int(ctx.s, 6);
-  let rise = (d <= 1 ? 0 : d === 5 ? 2 : 1) + city.surge;
+  let rise = (d <= 2 ? 0 : d === 5 ? 2 : 1) + city.surge;
   city.surge = 0;
   const held = Math.min(city.hold, rise);
   city.hold = 0;
@@ -76,7 +76,8 @@ registerScenario({
   },
   itemPools: { any: ITEM_IDS02, buff: BUFF_ITEMS02 },
   roundHeader: (s) => m`— Round ${s.round} —`,
-  apFor: (s, p) => (p.lost ? 1 : 2) + s.config.bonusAp,
+  // three action points a round in the city (one when in despair)
+  apFor: (s, p) => (p.lost ? 1 : 3) + s.config.bonusAp,
   onRoundStart: (ctx) => {
     // a crew is whoever worked a job this round
     for (const fac of Object.values(ctx.s.city!.facilities)) fac.workedThisRound = [];

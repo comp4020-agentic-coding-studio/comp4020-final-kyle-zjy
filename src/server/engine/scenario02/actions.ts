@@ -37,6 +37,8 @@ import { canMove, moveTargets, partSite, raftTargets } from "./city.ts";
 import { awardPass, boatMissing, checkReveal, jobDone } from "./boat.ts";
 
 const zoneRef = (i: number) => ref.zone(ZONES[i].id);
+/** How much of the next rise one run of the pumps holds back. */
+export const PUMP_HOLD = 2;
 const facilityAt = (i: number) => ZONES[i].facility;
 const others = (s: GameState, p: PlayerGameState) => Object.values(s.players).filter((o) => o.playerId !== p.playerId && !o.away);
 const here = (s: GameState, p: PlayerGameState) => others(s, p).filter((o) => o.carriageIndex === p.carriageIndex);
@@ -283,9 +285,9 @@ const OPERATE: Spec = {
     const f = facilityAt(p.carriageIndex)!;
     if (f === "PUMP_STATION") {
       city.pumpedRound = s.round;
-      city.hold += 1;
+      city.hold += PUMP_HOLD;
       contribute(ctx, p);
-      return log(ctx, m`${p.nickname} runs the pumps. The next rise will be smaller.`, "FACILITY", p.playerId);
+      return log(ctx, m`${p.nickname} runs the pumps. They will hold back up to ${PUMP_HOLD} of the next rise.`, "FACILITY", p.playerId);
     }
     if (f === "BROADCAST_TOWER") {
       s.flags[`op_${f}_${s.round}`] = 1;
@@ -579,7 +581,9 @@ const SHARE_INTEL: Spec<Extract<GameAction, { type: "SHARE_INTEL" }>> = {
   apply: (ctx, p, a) => {
     const intel = ctx.s.secrets[p.playerId].peeks.find((x) => x.id === a.intelId)!;
     ctx.s.flags[`shared_${intel.id}`] = 1;
+    ctx.s.city!.shared.push({ from: p.playerId, text: intel.text, round: ctx.s.round });
     log(ctx, m`${p.nickname} shares what they know: ${intel.text}`, "INTEL", p.playerId);
+    cue(ctx, "INTEL", { playerId: p.playerId });
   },
 };
 

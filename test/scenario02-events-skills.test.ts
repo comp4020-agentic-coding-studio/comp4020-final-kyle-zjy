@@ -195,10 +195,10 @@ describe("whole runs", () => {
     }
   }, 30_000); // 20 whole runs
 
-  it("a city run's turn order and actions are the shared ones: 2 AP, END_TURN passes", () => {
+  it("a city run's turn order and actions are the shared ones: 3 AP, END_TURN passes", () => {
     const s = city(3);
     const id = activePlayerId(s)!;
-    expect(s.players[id].ap).toBe(2);
+    expect(s.players[id].ap).toBe(3);
     expect(activePlayerId(applyGameAction(s, id, { type: "END_TURN" }, T0 + 5).state)).not.toBe(id);
   });
 });

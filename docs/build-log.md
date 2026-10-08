@@ -382,3 +382,30 @@ names); each variant is now a whole template. No rule, RNG or replay changed
   - `node scripts/ui-play02.ts`: the city at 390 and 320 px, to the results and back to the lobby.
   - `node scripts/ui-play.ts --until end --phone 320`: the train to its end.
   - A Chinese pass over the city: lobby, intro, city at 320 and 1280 px, the move picker, the log. No English left, nothing clipped, no small targets.
+
+## Scenario 02: the user's changes after the first playthrough
+
+- **Shared intel:** it is kept in public state (`city.shared`) and shown in everyone's secrets drawer ("Shared with everyone"), not only in the log.
+- **Action points:** 3 a round in the city (1 in despair; 2-player tables keep the shared +1).
+- **Objective line:** names the boat parts still missing, and says they are fitted at the Evacuation Pier.
+- **People to rescue:**
+  - Every run has the harbour engineer or Ms Varga.
+  - A placed pass-carrier's pass is always live.
+  - The people waiting, where they are and what each gives are public from the start (secrets drawer, "People waiting for rescue").
+- **Evacuation office:** its remaining passes are shown to everyone from act 2 (top bar; the pier's zone panel).
+- **Slower water:**
+  - The round-end rise holds half the time (average about 0.67).
+  - A pump run holds back up to 2.
+  - The pumps need ⌈n/4⌉ repairs.
+  - A zone holding a boat part never goes under before Collapse 9, and must be reachable, along with the pier, through Collapse 6.
+- **Kept replays:** the scenario 02 runs were regenerated on purpose (the rules changed).
+- **Simulation** (`node scripts/sim.ts --scenario 02 --runs 40`):
+
+  | Players | Boat leaves | Escaped when it leaves | Average rounds |
+  | --- | --- | --- | --- |
+  | 2 | 80% | 50% | 8.3 |
+  | 4 | 98% | 60% | 7.5 |
+  | 6 | 95% | 68% | 7.0 |
+  | 10 | 100% | 65% | 6.6 |
+
+  Runs now usually end before act 2 (Collapse 5): see the report to the user.

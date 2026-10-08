@@ -54,6 +54,12 @@ function toDecision(s: GameState): GameState {
   return s;
 }
 
+/** Answers every open decision (Fate, a reaction) with its default. */
+function settle(s: GameState): GameState {
+  for (let i = 0; i < 20 && s.pending.length; i++) s = answer(s, {});
+  return s;
+}
+
 /** Answers the open decision: `answers[id]` or the default. */
 function answer(s: GameState, answers: Record<string, string>): GameState {
   const w = s.pending[0];
@@ -107,7 +113,7 @@ describe("seats and passes", () => {
     s.city!.zones[zone].caches = ["VIP_PASS"];
     s.players[me].carriageIndex = zone;
     rigNextDie(s, 5);
-    const x = answer(applyGameAction(s, me, { type: "SEARCH" }, clock++).state, {});
+    const x = settle(applyGameAction(s, me, { type: "SEARCH" }, clock++).state);
     expect(x.city!.holdings[me].passes).toBe(1);
     expect(project(x, me).city!.holdings[me].passes).toBe(1);
     expect(project(x, other).city!.holdings[me].passes).toBeNull();
@@ -127,7 +133,7 @@ describe("seats and passes", () => {
     for (const live of [true, false]) {
       const s = run(live);
       const me = activePlayerId(s)!;
-      const x = answer(applyGameAction(s, me, { type: "REPAIR" }, clock++).state, {});
+      const x = settle(applyGameAction(s, me, { type: "REPAIR" }, clock++).state);
       expect(x.city!.facilities.PUMP_STATION.done).toBe(true);
       expect(x.city!.holdings[me].passes).toBe(live ? 1 : 0);
     }
@@ -267,5 +273,42 @@ describe("the departure", () => {
     s.activeIndex = s.turnOrder.indexOf("a");
     s.players.a.ap = 2;
     expect(() => applyGameAction(s, "a", { type: "MOVE", toCarriage: zoneIndex("VIADUCT") } as GameAction, clock++)).toThrow(/aboard/);
+  });
+});
+
+describe("what everyone can see", () => {
+  it("shared intel lands in every player's view, not only the log", () => {
+    const s = table(3);
+    const me = activePlayerId(s)!;
+    s.secrets[me].peeks.push({ id: "i1", text: m`The pier holds.`, round: 1 });
+    const x = applyGameAction(s, me, { type: "SHARE_INTEL", intelId: "i1" }, clock++).state;
+    for (const id of x.turnOrder) expect(project(x, id).city!.shared.map((e) => [e.from, en(e.text)])).toEqual([[me, "The pier holds."]]);
+  });
+
+  it("the office's passes are hidden in act 1, then shown to everyone and counted down", () => {
+    const s = table(4);
+    const me = activePlayerId(s)!;
+    s.city!.passSources = ["EXCHANGE", "EXCHANGE"];
+    expect(project(s, me).city!.officePasses).toBeNull();
+    s.city!.boat.installed = ["ENGINE", "FUEL", "NAV"];
+    changeCollapse({ s, now: T0, events: [] }, 5, m`test`);
+    s.sequence = null;
+    expect(project(s, s.turnOrder[1]).city!.officePasses).toBe(2);
+    s.players[me].carriageIndex = PIER;
+    s.players[me].fate = 3;
+    s.players[me].items = ["ROPE"];
+    const x = applyGameAction(s, me, { type: "REGISTER" }, clock++).state;
+    expect(x.city!.holdings[me].passes).toBe(1);
+    expect(project(x, x.turnOrder[1]).city!.officePasses).toBe(1);
+  });
+
+  it("every run has the harbour engineer or Ms Varga waiting, and her pass is really there", () => {
+    for (let i = 0; i < 40; i++) {
+      const s = table(2 + (i % 9), seedFor(i));
+      const carriers = s.city!.npcs.filter((n) => n.id === "ENGINEER" || n.id === "TEACHER");
+      expect(carriers.length, seedFor(i)).toBeGreaterThan(0);
+      for (const n of carriers) expect(s.city!.passSources).toContain(`NPC:${n.id}`);
+      expect(s.city!.passSources.length).toBe(passSupply(s.turnOrder.length, s.city!.boat.capacity));
+    }
   });
 });

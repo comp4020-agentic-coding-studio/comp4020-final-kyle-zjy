@@ -58,9 +58,10 @@ export function reachableAt(city: CityState, from: number, collapse: number): Se
 export const partSite = (city: CityState, part: string): number => city.zones.findIndex((z) => z.caches.includes(part));
 
 /**
- * Can this run be won if the water follows its schedule? Every part must be
- * reachable from the start, and carried to the pier, before the low city goes
- * (Collapse 4) and stay above water until at least Collapse 6; the power and pump stations
+ * Can this run be won if the water follows its schedule? Every part's zone
+ * stays above water through acts 1 and 2 (it never goes under before Collapse
+ * 9), and must be reachable from the start, and from it the pier, through
+ * Collapse 6; the power and pump stations
  * must be reachable while the middle of the city stands (Collapse 6); the pier
  * must be reachable from the start until the middle floods (Collapse 8) and from
  * the high ground after that (Collapse 10).
@@ -69,20 +70,26 @@ export function solvable(city: CityState): string[] {
   const problems: string[] = [];
   const start = city.startZone;
   const harbour = zoneIndex(HARBOUR_ZONE);
-  const fromStart4 = reachableAt(city, start, 4);
+  const fromStart6 = reachableAt(city, start, 6);
   for (const part of Object.keys(PART_SITES)) {
     const at = partSite(city, part);
     if (at < 0) problems.push(`${part}: not placed`);
-    else if (!fromStart4.has(at)) problems.push(`${part}: ${id(at)} cut off from the start by Collapse 4`);
-    else if (!reachableAt(city, at, 4).has(harbour)) problems.push(`${part}: ${id(at)} cut off from the pier by Collapse 4`);
-    else if (city.zones[at].sinkAt < 6) problems.push(`${part}: ${id(at)} goes under before Collapse 6`);
+    else if (city.zones[at].sinkAt < PART_SAFE_UNTIL) problems.push(`${part}: ${id(at)} goes under before Collapse ${PART_SAFE_UNTIL}`);
+    else if (!fromStart6.has(at)) problems.push(`${part}: ${id(at)} cut off from the start by Collapse 6`);
+    else if (!reachableAt(city, at, 6).has(harbour)) problems.push(`${part}: ${id(at)} cut off from the pier by Collapse 6`);
   }
-  const fromStart6 = reachableAt(city, start, 6);
   for (const f of ["POWER_STATION", "PUMP_STATION"]) if (!fromStart6.has(zoneIndex(f))) problems.push(`${f}: cut off by Collapse 6`);
   if (!reachableAt(city, start, 8).has(harbour)) problems.push("pier: cut off from the start by Collapse 8");
   const high = city.zones.map((_, i) => i).filter((i) => ZONES[i].elevation === "HIGH");
   if (!high.some((h) => reachableAt(city, h, 10).has(harbour))) problems.push("pier: no high ground reaches it at Collapse 10");
   return problems;
+}
+
+/** A zone holding a boat part doesn't go under in acts 1 and 2 (it may still flood). */
+export const PART_SAFE_UNTIL = 9;
+function keepDry(z: CityZone, part: string): void {
+  z.caches.push(part);
+  if (z.sinkAt < PART_SAFE_UNTIL) z.sinkAt = PART_SAFE_UNTIL;
 }
 
 /** Draws one candidate city from the run's generator. */
@@ -104,7 +111,7 @@ function drawCity(s: GameState): CityState {
   const harbour = zoneIndex(HARBOUR_ZONE);
   const roads = edges.filter((e) => e.kind === "ROAD" && ![e.a, e.b].some((x) => x === start || x === harbour));
   pick(s, roads).broken = true;
-  for (const [part, sites] of Object.entries(PART_SITES)) zones[zoneIndex(pick(s, sites))].caches.push(part);
+  for (const [part, sites] of Object.entries(PART_SITES)) keepDry(zones[zoneIndex(pick(s, sites))], part);
   return emptyCity(zones, edges, start);
 }
 
@@ -124,6 +131,7 @@ function emptyCity(zones: CityZone[], edges: CityEdge[], startZone: number): Cit
     npcs: [],
     contrib: {},
     rescues: {},
+    shared: [],
   };
 }
 
@@ -147,9 +155,13 @@ function populate(s: GameState, city: CityState, players: number): void {
   const open = shuffle(s, city.zones.map((_, i) => i).filter((i) => i !== city.startZone && i !== harbour));
   for (const i of open.slice(0, 12)) city.zones[i].caches.push(pick(s, ITEM_IDS02));
   const spots = shuffle(s, open.filter((i) => ZONES[i].elevation !== "HIGH"));
-  city.npcs = shuffle(s, NPCS).slice(0, Math.min(NPCS.length, 2 + Math.floor(players / 3))).map((n, k) => ({ id: n.id, zone: spots[k], state: "WAITING" }));
+  const count = Math.min(NPCS.length, 2 + Math.floor(players / 3));
+  let chosen = shuffle(s, NPCS).slice(0, count);
+  // every run has at least one of the two people who carry a spare pass
+  if (!chosen.some((n) => n.reward === "PASS")) chosen = [pick(s, NPCS.filter((n) => n.reward === "PASS")), ...chosen.slice(0, count - 1)];
+  city.npcs = chosen.map((n, k) => ({ id: n.id, zone: spots[k], state: "WAITING" }));
   city.facilities.POWER_STATION.required = 1 + Math.ceil(players / 2);
-  city.facilities.PUMP_STATION.required = 1 + Math.ceil(players / 3);
+  city.facilities.PUMP_STATION.required = Math.max(1, Math.ceil(players / 4));
   city.facilities.HARBOUR_GATE.required = Math.ceil(players / 3);
 
   const [lo, hi] = capacityRange(players);
@@ -158,16 +170,12 @@ function populate(s: GameState, city: CityState, players: number): void {
   // Half (rounded up) come from the work everyone needs done anyway, the rest from going out looking.
   const vipSpots = open.slice(12, 16);
   const work = ["JOB:POWER_STATION", "JOB:PUMP_STATION", "JOB:HARBOUR_GATE", "INSTALL:ENGINE", "INSTALL:FUEL", "INSTALL:NAV"];
-  const search = [
-    ...city.npcs.filter((n) => NPCS.find((d) => d.id === n.id)!.reward === "PASS").map((n) => `NPC:${n.id}`),
-    ...vipSpots.map((z) => `VIP:${z}`),
-    "EXCHANGE",
-    "EXCHANGE",
-    "EXCHANGE",
-  ];
+  // a person who carries a pass always has it (their reward is public from the start)
+  const people = city.npcs.filter((n) => NPCS.find((d) => d.id === n.id)!.reward === "PASS").map((n) => `NPC:${n.id}`);
+  const search = [...vipSpots.map((z) => `VIP:${z}`), "EXCHANGE", "EXCHANGE", "EXCHANGE"];
   const supply = passSupply(players, city.boat.capacity);
-  const fromWork = Math.ceil(supply / 2);
-  city.passSources = [...shuffle(s, work).slice(0, fromWork), ...shuffle(s, search).slice(0, supply - fromWork)];
+  const fromWork = Math.max(0, Math.min(Math.ceil(supply / 2), supply - people.length));
+  city.passSources = [...people, ...shuffle(s, work).slice(0, fromWork), ...shuffle(s, search).slice(0, Math.max(0, supply - people.length - fromWork))];
   for (const src of city.passSources) if (src.startsWith("VIP:")) city.zones[Number(src.slice(4))].caches.push("VIP_PASS");
   // the rare way out without a sacrifice: not every run has one
   if (int(s, 5) < 2) city.zones[pick(s, open.filter((i) => ZONES[i].elevation !== "LOW"))].caches.push("CHIP");
@@ -198,7 +206,7 @@ export function safeCity(): CityState {
     const kind = fragile.get(`${a}-${b}`) ?? "ROAD";
     return { a, b, kind, breakAt: kind === "ROAD" ? null : 6, broken: false };
   });
-  for (const [part, sites] of Object.entries(PART_SITES)) zones[zoneIndex(sites[0])].caches.push(part);
+  for (const [part, sites] of Object.entries(PART_SITES)) keepDry(zones[zoneIndex(sites[0])], part);
   return emptyCity(zones, edges, zoneIndex(START_ZONE));
 }
 
@@ -333,6 +341,7 @@ export function publicCity(s: GameState, viewerId: string): PublicCity | null {
       return [id, { parts: mine ? h.parts : null, partCount: h.parts.length, passes: mine ? h.passes : null }];
     })),
     boat: { ...boat, capacity: boat.revealed ? boat.capacity : null },
+    officePasses: s.act >= 2 ? s.city.passSources.filter((x) => x === "EXCHANGE").length : null,
   };
 }
 

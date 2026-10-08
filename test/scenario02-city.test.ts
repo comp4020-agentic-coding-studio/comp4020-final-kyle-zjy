@@ -165,7 +165,7 @@ describe("getting around", () => {
   it("a dry neighbour is one action point away; a far zone, a broken road or a sunk zone can't be reached", () => {
     const { s, me } = standing("CIVIC_SQUARE");
     const next = applyGameAction(s, me, { type: "MOVE", toCarriage: at("CITY_HALL") }, T0 + 5).state;
-    expect(next.players[me]).toMatchObject({ carriageIndex: at("CITY_HALL"), ap: 1 });
+    expect(next.players[me]).toMatchObject({ carriageIndex: at("CITY_HALL"), ap: 2 });
     expect(() => applyGameAction(s, me, { type: "MOVE", toCarriage: at("HARBOUR") }, T0 + 5)).toThrow(/next to yours/);
     const e = s.city!.edges.find((x) => [x.a, x.b].includes(at("CIVIC_SQUARE")) && [x.a, x.b].includes(at("PARK")))!;
     e.broken = true;
@@ -200,17 +200,18 @@ describe("getting around", () => {
     expect(wade(3, "1", 1)).toMatchObject({ carriageIndex: at("METRO"), sanity: 3, fate: 0 });
   });
 
-  it("2 action points a round, 1 when lost (2-player tables get the shared +1)", () => {
+  it("3 action points a round in the city, 1 when lost (2-player tables get the shared +1)", () => {
     const s = city(3);
-    for (const id of s.turnOrder) expect(s.players[id].ap).toBe(2);
+    for (const id of s.turnOrder) expect(s.players[id].ap).toBe(3);
     const lost = city(3);
     lost.players[lost.turnOrder[1]].lost = true;
+    lost.eventDeck = ["S2_SALVAGE"]; // an event that asks nobody anything
     let x = lost;
     for (let t = T0 + 2; x.round === 1; t++) x = applyGameAction(x, activePlayerId(x)!, { type: "END_TURN" }, t).state;
     if (x.sequence) x = ack(x, T0 + 900);
     expect(x.players[x.turnOrder[1]].ap).toBe(1);
-    expect(x.players[x.turnOrder[2]].ap).toBe(2);
-    expect(city(2).players.a.ap).toBe(3);
+    expect(x.players[x.turnOrder[2]].ap).toBe(3);
+    expect(city(2).players.a.ap).toBe(4);
   });
 });
 
@@ -226,5 +227,20 @@ describe("what players see of the city", () => {
   it("the whole map is reachable from the start before the water comes", () => {
     const s = city();
     expect(reachableAt(s.city!, s.city!.startZone, 0).size).toBeGreaterThan(25);
+  });
+});
+
+describe("boat parts and the water", () => {
+  it("no zone holding a boat part goes under in acts 1 and 2 (before Collapse 9)", () => {
+    for (let i = 0; i < 300; i++) {
+      const c = fresh(i);
+      for (const part of ["ENGINE", "FUEL", "NAV"]) {
+        const z = c.zones.find((x) => x.caches.includes(part))!;
+        expect(z.sinkAt, `${seedFor(i)} ${part}`).toBeGreaterThanOrEqual(9);
+      }
+    }
+    const s = city();
+    changeCollapse(ctxOf(s), 8, m`test`);
+    for (const part of ["ENGINE", "FUEL", "NAV"]) expect(s.city!.zones.find((x) => x.caches.includes(part))!.status).not.toBe("SUBMERGED");
   });
 });

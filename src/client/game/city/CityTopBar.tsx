@@ -2,7 +2,8 @@
 // numbers and a gauge), the boat (parts, power, gate, seats once known) and
 // the viewer's own passes. Log and secrets drawers sit on the right.
 import type { PlayerView } from "../../../shared/game/state.ts";
-import { useT } from "../../i18n/index.ts";
+import { useScenario02Text, useT } from "../../i18n/index.ts";
+import { BOAT_PARTS } from "../../../shared/game/scenario02/items.ts";
 import { Icon } from "../Icon.tsx";
 
 export function CityTopBar({ g, onLog, onSecrets, secretsCount }: { g: PlayerView; onLog: () => void; onSecrets: () => void; secretsCount: number }) {
@@ -46,6 +47,7 @@ export function CityTopBar({ g, onLog, onSecrets, secretsCount }: { g: PlayerVie
             <span className="font-mono text-[10px] text-gold">{b.capacity === null ? t("s2.top.seatsUnknown") : t("s2.top.seats", { n: b.capacity })}</span>
             {ready && <span className="rounded-full bg-moss/20 px-1.5 py-0.5 text-[10px] font-bold text-moss">{t("s2.top.ready")}</span>}
             <span className="font-mono text-[10px] text-gold-bright">{t("s2.top.passes", { n: passes })}</span>
+            {city.officePasses !== null && <span className="font-mono text-[10px] text-mist">{t("s2.top.office", { n: city.officePasses })}</span>}
           </div>
         </div>
         <button className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gold/30 text-mist hover:text-moon" onClick={onSecrets} aria-label={t("game.secretsAria", { n: secretsCount })}>
@@ -63,11 +65,21 @@ export function CityTopBar({ g, onLog, onSecrets, secretsCount }: { g: PlayerVie
 /** What the table is working toward now, in one line. */
 export function CityObjective({ g }: { g: PlayerView }) {
   const t = useT();
-  const key = g.city!.boat.readyRound !== null ? "s2.objective.ready" : (`s2.objective.${g.act}` as const);
+  const text = useScenario02Text();
+  const b = g.city!.boat;
+  const missing = BOAT_PARTS.filter((p) => !b.installed.includes(p)).map((p) => text.parts[p].name).join(t("common.listSep"));
+  const line =
+    b.readyRound !== null
+      ? t("s2.objective.ready")
+      : g.act === 3
+        ? t("s2.objective.3")
+        : missing
+          ? t(g.act === 1 ? "s2.objective.1" : "s2.objective.2", { parts: missing })
+          : t(g.act === 1 ? "s2.objective.1done" : "s2.objective.2done");
   return (
     <p className="mx-auto mt-1 flex max-w-6xl items-baseline gap-2 px-3 text-xs sm:px-4">
       <span className="label shrink-0 text-[10px] text-signal">{t("objective.label")}</span>
-      <span className="min-w-0 flex-1 text-mist">{t(key)}</span>
+      <span className="min-w-0 flex-1 text-mist">{line}</span>
     </p>
   );
 }

@@ -550,7 +550,6 @@ export const ZH_MESSAGES: Record<string, string> = {
   "The fire station's locker is empty.": "消防站的储物柜已经空了。",
   "Nothing here to operate.": "这里没有可以操作的设施。",
   "Pumps hold back a rise; the tower broadcasts what sinks next; the control centre finds a part; the hospital treats; the fire station has gear.": "水泵能遏制一次水位上涨；信号塔会广播下一个沉没的地方；控制中心能找到一个部件；医院可以治疗；消防站有装备。",
-  "{0} runs the pumps. The next rise will be smaller.": "{0}启动了水泵。下一次水位上涨会小一些。",
   "{0} broadcasts to the whole city: within two rises, {1} will be gone.": "{0}向全城广播：两次上涨之内，{1}将会消失。",
   "{0} broadcasts to the whole city: nothing more goes under in the next two rises.": "{0}向全城广播：接下来两次上涨中不会再有地方沉没。",
   "{0} works the control centre's screens and keeps what they find to themselves.": "{0}操作控制中心的屏幕，并把发现藏在心里。",
@@ -717,4 +716,5 @@ export const ZH_MESSAGES: Record<string, string> = {
   "The last rooftops go under. The city is gone, and the boat with it.": "最后的屋顶也沉没了。城市消失了，船也随之而去。",
   "{0} moves one zone closer ({1}).": "{0}向前靠近了一个区域（{1}）。",
   "{0} is swept into another zone ({1}).": "{0}被冲到了另一个区域（{1}）。",
+  "{0} runs the pumps. They will hold back up to {1} of the next rise.": "{0} 开动了水泵。下一次涨水最多会被挡下 {1}。",
 };
