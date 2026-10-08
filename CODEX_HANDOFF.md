@@ -3,6 +3,25 @@
 This file is about the code as it is now. The rules every scenario must keep
 are in `PROJECT_RULES.md`; the agent working rules are in `CLAUDE.md`.
 
+## Current Scenario 03 status
+
+PHASE 0–11 are complete. Scenario 03 is public in the lobby and supports
+2–10 players, two years in one eight-room building, a 12-cycle/four-act
+loop, all 192 adapted Core Skills, the round-6 and round-9 reveals, numbered
+bootstrap relics and three endings. `src/server/engine/scenario03/` holds its
+rules; `src/shared/game/scenario03/` holds content; `Scenario03Screens.tsx`
+renders the run. The historical implementation notes below describe earlier
+development boundaries; the current status is in
+`docs/scenario03-technical-design.md` and `docs/build-log.md`.
+
+Final verification: `pnpm check` (1009 tests), production build, 120
+real-action balance runs across 2/3/4/6/10 players and all three routes,
+and 3/4-player browser paths at 320/390/1280 px in English and Chinese.
+The browser scripts select Scenario 03 through the normal lobby. Scenario
+01 and 02 browser regressions also passed. For readable Chinese screenshots
+in this WSL environment, point `FONTCONFIG_FILE` to a fontconfig file using
+the Windows CJK fonts; this is a test-host setting, not an app dependency.
+
 Design docs:
 - `docs/architecture.md`: structure, and the scenario and skill layers (§14b, §15).
 - `docs/game-state.md`: scenario 01's state machine.
@@ -31,12 +50,14 @@ Design docs:
 | What | Command |
 | --- | --- |
 | typecheck | `pnpm typecheck` |
-| unit tests | `pnpm test:unit` (about 917 tests) |
+| unit tests | `pnpm test:unit` |
 | everything | `pnpm check` (typecheck + unit + spec; start the app first) |
 | build / run | `pnpm build && pnpm start` (or `NODE_ENV=production DATA_DIR=./data PORT=8080 node src/server/index.ts`) |
 | simulate | `node scripts/sim.ts [--runs 40] [--players 2,6,10] [--logs dir]`; `--scenario 02` for the city; `--coverage 8` for ability use |
+| scenario 03 balance | `node scripts/sim03.ts --runs 8` (five player counts × three endings) |
 | browser, scenario 01 | `node scripts/ui-play.ts --until act2\|act3\|end --phone 390\|320` |
 | browser, scenario 02 | `node scripts/ui-play02.ts --phone 390\|320` (lobby → results → back to the lobby) |
+| browser, scenario 03 | `S03_PLAYERS=3\|4 node scripts/ui-play03-phase7.ts` (lobby → Results); `S03_PLAYERS=3\|4 node scripts/ui-play03-phase3.ts` (relic loop) |
 | full walkthrough | `pnpm ui:walkthrough` |
 | portraits | `pnpm avatars` |
 
@@ -106,6 +127,7 @@ through `rulesFor(state)`:
 | `roundCloses?` / `roundCollapse` / `afterRound` | `flow.endRound` | +1 per round, act changes by round, round 12 limit | variable rise, hold and surge |
 | `collapseChanged?` | `changeCollapse` (any cause) | (none) | flood the map, act by Collapse, capacity reveal, lost part |
 | `movePlayer?` | MOVE_PLAYER effect | (none: train adjacency) | one walkable hex step |
+| `takesTurn?` | `flow.nextTurn` | (none: everyone plays) | not once aboard the boat |
 | `checkEnd` | `advance` and `endRound` | escape locks / Collapse / all lost | Collapse 12 (the boat not gone) |
 | `results?` / `announceEnding?` | `startEnding` | `computeResults` / ending text | per-player escape results |
 | `runJob` | job queue | ticket checks, echo strikes | (none) |
@@ -146,8 +168,9 @@ there, so the rules are always registered. **Add `./scenario03/rules.ts` there.*
     `caches` and `breakAt`;
   - `facilities`: POWER_STATION, PUMP_STATION, HARBOUR_GATE, each with
     progress, workers this round and contributors;
-  - `boat`: capacity, revealed, installed, battery power, auto gate, ready
-    round, aboard, gatekeeper, launched, betrayers;
+  - `boat`: capacity, revealed, installed, battery power, auto start (the
+    chip), ready round, aboard, engineer (who restarted the generator),
+    launched;
   - `passSources` (server only), `holdings` (parts and passes per player),
     `npcs`, `contrib`, `rescues`, `shared` (shared intel), `hold`, `surge`.
 - **What players see** (`scenario02/city.ts publicCity`): the schedule and
@@ -158,7 +181,10 @@ there, so the rules are always registered. **Add `./scenario03/rules.ts` there.*
   - the seeded schedule is set by height;
   - `solvable()` checks reachability **against the schedule**: part zones
     stay up until Collapse 9 and are reachable at 6; the pier is reachable at
-    8 from the start and at 10 from high ground;
+    8 from the start and at 10 from high ground; the power station (raised:
+    it never goes under) is reachable from the pier through 8;
+  - `spawnZones()` scatters players at the start: a different safe zone each,
+    never the pier, not cut off;
   - `generateCity()` redraws until the check passes, with `safeCity()` as the
     fallback;
   - `applyFlood()` runs on every Collapse change: zones only get worse;
@@ -166,22 +192,27 @@ there, so the rules are always registered. **Add `./scenario03/rules.ts` there.*
 - **Actions** (`scenario02/actions.ts`): MOVE (wading, rafts), SEARCH,
   INVESTIGATE (private intel), REPAIR (crew bonus), OPERATE, RESCUE, SALVAGE,
   HELP, STABILIZE, TRADE (0 AP, parts and passes, the other side checked on
-  accept), SHARE_INTEL, INSTALL, REGISTER. Each roll has its own `S2_*`
-  RollPurpose.
+  accept), SHARE_INTEL, INSTALL, REGISTER, RESTART_GENERATOR. Each roll has
+  its own `S2_*` RollPurpose.
 - **The boat** (`scenario02/boat.ts`):
   - five conditions;
   - capacity revealed on first sight in act 2, or at Collapse 7;
   - passes always outnumber seats;
-  - departure in three windows: BOARD → GATE → LAUNCH;
-  - per-player `escape` fate and titles ("Betrayer" only for voting to leave
-    while a pass-holder is outside and a seat is free).
+  - departure only from act 2: a BOARD vote each round from the round after
+    the countdown; those aboard are locked in (`takesTurn` → no turns, 0 AP);
+    then someone left in the city restarts the generator at the power station
+    (a retryable roll); success launches the boat (the chip launches it at
+    boarding);
+  - per-player `escape` fate (ESCAPED / ENGINEER / LEFT_BEHIND / DROWNED) and
+    titles ("The Last Engineer" for the restart).
 - **Events** (`shared/game/scenario02/events.ts`, handler in
   `engine/scenario02/events.ts`): the `CITY_EVENT` effect kind.
 - **Rules** (`scenario02/rules.ts`):
   - 3 AP a round;
-  - the rise is 0 / 1 / 2 with probabilities 1/2, 1/3, 1/6, plus surge,
-    minus hold;
-  - acts by Collapse: 1 below 5, 2 from 5 to 8, 3 from 9.
+  - the rise is 0 / 1 / 2 with odds by table size (`waterOdds`: expected
+    0.60 at 2 players up to 0.95 at 9–10), plus surge, minus hold;
+  - acts by Collapse: 1 below 5, 2 from 5 to 8, 3 from 9; a round starting at
+    6 or later still in act 1 brings the water to 5 (`act2Deadline`).
 - **Client:** `screens/CityGame.tsx`, `screens/CityScreens.tsx` (intro,
   ending, results), `game/city/*`. The Dock uses `GRID02` and its city
   pickers when `g.city` is set.
@@ -487,8 +518,9 @@ Then:
   contribution, and capped per round.
 - **One roll purpose per action** (`S2_SEARCH`, …) with an `onRollOutcome`
   handler reading the final tier, so Fate, help and reactions apply for free.
-- **Explicit multi-step endings through decision windows** (BOARD → GATE →
-  LAUNCH), with ties going to the safe option.
+- **Explicit multi-step endings**: a decision window to board, then a
+  retryable roll by someone left behind (the generator), with nothing ending
+  on a single failure.
 - **A bot plus the simulator for balance**, with kept logs replayed in
   tests: rule changes show up as replay failures and must be regenerated on
   purpose.

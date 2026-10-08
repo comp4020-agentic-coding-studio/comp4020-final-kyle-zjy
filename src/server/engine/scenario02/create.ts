@@ -1,6 +1,7 @@
 // A new run of scenario 02 from the room's seated members and a seed: the
-// city's flood schedule, the hidden parts and the turn order are drawn from the
-// seeded generator. Everyone starts together at Civic Square.
+// city's flood schedule, the hidden parts, where everyone starts and the turn
+// order are drawn from the seeded generator. Players start scattered across
+// safe ground, a zone each while there are enough (spawnZones).
 import { getCharacter } from "../../../shared/characters/roster/index.ts";
 import { START_FATE, START_SANITY, tuningFor } from "../../../shared/game/scenario01/content.ts";
 import { characterSkill } from "../../../shared/game/skills.ts";
@@ -10,7 +11,7 @@ import { log, type Ctx } from "../context.ts";
 import { emptyRoundRecord, emptyStats, type Seat } from "../create.ts";
 import { int, seedState, shuffle } from "../rng.ts";
 import { EVENT_IDS02 } from "../../../shared/game/scenario02/events.ts";
-import { applyFlood, generateCity } from "./city.ts";
+import { applyFlood, generateCity, spawnZones } from "./city.ts";
 
 export const COLLAPSE_MAX = 12;
 
@@ -79,9 +80,10 @@ export function createScenario02(sessionId: string, seats: Seat[], seed: string,
   s.city = generateCity(s);
   s.eventDeck = shuffle(s, EVENT_IDS02);
 
+  const spawn = spawnZones(s, s.city, ordered.length);
   const start = int(s, ordered.length);
   s.turnOrder = [...ordered.slice(start), ...ordered.slice(0, start)].map((p) => p.playerId);
-  for (const seat of ordered) {
+  for (const [k, seat] of ordered.entries()) {
     const character = getCharacter(seat.zodiac, seat.mbti);
     s.players[seat.playerId] = {
       playerId: seat.playerId,
@@ -92,7 +94,7 @@ export function createScenario02(sessionId: string, seats: Seat[], seed: string,
       sanity: START_SANITY,
       ap: 0,
       lost: false,
-      carriageIndex: s.city.startZone,
+      carriageIndex: spawn[k],
       skill: { usesLeft: characterSkill(character.id, s.scenarioId).maxUses, state: "READY" },
       items: [],
       statuses: [],
@@ -112,7 +114,7 @@ export function createScenario02(sessionId: string, seats: Seat[], seed: string,
     s.city.rescues[seat.playerId] = 0;
     s.city.contrib[seat.playerId] = 0;
   }
-  log(ctx, m`The sirens stop. The water does not. Everyone left in the city has gathered at Civic Square.`, "STORY");
+  log(ctx, m`The sirens stop. The water does not. The last people in the city are scattered across it, out of sight of each other.`, "STORY");
   log(ctx, m`An evacuation boat is moored at the pier. Nobody knows how many it can carry.`, "STORY");
   applyFlood(ctx);
   return s;

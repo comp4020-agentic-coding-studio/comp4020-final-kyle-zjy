@@ -72,7 +72,7 @@ export function CityIntro({ g }: { g: PlayerView }) {
   );
 }
 
-const TINT: Record<EscapeFate, string> = { ESCAPED: "#0d2a33", GATEKEEPER: "#2a1f05", LEFT_BEHIND: "#1b1430", DROWNED: "#04101f" };
+const TINT: Record<EscapeFate, string> = { ESCAPED: "#0d2a33", ENGINEER: "#2a1f05", LEFT_BEHIND: "#1b1430", DROWNED: "#04101f" };
 
 /** The closing scene: each player's own fate first. */
 export function CityEnding({ g }: { g: PlayerView }) {
@@ -83,7 +83,7 @@ export function CityEnding({ g }: { g: PlayerView }) {
   return (
     <main className="flex min-h-dvh items-center justify-center px-6 py-10" style={{ background: `radial-gradient(circle at 50% 35%, ${TINT[fate]}, #000000 72%)` }} role="dialog" aria-label={t(`s2.end.${fate}.title`)}>
       <div className="w-full max-w-md text-center">
-        <motion.p className={`label ${fate === "ESCAPED" || fate === "GATEKEEPER" ? "text-gold-bright" : "text-ember"}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+        <motion.p className={`label ${fate === "ESCAPED" || fate === "ENGINEER" ? "text-gold-bright" : "text-ember"}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
           {t(`s2.end.${fate}.kicker`)}
         </motion.p>
         <motion.h1 className="mt-4 font-display text-4xl leading-tight font-semibold text-moon sm:text-5xl" initial={{ opacity: 0, filter: "blur(10px)" }} animate={{ opacity: 1, filter: "blur(0px)" }} transition={{ delay: 0.7, duration: 1.4 }}>
@@ -117,7 +117,7 @@ export function CityResults({ g }: { g: PlayerView }) {
     [t("results.rounds"), String(g.round)],
     [t("results.collapse"), `${g.collapse} / ${g.collapseMax}`],
     [t("s2.results.aboard"), `${b.aboard.length} / ${b.capacity ?? "?"}`],
-    [t("s2.results.gate"), b.gatekeeper ? g.players[b.gatekeeper].nickname : b.autoGate ? t("s2.results.chip") : "—"],
+    [t("s2.results.engine"), b.engineer ? g.players[b.engineer].nickname : b.autoStart && b.launched ? t("s2.results.chip") : "—"],
   ];
   return (
     <main className="night-sky min-h-dvh px-4 py-8 sm:py-12">
@@ -181,7 +181,7 @@ function FateCard({ g, r, highlight = false }: { g: PlayerView; r: PlayerResult;
           <p className="truncate text-xs text-mist">{charTitle}</p>
           <p className="mt-1 font-display text-xl text-gold-bright">{fmt(r.title)}</p>
         </div>
-        <span className={`ml-auto shrink-0 rounded-full px-2 py-1 font-mono text-[10px] font-bold ${fate === "ESCAPED" ? "bg-moss/20 text-moss" : fate === "GATEKEEPER" ? "bg-gold/20 text-gold-bright" : "bg-ember/15 text-ember"}`}>{t(`s2.results.fate.${fate}`)}</span>
+        <span className={`ml-auto shrink-0 rounded-full px-2 py-1 font-mono text-[10px] font-bold ${fate === "ESCAPED" ? "bg-moss/20 text-moss" : fate === "ENGINEER" ? "bg-gold/20 text-gold-bright" : "bg-ember/15 text-ember"}`}>{t(`s2.results.fate.${fate}`)}</span>
       </div>
       <ul className="mt-3 space-y-1 text-sm text-mist">
         {r.highlights.map((h, i) => (

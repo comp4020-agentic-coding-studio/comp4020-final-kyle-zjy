@@ -2,7 +2,7 @@
 // engine calls advance(), which carries the run forward until it has to wait
 // for somebody: an open window, the active player's turn, or a cinematic.
 //
-//   INTRO → ACT_1 → ACT_2 → ACT_3 → ENDING → RESULTS
+//   INTRO → ACT_1 → ACT_2 → ACT_3 → optional ACT_4 → ENDING → RESULTS
 //   each round: ROUND_START → PLAYER_TURNS → (INSPECTOR | WORLD) → ROUND_EVENT → ROUND_END
 // What happens inside a step that differs by scenario comes from its rules
 // (src/server/engine/scenario.ts).
@@ -154,6 +154,9 @@ export function nextTurn(ctx: Ctx): void {
   const s = ctx.s;
   s.activeIndex++;
   s.turnDeadline = null;
+  // a player out of the city (scenario 02: aboard the boat) is passed over without a turn
+  const takes = rulesFor(s).takesTurn;
+  while (takes && s.turnOrder[s.activeIndex] && !takes(s, s.players[s.turnOrder[s.activeIndex]])) s.activeIndex++;
   const id = s.turnOrder[s.activeIndex];
   if (!id) return;
   const p = s.players[id];

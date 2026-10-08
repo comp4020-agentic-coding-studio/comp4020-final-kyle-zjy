@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { activePlayerId, type Ctx } from "../src/server/engine/context.ts";
 import { createGame } from "../src/server/engine/create.ts";
 import { changeCollapse } from "../src/server/engine/effects.ts";
+import { availableActions } from "../src/server/engine/actions.ts";
 import { applyGameAction, startGame, tickGame } from "../src/server/engine/engine.ts";
 import { project } from "../src/server/engine/project.ts";
 import { capacityRange, passSupply } from "../src/server/engine/scenario02/city.ts";
@@ -14,9 +15,10 @@ import { rigNextDie, SEED, seatsFor, T0 } from "./helpers.ts";
 
 // PHASE S2-4: the boat, passes and the departure. A pass is the right to
 // compete for a seat; there are more passes than seats; the departure is its
-// own phase (board, gate, launch); each player's run ends on its own terms.
+// own phase (board, then the generator); each player's run ends on its own terms.
 
 const PIER = zoneIndex("HARBOUR");
+const POWER = zoneIndex("POWER_STATION");
 let clock = T0 + 10;
 const seedFor = (i: number) => ((i + 1) * 2654435761 >>> 0).toString(16).padStart(8, "0").repeat(4);
 const ack = (s: GameState) => s.turnOrder.reduce((x, id) => applyGameAction(x, id, { type: "ACK_SEQUENCE" }, clock++).state, s);
@@ -27,12 +29,13 @@ function table(n = 4, seed = SEED, patch: (s: GameState) => void = () => {}): Ga
   return s;
 }
 
-/** A boat with everything fitted, ready since last round; `atPier` hold passes and stand at the pier. */
+/** In act 2 (the evacuation window is open), a boat with everything fitted, ready since last round; `atPier` hold passes and stand at the pier. */
 function readyBoat(n: number, atPier: string[], opts: { capacity?: number; chip?: boolean } = {}): GameState {
   return table(n, SEED, (s) => {
+    Object.assign(s, { collapse: 5, act: 2, phase: "ACT_2" });
     const b = s.city!.boat;
     b.installed = ["ENGINE", "FUEL", "NAV", ...(opts.chip ? ["CHIP" as const] : [])];
-    b.autoGate = !!opts.chip;
+    b.autoStart = !!opts.chip;
     b.capacity = opts.capacity ?? b.capacity;
     s.city!.facilities.POWER_STATION.done = true;
     s.city!.facilities.HARBOUR_GATE.done = true;
@@ -58,6 +61,28 @@ function toDecision(s: GameState): GameState {
 function settle(s: GameState): GameState {
   for (let i = 0; i < 20 && s.pending.length; i++) s = answer(s, {});
   return s;
+}
+
+/** One step of play: the open decision's defaults, a scene seen through, or the active turn ended. */
+function step(s: GameState): GameState {
+  if (s.pending.length) return answer(s, {});
+  if (s.sequence) return ack(s);
+  const id = activePlayerId(s);
+  return id ? applyGameAction(s, id, { type: "END_TURN" }, clock++).state : tickGame(s, clock++).state;
+}
+
+/** Plays on until it is `id`'s turn with nothing open. */
+function turnOf(s: GameState, id: string): GameState {
+  for (let i = 0; i < 400 && !(activePlayerId(s) === id && !s.pending.length && !s.sequence) && !s.outcome; i++) s = step(s);
+  expect(activePlayerId(s)).toBe(id);
+  return s;
+}
+
+/** `id` restarts the generator with the die showing `raw`, taking no Fate. */
+function restart(s: GameState, id: string, raw: number): GameState {
+  s.players[id].nextRaw = raw;
+  s = applyGameAction(s, id, { type: "RESTART_GENERATOR" }, clock++).state;
+  return settle(s);
 }
 
 /** Answers the open decision: `answers[id]` or the default. */
@@ -187,32 +212,70 @@ describe("the departure", () => {
     expect(s.city!.holdings.a.passes).toBe(0);
   });
 
-  it("someone ashore holds the gate and stays; the boat leaves; each player's run ends differently", () => {
+  it("once someone is aboard, the boat waits for the generator; restarting it sends the boat off; each run ends differently", () => {
     let s = readyBoat(4, ["a", "b", "c"], { capacity: 2 });
     s.city!.contrib = { a: 5, b: 1, c: 3, d: 0 };
     s = answer(toDecision(s), { a: "BOARD", b: "BOARD", c: "BOARD" });
-    expect(en(s.pending[0].title)).toBe("Who holds the gate?");
-    s = answer(s, { b: "HOLD" });
-    expect(s).toMatchObject({ phase: "ENDING", outcome: "S02_EVACUATED" });
-    const fate = Object.fromEntries(s.results!.map((r) => [r.playerId, r.escape]));
-    expect(fate).toEqual({ a: "ESCAPED", c: "ESCAPED", b: "GATEKEEPER", d: "LEFT_BEHIND" });
-    expect(en(s.results!.find((r) => r.playerId === "b")!.title)).toBe("The Last Gatekeeper");
-  });
-
-  it("with nobody to hold the gate, the boat can't leave this round", () => {
-    let s = readyBoat(3, ["a", "b"], { capacity: 2 });
-    s = answer(toDecision(s), { a: "BOARD", b: "BOARD" });
-    s = answer(s, {});
     expect(s.city!.boat.launched).toBe(false);
-    expect(s.city!.boat.aboard.sort()).toEqual(["a", "b"]);
-    expect(s.log.some((l) => l.text === "Nobody will hold the gate. The boat can't leave this round.")).toBe(true);
+    expect(s.log.some((l) => l.text.startsWith("Those aboard can only wait."))).toBe(true);
+    s = turnOf(s, "b");
+    s.players.b.carriageIndex = POWER;
+    s = restart(s, "b", 6);
+    expect(s).toMatchObject({ phase: "ENDING", outcome: "S02_EVACUATED" });
+    expect(s.city!.boat.engineer).toBe("b");
+    const fate = Object.fromEntries(s.results!.map((r) => [r.playerId, r.escape]));
+    expect(fate).toEqual({ a: "ESCAPED", c: "ESCAPED", b: "ENGINEER", d: "LEFT_BEHIND" });
+    expect(en(s.results!.find((r) => r.playerId === "b")!.title)).toBe("The Last Engineer");
   });
 
-  it("the rare chip runs the gate from the boat: nobody has to stay", () => {
+  it("a failed restart costs Sanity, doesn't end the run, and can be tried again next round (not twice in one)", () => {
+    let s = readyBoat(3, ["a"], { capacity: 1 });
+    s = answer(toDecision(s), { a: "BOARD" });
+    s = turnOf(s, "b");
+    s.players.b.carriageIndex = POWER;
+    const sanity = s.players.b.sanity;
+    const collapse = s.collapse;
+    s = restart(s, "b", 2);
+    expect(s.city!.boat.launched).toBe(false);
+    expect(s.outcome).toBeNull();
+    expect(s.players.b.sanity).toBe(sanity - 1);
+    expect(s.collapse).toBe(collapse);
+    expect(() => applyGameAction(s, "b", { type: "RESTART_GENERATOR" }, clock++)).toThrow(/already tried/);
+    const round = s.round;
+    s = applyGameAction(s, "b", { type: "END_TURN" }, clock++).state;
+    s = turnOf(s, "b");
+    expect(s.round).toBe(round + 1);
+    s = restart(s, "b", 6);
+    expect(s.outcome).toBe("S02_EVACUATED");
+  });
+
+  it("a disastrous restart costs Sanity and one point of Collapse, nothing like the whole city", () => {
+    let s = readyBoat(3, ["a"], { capacity: 1 });
+    s = answer(toDecision(s), { a: "BOARD" });
+    s = turnOf(s, "b");
+    s.players.b.carriageIndex = POWER;
+    const collapse = s.collapse;
+    s = restart(s, "b", 1);
+    expect(s.city!.boat.launched).toBe(false);
+    expect(s.collapse).toBe(collapse + 1);
+    expect(s.outcome).toBeNull();
+  });
+
+  it("the generator can't be restarted before anyone is aboard, or away from the power station", () => {
+    let s = readyBoat(3, []);
+    s = turnOf(s, "b");
+    s.players.b.carriageIndex = POWER;
+    expect(() => applyGameAction(s, "b", { type: "RESTART_GENERATOR" }, clock++)).toThrow(/Nobody is aboard/);
+    s.city!.boat.aboard = ["a"];
+    s.players.b.carriageIndex = PIER;
+    expect(() => applyGameAction(s, "b", { type: "RESTART_GENERATOR" }, clock++)).toThrow(/generator is at/);
+  });
+
+  it("the rare chip starts the boat from the deck: nobody has to restart the generator", () => {
     let s = readyBoat(3, ["a", "b"], { capacity: 2, chip: true });
     s = answer(toDecision(s), { a: "BOARD", b: "BOARD" });
     expect(s).toMatchObject({ phase: "ENDING", outcome: "S02_EVACUATED" });
-    expect(s.city!.boat.gatekeeper).toBeNull();
+    expect(s.city!.boat.engineer).toBeNull();
     expect(s.results!.filter((r) => r.escape === "ESCAPED")).toHaveLength(2);
   });
 
@@ -222,26 +285,24 @@ describe("the departure", () => {
     expect(has.every(Boolean)).toBe(false);
   });
 
-  it("leaving with a seat free while a pass-holder is still out there marks the leavers, and only them", () => {
-    let s = readyBoat(4, ["a", "b", "c"], { capacity: 3 });
-    s.city!.holdings.d.passes = 1; // d holds a pass but is out in the city
+  it("those aboard are locked in: no action points, no turns, no city actions; the others play on", () => {
+    let s = readyBoat(4, ["a", "b"], { capacity: 2 });
     s = answer(toDecision(s), { a: "BOARD", b: "BOARD" });
-    s = answer(s, { c: "HOLD" });
-    expect(en(s.pending[0].title)).toBe("Leave now?");
-    s = answer(s, { a: "LEAVE", b: "LEAVE" });
-    expect(s.city!.boat.betrayers.sort()).toEqual(["a", "b"]);
-    expect(en(s.results!.find((r) => r.playerId === "a")!.title)).toBe("The Betrayer");
-    expect(en(s.results!.find((r) => r.playerId === "c")!.title)).toBe("The Last Gatekeeper");
-  });
-
-  it("waiting for them keeps the seats and marks nobody", () => {
-    let s = readyBoat(4, ["a", "b", "c"], { capacity: 3 });
-    s.city!.holdings.d.passes = 1;
-    s = answer(toDecision(s), { a: "BOARD", b: "BOARD" });
-    s = answer(s, { c: "HOLD" });
-    s = answer(s, { a: "LEAVE" });
-    expect(s.city!.boat).toMatchObject({ launched: false, betrayers: [], gatekeeper: null });
-    expect(s.city!.boat.aboard.sort()).toEqual(["a", "b"]);
+    const round = s.round;
+    const order: string[] = [];
+    for (let i = 0; i < 400 && s.round <= round + 1 && !s.outcome; i++) {
+      const id = activePlayerId(s);
+      if (id && order.at(-1) !== id) order.push(id);
+      s = step(s);
+    }
+    expect(order.length).toBeGreaterThan(0);
+    expect(order.every((id) => id === "c" || id === "d")).toBe(true);
+    expect(s.players.a.ap).toBe(0);
+    s = turnOf(s, "c");
+    for (const a of [{ type: "MOVE", toCarriage: zoneIndex("VIADUCT") }, { type: "SEARCH" }, { type: "END_TURN" }] as GameAction[]) {
+      expect(() => applyGameAction(s, "a", a, clock++)).toThrow();
+    }
+    expect(availableActions(s, "a").every((x) => !x.enabled)).toBe(true);
   });
 
   it("the water reaching 12 before the boat leaves takes everyone", () => {
@@ -260,19 +321,12 @@ describe("the departure", () => {
     s = answer(s, Object.fromEntries(ids.map((id) => [id, "BOARD"])));
     expect(s.city!.boat.aboard).toHaveLength(cap);
     const ashore = ids.find((id) => !s.city!.boat.aboard.includes(id))!;
-    s = answer(s, { [ashore]: "HOLD" });
-    if (s.pending.length) s = answer(s, Object.fromEntries(s.city!.boat.aboard.map((id) => [id, "LEAVE"])));
+    s = turnOf(s, ashore);
+    s.players[ashore].carriageIndex = POWER;
+    s = restart(s, ashore, 6);
     expect(s.outcome).toBe("S02_EVACUATED");
     expect(s.results!.filter((r) => r.escape === "ESCAPED")).toHaveLength(cap);
     expect(s.results!.filter((r) => r.escape !== "ESCAPED").length).toBe(n - cap);
-  });
-
-  it("a player aboard can't walk off without giving up their seat", () => {
-    const s = readyBoat(3, ["a"]);
-    s.city!.boat.aboard = ["a"];
-    s.activeIndex = s.turnOrder.indexOf("a");
-    s.players.a.ap = 2;
-    expect(() => applyGameAction(s, "a", { type: "MOVE", toCarriage: zoneIndex("VIADUCT") } as GameAction, clock++)).toThrow(/aboard/);
   });
 });
 
@@ -289,6 +343,8 @@ describe("what everyone can see", () => {
     const s = table(4);
     const me = activePlayerId(s)!;
     s.city!.passSources = ["EXCHANGE", "EXCHANGE"];
+    // two passes already out: with the office's two the contest is there, so entering act 2 adds none
+    for (const id of s.turnOrder.filter((x) => x !== me).slice(0, 2)) s.city!.holdings[id].passes = 1;
     expect(project(s, me).city!.officePasses).toBeNull();
     s.city!.boat.installed = ["ENGINE", "FUEL", "NAV"];
     changeCollapse({ s, now: T0, events: [] }, 5, m`test`);

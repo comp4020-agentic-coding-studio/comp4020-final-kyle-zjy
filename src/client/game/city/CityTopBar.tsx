@@ -24,7 +24,7 @@ export function CityTopBar({ g, onLog, onSecrets, secretsCount }: { g: PlayerVie
     <header className="safe-top relative z-20 border-b border-gold/15 bg-[#05060d]/85 px-3 py-2 backdrop-blur-md sm:px-4">
       <div className="mx-auto flex max-w-6xl items-center gap-3">
         <div className="min-w-0 max-w-[30%] shrink">
-          <p className="label truncate text-[10px] text-signal">{t(`s2.top.act.${g.act}`)}</p>
+          <p className="label truncate text-[10px] text-signal">{t(`s2.top.act.${Math.min(g.act, 3) as 1 | 2 | 3}`)}</p>
           <p className="font-mono text-lg leading-tight text-moon">{t("s2.top.round", { n: Math.max(1, g.round) })}</p>
         </div>
         <div className="min-w-0 flex-1">
@@ -47,7 +47,7 @@ export function CityTopBar({ g, onLog, onSecrets, secretsCount }: { g: PlayerVie
             <span className="font-mono text-[10px] text-gold">{b.capacity === null ? t("s2.top.seatsUnknown") : t("s2.top.seats", { n: b.capacity })}</span>
             {ready && <span className="rounded-full bg-moss/20 px-1.5 py-0.5 text-[10px] font-bold text-moss">{t("s2.top.ready")}</span>}
             <span className="font-mono text-[10px] text-gold-bright">{t("s2.top.passes", { n: passes })}</span>
-            {city.officePasses !== null && <span className="font-mono text-[10px] text-mist">{t("s2.top.office", { n: city.officePasses })}</span>}
+            {city.officePasses !== null && <span className="font-mono text-[10px] text-mist">{city.officePasses === 1 ? t("s2.top.office.one") : t("s2.top.office.other", { n: city.officePasses })}</span>}
           </div>
         </div>
         <button className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gold/30 text-mist hover:text-moon" onClick={onSecrets} aria-label={t("game.secretsAria", { n: secretsCount })}>
@@ -66,12 +66,18 @@ export function CityTopBar({ g, onLog, onSecrets, secretsCount }: { g: PlayerVie
 export function CityObjective({ g }: { g: PlayerView }) {
   const t = useT();
   const text = useScenario02Text();
-  const b = g.city!.boat;
+  const city = g.city!;
+  const b = city.boat;
+  const ready = BOAT_PARTS.every((p) => b.installed.includes(p)) && (city.facilities.POWER_STATION.done || b.batteryPower) && city.facilities.HARBOUR_GATE.done;
   const missing = BOAT_PARTS.filter((p) => !b.installed.includes(p)).map((p) => text.parts[p].name).join(t("common.listSep"));
   const line =
-    b.readyRound !== null
-      ? t("s2.objective.ready")
-      : g.act === 3
+    b.aboard.length && !b.launched
+      ? t("s2.objective.awaitStart")
+      : b.readyRound !== null
+        ? t("s2.objective.ready")
+      : ready && g.act === 1
+        ? t("s2.objective.readyEarly")
+        : g.act === 3
         ? t("s2.objective.3")
         : missing
           ? t(g.act === 1 ? "s2.objective.1" : "s2.objective.2", { parts: missing })

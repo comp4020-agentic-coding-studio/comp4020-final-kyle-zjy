@@ -46,6 +46,7 @@ const BONUS_STATUS: Partial<Record<RollPurpose, string>> = {
   S2_SEARCH: "INVESTIGATE_BONUS",
   S2_INVESTIGATE: "INVESTIGATE_BONUS",
   S2_WORK: "REPAIR_BONUS",
+  S2_RESTART: "REPAIR_BONUS",
   S2_WADE: "ROPE_BONUS",
   S2_RESCUE: "ROPE_BONUS",
   S2_RISK: "RISK_BONUS",
@@ -255,7 +256,7 @@ export function quickRoll(ctx: Ctx, p: PlayerGameState): { value: number; tier: 
   return { value, tier: tierOf(value) };
 }
 
-const KIND_BIT: Partial<Record<RollPurpose, number>> = { INVESTIGATE: 1, SEARCH: 2, REPAIR: 4, CONFRONT: 8, S2_INVESTIGATE: 1, S2_SEARCH: 2, S2_WORK: 4, S2_RESCUE: 8, S2_RISK: 8 };
+const KIND_BIT: Partial<Record<RollPurpose, number>> = { INVESTIGATE: 1, SEARCH: 2, REPAIR: 4, CONFRONT: 8, S2_INVESTIGATE: 1, S2_SEARCH: 2, S2_WORK: 4, S2_RESTART: 4, S2_RESCUE: 8, S2_RISK: 8, S3_SCAN_ARCHIVE: 1, S3_SCAN_FIELD: 2, S3_SCAN_STABILIZE: 4 };
 
 /** What a finished ordinary roll means for round records, streaks and bonds. */
 function recordRoll(ctx: Ctx, p: PlayerGameState, roll: Roll): void {

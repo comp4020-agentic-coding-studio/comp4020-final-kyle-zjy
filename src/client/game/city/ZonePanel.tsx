@@ -36,7 +36,7 @@ export function ZonePanel({ g, zone, onBack }: { g: PlayerView; zone: number; on
             {fac.done ? t("s2.panel.facilityDone", { name: t(`s2.facility.${job!}`) }) : t("s2.panel.facility", { name: t(`s2.facility.${job!}`), progress: fac.progress, required: fac.required })}
           </p>
         )}
-        {def.facility === "HARBOUR" && city.officePasses !== null && <p className="mt-0.5 text-gold">{t("s2.panel.office", { n: city.officePasses })}</p>}
+        {def.facility === "HARBOUR" && city.officePasses !== null && <p className="mt-0.5 text-gold">{city.officePasses === 1 ? t("s2.panel.office.one") : t("s2.panel.office.other", { n: city.officePasses })}</p>}
         <p className="mt-0.5 text-mist">{people.length ? t("s2.panel.people", { names: people.map((p) => p.nickname).join(sep) }) : t("s2.panel.nobody")}</p>
         {waiting.length > 0 && <p className="mt-0.5 font-semibold text-gold-bright">{t("s2.panel.waiting", { names: waiting.map((n) => text.npcs[n.id].name).join(sep) })}</p>}
         {!mine && (

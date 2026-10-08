@@ -24,6 +24,7 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
     triggerQueue: _triggerQueue,
     roundRecord: _roundRecord,
     city: _city,
+    temporal: _temporal,
     ...shared
   } = s;
   const over = s.phase === "RESULTS" || s.phase === "ENDING";
@@ -55,6 +56,27 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
     myActions: availableActions(s, viewerId),
     deckSize: eventDeck.length,
     city: publicCity(s, viewerId),
+    ...(s.temporal ? { temporal: {
+      story: { revealed: [...s.temporal.story.revealed], availableRoutes: [...s.temporal.story.availableRoutes] },
+      finalRoute: s.temporal.finalRoute,
+      bootstrapProgress: { placed: s.temporal.bootstrap.filter((item) => item.placedBy === item.assignedTo).length, total: s.temporal.bootstrap.length },
+      discoveredFacts: [...s.temporal.discoveredFacts],
+      locations: { ...s.temporal.locations },
+      present: { ...s.temporal.present },
+      interventions: s.temporal.interventions.map((item) => ({ ...item, actorId: s.temporal!.story.revealed.includes("INTRUDERS_IDENTIFIED") ? item.actorId : null })),
+      surveillance: s.temporal.surveillanceReviewed || s.temporal.story.revealed.includes("INTRUDERS_IDENTIFIED")
+        ? s.temporal.surveillance.map(({ evidenceId: _evidenceId, ...item }) => ({ ...item, actorId: s.temporal!.story.revealed.includes("INTRUDERS_IDENTIFIED") ? item.actorId : null }))
+        : [],
+      surveillanceReviewed: s.temporal.surveillanceReviewed,
+      accessLedgerReviewed: s.temporal.accessLedgerReviewed,
+      prototypeLogReviewed: s.temporal.prototypeLogReviewed,
+      identityMatches: s.temporal.story.revealed.includes("INTRUDERS_IDENTIFIED") ? [...s.temporal.identityMatches] : [],
+      causalRevision: s.temporal.causalRevision,
+      myEvidence: [...(s.temporal.evidence[viewerId] ?? [])],
+      worldItems: Object.values(s.temporal.storedItems).filter((item) => item.status === "AVAILABLE_2026" || item.status === "STORED").map(({ ownerId: _ownerId, bootstrapOwnerId: _bootstrapOwnerId, ...item }) => item),
+      myItems: Object.values(s.temporal.storedItems).filter((item) => item.ownerId === viewerId).map(({ bootstrapOwnerId: _bootstrapOwnerId, ...item }) => item),
+      myObligations: s.temporal.bootstrap.filter((item) => item.assignedTo === viewerId),
+    } } : {}),
   };
 }
 

@@ -40,6 +40,15 @@ export function SecretsDrawer({ g, onClose }: { g: PlayerView; onClose: () => vo
                 items={g.city.shared.map((x, i) => ({ id: `shared-${i}`, text: t("s2.secrets.sharedBy", { name: g.players[x.from]?.nickname ?? "?", text: fmt(x.text) }), meta: t("secrets.round", { n: x.round }) }))}
               />
               <Section
+                title={t("s2.secrets.passInfo")}
+                empty=""
+                items={[
+                  { id: "out", text: t("s2.secrets.passesOut", { n: g.city.passesOut }) },
+                  { id: "office", text: g.city.officePasses === null ? t("s2.secrets.officeClosed") : t("s2.secrets.officeLeft", { n: g.city.officePasses }) },
+                  { id: "known", text: t("s2.secrets.knownSources", { n: g.city.knownPassSources }) },
+                ]}
+              />
+              <Section
                 title={t("s2.secrets.people")}
                 empty=""
                 items={g.city.npcs.map((n) => ({

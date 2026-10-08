@@ -18,6 +18,8 @@ const SCHEDULE = {
 } as const;
 /** The pier floods late but never goes under: the boat is moored there. */
 const NEVER = 99;
+/** The power station's generator hall stands on a raised plinth: it floods but never goes under (the boat's last start is there). */
+const RAISED = ["POWER_STATION"];
 
 const id = (i: number) => ZONES[i].id;
 
@@ -64,7 +66,8 @@ export const partSite = (city: CityState, part: string): number => city.zones.fi
  * Collapse 6; the power and pump stations
  * must be reachable while the middle of the city stands (Collapse 6); the pier
  * must be reachable from the start until the middle floods (Collapse 8) and from
- * the high ground after that (Collapse 10).
+ * the high ground after that (Collapse 10); the power station (where the boat's
+ * generator is restarted) must be reachable from the pier through Collapse 8.
  */
 export function solvable(city: CityState): string[] {
   const problems: string[] = [];
@@ -80,6 +83,7 @@ export function solvable(city: CityState): string[] {
   }
   for (const f of ["POWER_STATION", "PUMP_STATION"]) if (!fromStart6.has(zoneIndex(f))) problems.push(`${f}: cut off by Collapse 6`);
   if (!reachableAt(city, start, 8).has(harbour)) problems.push("pier: cut off from the start by Collapse 8");
+  if (!reachableAt(city, harbour, 8).has(zoneIndex("POWER_STATION"))) problems.push("power station: cut off from the pier by Collapse 8");
   const high = city.zones.map((_, i) => i).filter((i) => ZONES[i].elevation === "HIGH");
   if (!high.some((h) => reachableAt(city, h, 10).has(harbour))) problems.push("pier: no high ground reaches it at Collapse 10");
   return problems;
@@ -99,6 +103,7 @@ function drawCity(s: GameState): CityState {
     const sched = SCHEDULE[z.elevation];
     return { status: "NORMAL", searched: false, powered: false, floodAt: pick(s, [...sched.flood]), sinkAt: pick(s, [...sched.sink]), caches: [] };
   });
+  for (const r of RAISED) zones[zoneIndex(r)].sinkAt = NEVER;
   // the meeting point is dry when the sirens start
   const start = zoneIndex(START_ZONE);
   zones[start].floodAt = Math.max(zones[start].floodAt, 5);
@@ -124,7 +129,7 @@ function emptyCity(zones: CityZone[], edges: CityEdge[], startZone: number): Cit
     hold: 0,
     surge: 0,
     facilities: { POWER_STATION: facility(0), PUMP_STATION: facility(0), HARBOUR_GATE: facility(0) },
-    boat: { capacity: 0, revealed: false, installed: [], batteryPower: false, autoGate: false, readyRound: null, aboard: [], gatekeeper: null, launched: false, betrayers: [] },
+    boat: { capacity: 0, revealed: false, installed: [], batteryPower: false, autoStart: false, readyRound: null, aboard: [], engineer: null, launched: false },
     passSources: [],
     pumpedRound: 0,
     holdings: {},
@@ -181,6 +186,28 @@ function populate(s: GameState, city: CityState, players: number): void {
   if (int(s, 5) < 2) city.zones[pick(s, open.filter((i) => ZONES[i].elevation !== "LOW"))].caches.push("CHIP");
 }
 
+/**
+ * Where each player starts, drawn from the seed: scattered across the city,
+ * a different zone each while there are enough. Only safe ground: not the
+ * pier, dry when the sirens stop, not going under before act 2 (Collapse 5),
+ * and still joined to the pier and the power station at Collapse 6, so nobody
+ * starts cut off.
+ */
+export function spawnZones(s: GameState, city: CityState, players: number): number[] {
+  const harbour = zoneIndex(HARBOUR_ZONE);
+  const power = zoneIndex("POWER_STATION");
+  const safe = city.zones
+    .map((z, i) => ({ z, i }))
+    .filter(({ z, i }) => i !== harbour && scheduledStatus(z, 0) === "NORMAL" && z.sinkAt > 5)
+    .map(({ i }) => i)
+    .filter((i) => {
+      const r = reachableAt(city, i, 6);
+      return r.has(harbour) && r.has(power);
+    });
+  const pool = shuffle(s, safe.length ? safe : [city.startZone]);
+  return Array.from({ length: players }, (_, k) => pool[k % pool.length]);
+}
+
 /** A city that can be won, drawn from the seed. Redraws (deterministically) until the schedule check passes. */
 export function generateCity(s: GameState, players = s.config?.playerCount ?? 4): CityState {
   let city: CityState | null = null;
@@ -199,7 +226,7 @@ export function safeCity(): CityState {
   const zones: CityZone[] = ZONES.map((z) =>
     z.id === HARBOUR_ZONE
       ? { status: "NORMAL", searched: false, powered: false, floodAt: 9, sinkAt: NEVER, caches: [] }
-      : { status: "NORMAL", searched: false, powered: false, floodAt: Math.max(...SCHEDULE[z.elevation].flood), sinkAt: Math.max(...SCHEDULE[z.elevation].sink), caches: [] },
+      : { status: "NORMAL", searched: false, powered: false, floodAt: Math.max(...SCHEDULE[z.elevation].flood), sinkAt: RAISED.includes(z.id) ? NEVER : Math.max(...SCHEDULE[z.elevation].sink), caches: [] },
   );
   const fragile = new Map(FRAGILE.map((f) => [[zoneIndex(f.a), zoneIndex(f.b)].sort((x, y) => x - y).join("-"), f.kind]));
   const edges: CityEdge[] = ADJACENT.map(([a, b]) => {
@@ -331,7 +358,8 @@ export function raftTargets(city: CityState, from: number): number[] {
  */
 export function publicCity(s: GameState, viewerId: string): PublicCity | null {
   if (!s.city) return null;
-  const { zones, edges, holdings, passSources: _sources, boat, ...rest } = s.city;
+  const { zones, edges, holdings, passSources, boat, ...rest } = s.city;
+  const office = passSources.filter((x) => x === "EXCHANGE").length;
   return {
     ...rest,
     zones: zones.map(({ floodAt: _f, sinkAt, caches: _c, ...z }) => ({ ...z, warning: z.status !== "SUBMERGED" && sinkAt === s.collapse + 1 })),
@@ -341,7 +369,9 @@ export function publicCity(s: GameState, viewerId: string): PublicCity | null {
       return [id, { parts: mine ? h.parts : null, partCount: h.parts.length, passes: mine ? h.passes : null }];
     })),
     boat: { ...boat, capacity: boat.revealed ? boat.capacity : null },
-    officePasses: s.act >= 2 ? s.city.passSources.filter((x) => x === "EXCHANGE").length : null,
+    officePasses: s.act >= 2 ? office : null,
+    passesOut: Object.values(holdings).reduce((n, h) => n + h.passes, 0),
+    knownPassSources: (s.act >= 2 ? office : 0) + s.city.npcs.filter((n) => n.state === "WAITING" && s.city!.passSources.includes(`NPC:${n.id}`)).length,
   };
 }
 

@@ -44,6 +44,8 @@ export const ref = {
   goal: (id: string) => r("goal", id),
   /** Scenario 02's wording of the same goal. */
   goal02: (id: string) => r("goal02", id),
+  /** Incident Zero's causal and temporal version of a shared task goal. */
+  goal03: (id: string) => r("goal03", id),
   boon: (id: string) => r("boon", id),
   investigateHint: (id: CarriageIdentity) => r("investigateHint", id),
   searchHint: (id: CarriageIdentity) => r("searchHint", id),

@@ -27,6 +27,7 @@ import { rulesFor } from "./scenario.ts";
 // every scenario's rules register on load; every run is created through here
 import "./scenario01/rules.ts";
 import "./scenario02/rules.ts";
+import "./scenario03/rules.ts";
 
 export type Seat = { playerId: PlayerId; nickname: string; seat: number; zodiac: Zodiac; mbti: MBTI };
 

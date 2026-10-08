@@ -4,6 +4,8 @@ import type { CharacterId } from "../characters/types.ts";
 import { characterText, itemText, scenarioText } from "./content.ts";
 import type { ItemId, ScenarioId } from "../game/state.ts";
 import { scenario02Text } from "./scenario02.ts";
+import { EN_EVENTS03, EN_GOALS03 } from "./scenario03.ts";
+import { ZH_EVENTS03, ZH_GOALS03 } from "./zh-CN/scenario03.ts";
 import { isMsg, type Locale, type Msg, type MsgParam } from "./types.ts";
 import { ZH_MESSAGES } from "./zh-CN/messages.ts";
 
@@ -30,10 +32,10 @@ function content(locale: Locale, kind: string, ids: string[]): string {
     case "investigateHint": return s.carriages[a as keyof typeof s.carriages]?.investigateHint ?? a;
     case "searchHint": return s.carriages[a as keyof typeof s.carriages]?.searchHint ?? a;
     case "title": return characterText(locale, a as CharacterId).title;
-    case "event": return (s.events[a] ?? scenario02Text(locale).events[a])?.title ?? a;
-    case "option": return (s.events[a] ?? scenario02Text(locale).events[a])?.options?.[b]?.label ?? b;
-    case "optionDetail": return (s.events[a] ?? scenario02Text(locale).events[a])?.options?.[b]?.detail ?? b;
-    case "eventText": return (s.events[a] ?? scenario02Text(locale).events[a])?.text ?? a;
+    case "event": return (s.events[a] ?? scenario02Text(locale).events[a] ?? (locale === "zh-CN" ? ZH_EVENTS03 : EN_EVENTS03)[a])?.title ?? a;
+    case "option": return (s.events[a] ?? scenario02Text(locale).events[a] ?? (locale === "zh-CN" ? ZH_EVENTS03 : EN_EVENTS03)[a])?.options?.[b]?.label ?? b;
+    case "optionDetail": return (s.events[a] ?? scenario02Text(locale).events[a] ?? (locale === "zh-CN" ? ZH_EVENTS03 : EN_EVENTS03)[a])?.options?.[b]?.detail ?? b;
+    case "eventText": return (s.events[a] ?? scenario02Text(locale).events[a] ?? (locale === "zh-CN" ? ZH_EVENTS03 : EN_EVENTS03)[a])?.text ?? a;
     case "nightRule": return s.nightRules[a as keyof typeof s.nightRules]?.name ?? a;
     case "nightRuleText": return s.nightRules[a as keyof typeof s.nightRules]?.text ?? a;
     case "obsession": return s.obsessions[a as keyof typeof s.obsessions]?.name ?? a;
@@ -41,6 +43,7 @@ function content(locale: Locale, kind: string, ids: string[]): string {
     case "ruleChange": return s.ruleChanges[a] ?? a;
     case "goal": return s.goals[a as keyof typeof s.goals] ?? a;
     case "goal02": return scenario02Text(locale).goals[a] ?? a;
+    case "goal03": return (locale === "zh-CN" ? ZH_GOALS03 : EN_GOALS03)[a] ?? a;
     case "boon": return s.boons[a] ?? a;
     case "zone": return scenario02Text(locale).zones[a]?.name ?? a;
     case "part": return scenario02Text(locale).parts[a]?.name ?? a;

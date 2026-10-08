@@ -78,6 +78,10 @@ function describe(c: Cue, g: PlayerView, t: TFunction, text: ScenarioText, skill
       return p.playerId === g.viewerId ? { icon: "KEY", text: t("s2.cue.passMine"), tone: "text-gold-bright border-gold/60" } : null;
     case "CAPACITY":
       return { icon: "ANCHOR", text: t("s2.cue.capacity", { n: Number(p.capacity) }), tone: "text-gold-bright border-gold/60" };
+    case "OFFICE":
+      return { icon: "ANCHOR", text: Number(p.added) === 1 ? t("s2.cue.office.one") : t("s2.cue.office.other", { n: Number(p.added) }), tone: "text-gold-bright border-gold/60" };
+    case "AWAIT_START":
+      return { icon: "REPAIR", text: t("s2.cue.awaitStart"), tone: "text-signal border-signal/50" };
     case "BOAT_READY":
       return { icon: "ANCHOR", text: t("s2.cue.ready"), tone: "text-moss border-moss/50" };
     case "LAUNCH":

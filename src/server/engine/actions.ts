@@ -26,7 +26,7 @@ import { rulesFor, type ActionSet } from "./scenario.ts";
 export type Fail = { code: RejectCode; reason: Msg };
 export const fail = (code: RejectCode, reason: Msg): Fail => ({ code, reason });
 
-const IN_RUN = new Set(["ACT_1", "ACT_2", "ACT_3"]);
+const IN_RUN = new Set(["ACT_1", "ACT_2", "ACT_3", "ACT_4"]);
 
 /** Shared gate for anything done on your own turn. */
 function turnGate(s: GameState, actorId: PlayerId, cost: number): Fail | null {

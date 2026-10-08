@@ -16,6 +16,8 @@ import { ZH_MESSAGES } from "../src/shared/i18n/zh-CN/messages.ts";
 import { ZH_SCENARIO } from "../src/shared/i18n/zh-CN/scenario.ts";
 import { EN_SCENARIO02 } from "../src/shared/i18n/scenario02.ts";
 import { ZH_SCENARIO02 } from "../src/shared/i18n/zh-CN/scenario02.ts";
+import { EN_ITEMS03 } from "../src/shared/i18n/scenario03.ts";
+import { ZH_ITEMS03 } from "../src/shared/i18n/zh-CN/scenario03.ts";
 import { ZH_S02_SKILL_TEXT } from "../src/shared/i18n/zh-CN/skills02.ts";
 import { S02_SKILL_TEXT } from "../src/shared/game/scenario02/skill-adapters.ts";
 import type { RunInput } from "./bot.ts";
@@ -76,6 +78,14 @@ describe("the locale choice", () => {
 });
 
 describe("catalog coverage", () => {
+  it("every Scenario 03 item has Chinese content and resolves through item references", () => {
+    expect(Object.keys(ZH_ITEMS03).sort()).toEqual(Object.keys(EN_ITEMS03).sort());
+    for (const id of Object.keys(EN_ITEMS03) as (keyof typeof EN_ITEMS03)[]) {
+      expect(ZH_ITEMS03[id].name).toMatch(HAN);
+      expect(ZH_ITEMS03[id].text).toMatch(HAN);
+      expect(format("zh-CN", ref.item(id))).toBe(ZH_ITEMS03[id].name);
+    }
+  });
   it("the UI catalogs have the same keys and placeholders in both directions", async () => {
     const { en } = await import("../src/client/i18n/en.ts");
     const { zhCN } = await import("../src/client/i18n/zh-CN.ts");
@@ -89,6 +99,13 @@ describe("catalog coverage", () => {
       expect(placeholders(s2zhCN[k]), k).toEqual(placeholders(s2en[k]));
       // words in the English need words in the Chinese ("{name}: {progress} / {required}" has none)
       if (/[A-Za-z]{2}/.test(s2en[k].replace(/\{\w+\}/g, ""))) expect(s2zhCN[k], k).toMatch(HAN);
+    }
+    const { s3en } = await import("../src/client/i18n/s3-en.ts");
+    const { s3zhCN } = await import("../src/client/i18n/s3-zh-CN.ts");
+    expect(Object.keys(s3zhCN).sort()).toEqual(Object.keys(s3en).sort());
+    for (const k of Object.keys(s3en) as (keyof typeof s3en)[]) {
+      expect(placeholders(s3zhCN[k]), k).toEqual(placeholders(s3en[k]));
+      if (/[A-Za-z]{2}/.test(s3en[k].replace(/\{\w+\}/g, ""))) expect(s3zhCN[k], k).toMatch(HAN);
     }
   });
 

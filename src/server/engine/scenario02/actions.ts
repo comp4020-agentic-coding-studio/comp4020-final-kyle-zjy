@@ -15,6 +15,8 @@
 //   SHARE_INTEL  0 AP  read out something you learned, to everyone
 //   INSTALL      1 AP  at the pier: fit a part to the boat, or wire two batteries for power
 //   REGISTER     1 AP  at the pier: trade 3 Fate and an item for a pass, while the office has any
+//   RESTART_GENERATOR  1 AP  at the power station, once someone is aboard: roll; a success sends
+//                the boat off; a failure costs Sanity and can be tried again next round
 import type { GameAction, GameActionType, TradeOffer } from "../../../shared/game/actions.ts";
 import { AP_COST } from "../../../shared/game/actions.ts";
 import { MAX_HELP_BONUS } from "../../../shared/game/scenario01/content.ts";
@@ -34,7 +36,7 @@ import { pick } from "../rng.ts";
 import type { ActionSet } from "../scenario.ts";
 import { onResume, openWindow } from "../windows.ts";
 import { canMove, moveTargets, partSite, raftTargets } from "./city.ts";
-import { awardPass, boatMissing, checkReveal, jobDone } from "./boat.ts";
+import { awaitingStart, awardPass, boatMissing, castOff, checkReveal, jobDone } from "./boat.ts";
 
 const zoneRef = (i: number) => ref.zone(ZONES[i].id);
 /** How much of the next rise one run of the pumps holds back. */
@@ -259,7 +261,7 @@ onRollOutcome("S2_WORK", (ctx, p, roll, rc) => {
     city.hold += 1;
     log(ctx, m`The power station comes back. Lights flicker on across what is left of the city, and the next rise is held back.`, "FACILITY");
   } else if (f === "PUMP_STATION") log(ctx, m`The pumps answer. Run them each round and they hold back the water.`, "FACILITY");
-  else log(ctx, m`The pier gate swings on its hinges again. It still needs someone to hold it open.`, "FACILITY");
+  else log(ctx, m`The pier gate swings on its hinges again.`, "FACILITY");
   cue(ctx, "FACILITY", { facility: f });
   jobDone(ctx, f);
 });
@@ -613,9 +615,9 @@ const INSTALL: Spec<Extract<GameAction, { type: "INSTALL" }>> = {
       const h = city.holdings[p.playerId].parts;
       h.splice(h.indexOf(a.part), 1);
       city.boat.installed.push(a.part);
-      if (a.part === "CHIP") city.boat.autoGate = true;
+      if (a.part === "CHIP") city.boat.autoStart = true;
       else awardPass(ctx, `INSTALL:${a.part}`, p, m`the harbour crew, for the ${ref.part(a.part)}`);
-      log(ctx, a.part === "CHIP" ? m`${p.nickname} fits the ${ref.part(a.part)}. The gate can now run from the boat.` : m`${p.nickname} fits the ${ref.part(a.part)} to the boat.`, "BOAT", p.playerId);
+      log(ctx, a.part === "CHIP" ? m`${p.nickname} fits the ${ref.part(a.part)}. The boat can now start itself: nobody will have to restart the generator by hand.` : m`${p.nickname} fits the ${ref.part(a.part)} to the boat.`, "BOAT", p.playerId);
     }
     contribute(ctx, p, 2);
     cue(ctx, "INSTALL", { playerId: p.playerId, part: a.part });
@@ -640,14 +642,51 @@ const REGISTER: Spec = {
   },
 };
 
+// ---- the last start ------------------------------------------------------------------
+
+const RESTART_GENERATOR: Spec = {
+  check: (s, p) => {
+    if (facilityAt(p.carriageIndex) !== "POWER_STATION") return fail("ILLEGAL_TARGET", m`The generator is at ${ref.zone("POWER_STATION")}.`);
+    if (!awaitingStart(s)) return fail("ILLEGAL_TARGET", m`Nobody is aboard the boat yet. The generator is restarted once someone is.`);
+    if (s.flags[`restart_${p.playerId}_${s.round}`]) return fail("ILLEGAL_TARGET", m`You've already tried the generator this round. It needs time before another try.`);
+    return null;
+  },
+  hint: () => m`A roll: a success sends the boat off with everyone aboard. A failure shakes you, and you can try again next round.`,
+  apply: (ctx, p) => {
+    const s = ctx.s;
+    s.flags[`restart_${p.playerId}_${s.round}`] = 1;
+    s.flags.s2_restartAttempts = (s.flags.s2_restartAttempts ?? 0) + 1;
+    log(ctx, m`${p.nickname} throws the starter on the generator.`, "WORK", p.playerId);
+    startRoll(ctx, p, "S2_RESTART", m`restart the generator`, { kind: "S2_RESTART", carriageIndex: p.carriageIndex });
+  },
+};
+
+onRollOutcome("S2_RESTART", (ctx, p, roll) => {
+  // the boat may have gone while the roll was open
+  if (!awaitingStart(ctx.s)) return;
+  if (roll.tier === "SUCCESS" || roll.tier === "PERFECT") {
+    p.stats.repairs++;
+    contribute(ctx, p, 2);
+    log(ctx, m`The generator coughs, catches and roars. ${p.nickname} holds the lever down.`, "WORK", p.playerId);
+    return castOff(ctx, p);
+  }
+  if (roll.tier === "DISASTER") {
+    log(ctx, m`The generator bucks, sparks and floods its own pit. ${p.nickname} is thrown clear; the water gains on the hall.`, "WORK", p.playerId);
+    loseSanity(ctx, p, 1, m`the generator`);
+    return changeCollapse(ctx, 1, m`a failed restart`);
+  }
+  log(ctx, m`The generator turns over and dies. ${p.nickname} will have to try again next round.`, "WORK", p.playerId);
+  loseSanity(ctx, p, 1, m`the generator`);
+});
+
 let set: ActionSet | null = null;
 
 /** Built on first use: the shared specs (actions.ts) may still be loading when this module is (import cycle). */
 export function s02Actions(): ActionSet {
   set ??= {
-    specs: { MOVE, SEARCH, INVESTIGATE, REPAIR, OPERATE, RESCUE, SALVAGE, HELP, STABILIZE, TRADE, SHARE_INTEL, INSTALL, REGISTER, USE_SKILL, USE_ITEM, END_TURN } as Partial<Record<GameActionType, Spec<never>>>,
-    turnActions: ["MOVE", "SEARCH", "INVESTIGATE", "REPAIR", "OPERATE", "RESCUE", "SALVAGE", "HELP", "STABILIZE", "TRADE", "SHARE_INTEL", "INSTALL", "REGISTER", "USE_SKILL", "USE_ITEM", "END_TURN"],
-    apCost: { ...AP_COST, TRADE: 0, OPERATE: 1, RESCUE: 1, SALVAGE: 1, SHARE_INTEL: 0, INSTALL: 1, REGISTER: 1 },
+    specs: { MOVE, SEARCH, INVESTIGATE, REPAIR, OPERATE, RESCUE, SALVAGE, HELP, STABILIZE, TRADE, SHARE_INTEL, INSTALL, REGISTER, RESTART_GENERATOR, USE_SKILL, USE_ITEM, END_TURN } as Partial<Record<GameActionType, Spec<never>>>,
+    turnActions: ["MOVE", "SEARCH", "INVESTIGATE", "REPAIR", "OPERATE", "RESCUE", "SALVAGE", "HELP", "STABILIZE", "TRADE", "SHARE_INTEL", "INSTALL", "REGISTER", "RESTART_GENERATOR", "USE_SKILL", "USE_ITEM", "END_TURN"],
+    apCost: { ...AP_COST, TRADE: 0, OPERATE: 1, RESCUE: 1, SALVAGE: 1, SHARE_INTEL: 0, INSTALL: 1, REGISTER: 1, RESTART_GENERATOR: 1 },
   };
   return set;
 }

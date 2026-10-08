@@ -187,7 +187,7 @@ export const ZH_SCENARIO02: Scenario02Text = {
     },
     CHIP: {
       name: "自动控制芯片",
-      text: "可在船上操控码头闸门。并非每局都有。装上它，就没有人必须留下。"
+      text: "可在甲板上直接启动船的引擎。并非每局都有。装上它，就没有人需要回去重启发电机。"
     }
   },
   npcs: {

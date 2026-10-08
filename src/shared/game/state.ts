@@ -3,6 +3,10 @@
 // every secret that isn't the viewer's (see docs/game-state.md §12).
 import type { CharacterId, MBTI, RollTier, TriggerKind, Zodiac } from "../characters/types.ts";
 import type { PartId, S02ItemId } from "./scenario02/items.ts";
+import type { RoomId03, Year03 } from "./scenario03/map.ts";
+import type { S03ItemId } from "./scenario03/items.ts";
+import type { FactId03 } from "./scenario03/facts.ts";
+import type { EndingRoute03, StoryBeatId03 } from "./scenario03/story.ts";
 import type { ActionAvailability } from "./actions.ts";
 import type { Effect, StatusPolarity } from "./effects.ts";
 import type { Msg } from "../i18n/types.ts";
@@ -10,7 +14,7 @@ import type { Msg } from "../i18n/types.ts";
 export type PlayerId = string;
 export type RoomCode = string;
 
-export const GAME_PHASES = ["LOBBY", "INTRO", "ACT_1", "ACT_2", "ACT_3", "ENDING", "RESULTS"] as const;
+export const GAME_PHASES = ["LOBBY", "INTRO", "ACT_1", "ACT_2", "ACT_3", "ACT_4", "ENDING", "RESULTS"] as const;
 export type GamePhase = (typeof GAME_PHASES)[number];
 
 /** Per-member progress through character selection inside LOBBY. */
@@ -37,7 +41,97 @@ export type RoomState = {
   version: number;
 };
 
-export type ScenarioId = "S01_LAST_TRAIN" | "S02_SUNKEN_CITY";
+export type ScenarioId = "S01_LAST_TRAIN" | "S02_SUNKEN_CITY" | "S03_INCIDENT_ZERO";
+
+export type Temporal03 = {
+  story: { revealed: StoryBeatId03[]; availableRoutes: EndingRoute03[] };
+  finalRoute: EndingRoute03 | null;
+  discoveredFacts: FactId03[];
+  locations: Record<PlayerId, { roomId: RoomId03; year: Year03 }>;
+  baselinePresent: TemporalPresent03;
+  present: TemporalPresent03;
+  interventions: TemporalIntervention03[];
+  evidence: Record<PlayerId, string[]>;
+  causalRevision: number;
+  storedItems: Record<string, TemporalItem03>;
+  bootstrap: BootstrapObligation03[];
+  holdings: Record<PlayerId, { artifacts: string[] }>;
+  sealedProfiles: TemporalProfile03[];
+  surveillance: TemporalTrace03[];
+  surveillanceReviewed: boolean;
+  accessLedgerReviewed: boolean;
+  prototypeLogReviewed: boolean;
+  identityMatches: TemporalIdentityMatch03[];
+};
+
+export type TemporalProfile03 = { signature: string; characterId: CharacterId; seat: number };
+export type TemporalIdentityMatch03 = { signature: string; playerId: PlayerId };
+export type TemporalTrace03 = {
+  seq: number;
+  kind: "ARRIVAL" | "MOVEMENT" | "INVESTIGATION" | "INTERVENTION" | "RELIC_STORAGE";
+  signature: string;
+  actorId: PlayerId;
+  round: number;
+  roomId: RoomId03;
+  nodeId?: TemporalIntervention03["nodeId"];
+  choiceId?: string;
+  instanceId?: string;
+  evidenceId?: string;
+};
+export type PublicTemporalTrace03 = Omit<TemporalTrace03, "actorId" | "evidenceId"> & { actorId: PlayerId | null };
+
+export type TemporalItem03 = {
+  instanceId: string;
+  itemId: S03ItemId;
+  roomId: RoomId03;
+  status: "AVAILABLE_2026" | "HELD_2026" | "HELD_1996" | "STORED" | "ERASED";
+  ownerId: PlayerId | null;
+  bootstrapOwnerId: PlayerId | null;
+  storedBy: PlayerId | null;
+  storedRound: number | null;
+};
+
+export type BootstrapObligation03 = {
+  instanceId: string;
+  assignedTo: PlayerId;
+  storageRoom: RoomId03;
+  placedBy: PlayerId | null;
+};
+
+export type TemporalPresent03 = {
+  caseFile: "A" | "B";
+  researchFacility: "TEMPORAL_CONTAINMENT";
+  secretArchiveOpen: boolean;
+  workerPresent: boolean;
+  badgeCache: boolean;
+  report: "OFFICIAL" | "CORRECTED";
+  powerRoomExists: boolean;
+  administrationIntegrity: "STABLE" | "FADING";
+  accidentRecord: "PENDING" | "OFFICIAL" | "CONTROLLED" | "ERASED";
+  staffEvacuated: boolean;
+  jiStaged: boolean;
+  prototypeHidden: boolean;
+};
+
+export type TemporalIntervention03 = {
+  seq: number;
+  nodeId: "ARCHIVE_GATE" | "WORKER" | "REPORT" | "PROTOTYPE_CORE" | "ACCIDENT_RECORD" | "STAFF_EVACUATION" | "JI_RECORD" | "PROTOTYPE_FATE";
+  choiceId: string;
+  actorId: PlayerId;
+  round: number;
+  roomId: RoomId03;
+  year: "Y1996";
+};
+
+export type PublicTemporal03 = Omit<Temporal03, "baselinePresent" | "evidence" | "storedItems" | "bootstrap" | "holdings" | "sealedProfiles" | "surveillance" | "interventions"> & {
+  bootstrapProgress: { placed: number; total: number };
+  surveillance: PublicTemporalTrace03[];
+  interventions: (Omit<TemporalIntervention03, "actorId"> & { actorId: PlayerId | null })[];
+  myEvidence: string[];
+  worldItems: Omit<TemporalItem03, "ownerId" | "bootstrapOwnerId">[];
+  myItems: Omit<TemporalItem03, "bootstrapOwnerId">[];
+  myObligations: BootstrapObligation03[];
+};
 
 // ---- scenario 01 -----------------------------------------------------------
 
@@ -63,7 +157,7 @@ export type Anchor = {
 export type FragmentType = "ROUTE" | "DRIVER" | "MANIFEST" | "WITNESS" | "TICKET" | "SIGNAL";
 
 /** Every item of every scenario (each scenario's pools only draw its own). */
-export type ItemId = S01ItemId | S02ItemId;
+export type ItemId = S01ItemId | S02ItemId | S03ItemId;
 
 export type S01ItemId =
   | "OLD_KEY"
@@ -175,7 +269,7 @@ export type PlayerStats = {
   timesLost: number;
 };
 
-export type RollPurpose = "INVESTIGATE" | "SEARCH" | "REPAIR" | "CONFRONT" | "TICKET_CHECK" | "EVENT" | "SKILL" | "S2_WADE" | "S2_SEARCH" | "S2_INVESTIGATE" | "S2_WORK" | "S2_RESCUE" | "S2_RISK";
+export type RollPurpose = "INVESTIGATE" | "SEARCH" | "REPAIR" | "CONFRONT" | "TICKET_CHECK" | "EVENT" | "SKILL" | "S2_WADE" | "S2_SEARCH" | "S2_INVESTIGATE" | "S2_WORK" | "S2_RESCUE" | "S2_RISK" | "S2_RESTART" | "S3_SCAN_ARCHIVE" | "S3_SCAN_FIELD" | "S3_SCAN_STABILIZE";
 
 export type Roll = {
   id: string;
@@ -294,7 +388,7 @@ export type Inspector = {
 };
 
 /** S02_EVACUATED: the boat left the sunken city (who was aboard is in each result). */
-export type Outcome = "NORMAL" | "TRUE_DELETE" | "TRUE_TICKET" | "FAILED" | "S02_EVACUATED";
+export type Outcome = "NORMAL" | "TRUE_DELETE" | "TRUE_TICKET" | "FAILED" | "S02_EVACUATED" | "S03_OFFICIAL_HISTORY" | "S03_NO_TOMORROW" | "S03_DECEIVE_HISTORY";
 
 /** BOAT_LOST: a part the boat needs went under before anyone found it. */
 export type FailReason = "COLLAPSE" | "TIME" | "ALL_LOST" | "BOAT_LOST";
@@ -350,7 +444,7 @@ export type Bond = {
 /** A short cinematic everyone sees at once (intro, blackout, fold, ending). */
 /** A scene everyone sees at once; it ends when every connected passenger has pressed Continue (or the host skips). */
 export type Sequence = {
-  kind: "INTRO" | "BLACKOUT" | "FOLD" | "CAB_OPEN" | "ENDING" | "FLOOD" | "CAPACITY";
+  kind: "INTRO" | "BLACKOUT" | "FOLD" | "CAB_OPEN" | "ENDING" | "FLOOD" | "CAPACITY" | "S3_IDENTITY" | "S3_THIRD_ROUTE";
   /** FLOOD: the act the city has just entered. */
   stage?: number;
   acks: PlayerId[];
@@ -407,7 +501,7 @@ export type PlayerResult = {
   escape?: EscapeFate;
 };
 
-export type EscapeFate = "ESCAPED" | "GATEKEEPER" | "LEFT_BEHIND" | "DROWNED";
+export type EscapeFate = "ESCAPED" | "ENGINEER" | "LEFT_BEHIND" | "DROWNED";
 
 export type TuningTier = "SMALL" | "STANDARD" | "LARGE";
 
@@ -442,7 +536,7 @@ export type GameState = {
   config: GameConfig;
 
   round: number;
-  act: 1 | 2 | 3;
+  act: 1 | 2 | 3 | 4;
   step: RoundStep;
   turnOrder: PlayerId[];
   activeIndex: number;
@@ -480,6 +574,8 @@ export type GameState = {
   sequence: Sequence | null;
   /** Scenario 02's city; null in scenario 01. A player's node there is their `carriageIndex` (a zone index). */
   city: CityState | null;
+  /** Scenario 03's two-year position state; absent in older scenario snapshots. */
+  temporal?: Temporal03 | null;
   flags: Record<string, number>;
 
   outcome: Outcome | null;
@@ -493,9 +589,10 @@ export type GameState = {
 /** What one client receives. Server-only fields are gone; secrets are the viewer's own. */
 export type PlayerView = Omit<
   GameState,
-  "secrets" | "seed" | "rng" | "rngCalls" | "eventDeck" | "players" | "pending" | "rollContext" | "pendingEffect" | "delayed" | "bonds" | "jobs" | "triggerQueue" | "roundRecord" | "city"
+  "secrets" | "seed" | "rng" | "rngCalls" | "eventDeck" | "players" | "pending" | "rollContext" | "pendingEffect" | "delayed" | "bonds" | "jobs" | "triggerQueue" | "roundRecord" | "city" | "temporal"
 > & {
   city: PublicCity | null;
+  temporal?: PublicTemporal03 | null;
   viewerId: PlayerId;
   mySecrets: ViewerSecrets | null;
   players: Record<PlayerId, PublicPlayerState>;
@@ -556,6 +653,8 @@ export type Holding = { parts: PartId[]; /** Evacuation passes: the right to com
  * The evacuation boat at the pier. Ready once its three parts are installed,
  * the pier has power and the pier gate is repaired. Capacity is drawn per run
  * and kept from players until someone sees the boat (or the city is half gone).
+ * After boarding, it leaves once someone still in the city restarts the
+ * generator at the power station (or at once, with the auto-control chip).
  */
 export type Boat = {
   capacity: number;
@@ -563,15 +662,15 @@ export type Boat = {
   installed: PartId[];
   /** Power by two emergency batteries (the alternative to the power station). */
   batteryPower: boolean;
-  /** The auto-control chip is fitted: the gate runs from the boat, nobody stays. */
-  autoGate: boolean;
-  /** The round the boat was first found ready; departure comes the round after. */
+  /** The auto-control chip is fitted: the boat starts itself, nobody has to restart the generator. */
+  autoStart: boolean;
+  /** The round the boat was first found ready in act 2 or later; boarding comes the round after. */
   readyRound: number | null;
+  /** Boarded: locked in, no more turns. */
   aboard: PlayerId[];
-  gatekeeper: PlayerId | null;
+  /** Who restarted the generator at the power station, sending the boat off (stays behind). */
+  engineer: PlayerId | null;
   launched: boolean;
-  /** Voted to leave while a pass-holder was still outside with a seat free. */
-  betrayers: PlayerId[];
 };
 
 export type CityState = {
@@ -610,4 +709,8 @@ export type PublicCity = Omit<CityState, "zones" | "edges" | "holdings" | "passS
   boat: Omit<Boat, "capacity"> & { capacity: number | null };
   /** Passes the evacuation office has left; null until it opens (act 2). */
   officePasses: number | null;
+  /** Passes in players' hands (every pass handed out is in the public log; who holds them is not shown). */
+  passesOut: number;
+  /** Public pass sources still open: waiting people known to carry one, and the office once open. Hidden sources are not counted. */
+  knownPassSources: number;
 };

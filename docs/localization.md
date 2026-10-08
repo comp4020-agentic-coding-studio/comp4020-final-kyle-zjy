@@ -11,7 +11,7 @@ read the same state in different languages.
 | What | Where | Key |
 | --- | --- | --- |
 | Client UI copy (buttons, labels, notices) | `src/client/i18n/{en,zh-CN}.ts`, `t("lobby.ready")` | dotted key; `en.ts` is the source |
-| Scenario and character text (carriages, items, events, endings, 192 titles / skills…) | English from the game data itself; `src/shared/i18n/zh-CN/{scenario.ts,characters/*}` | the content's stable id |
+| Scenario and character text (rooms, items, events, endings, 192 titles / skills…) | English from game data and `src/shared/i18n/`; Chinese in `src/shared/i18n/zh-CN/` | the content's stable id |
 | Engine messages in game state (log lines, decision windows, results, secrets, rejections) | `m` tag at the call site (`src/shared/i18n/msg.ts`); `src/shared/i18n/zh-CN/messages.ts` | the English template, e.g. `"{0} gains {1} Fate ({2})."` |
 
 Game state carries `Msg` values (`{ k, p }`), never sentences: the server
@@ -93,3 +93,48 @@ English: timing, targets, amounts, and "once per run" carry over word for word.
 | aboard / despair (lost) | 已登船 / 绝望 | |
 | escaped / held the gate / left behind / drowned | 已逃离 / 守住闸门 / 被留下 / 溺亡 | per-player endings |
 | The Last Gatekeeper, The Betrayer, The Last Survivor, The Unsung Hero, The Rescuer, Companion in the Deep, Fate's Gambler, The Hoarder | 最后守门人、背叛者、最后幸存者、无名英雄、救援者、绝境同行者、命运赌徒、囤积者 | titles |
+
+## Scenario 03 foundation terms (zh-CN)
+
+Act I and II story text uses stable `s3.story.<ID>` UI keys in both locales, with
+matching engine log templates in the shared message catalog. Archivist 00's
+name, prompt and private note use `s3.npc.*` keys. The official file is always
+presented as a claim in the archive, preserving later distinctions between
+recorded history and fixed facts.
+
+Act II surveillance entries use `s3.intruders.trace.<KIND>` plus keyed node
+and choice names; the matching cinematic uses `s3.identity.*`. The server
+stores only IDs, signature tokens, player IDs and action provenance, so each
+browser renders the same state in its own locked locale.
+
+PHASES 1–7 use localized UI keys in `s3-en.ts` and `s3-zh-CN.ts`, plus shared
+message templates. Act III uses `s3.paradox.*`, `s3.fact.*` and `s3.route.*`
+for ZERO, claim/evidence pairs, the fading 2026 room state and third-route
+scene. Ji Linchuan is 纪临川 in Chinese throughout. Item names and descriptions
+use `scenario03.ts` and `zh-CN/scenario03.ts`. Act IV uses `s3.final.*`, `s3.ending.*` and `s3.results.*` for the
+causal checklist, three outcomes and failure. The true ending's identity
+reveal and seven-minute line have matching engine templates in both locales.
+PHASE 8 resolves all 192 skill names and descriptions through
+`characterText(locale, id, "S03_INCIDENT_ZERO")`; its setting-specific
+revisions are in `scenario03/skill-adapters.ts` and `zh-CN/skills03.ts`.
+The public anomaly deck uses event IDs in `scenario03/events.ts` with English
+and Chinese text in the matching i18n modules. Three scan protocols and
+co-located help have parallel client keys and engine templates.
+
+| English | 中文 | Notes |
+| --- | --- | --- |
+| Temporal Administration: Incident Zero | 时间管理局：第零号事故 | scenario title |
+| 1996 / 2026 | 1996 年 / 2026 年 | two versions of the same physical room |
+| Central Hall | 中央大厅 | starting room |
+| Research Wing | 研究区 | `TEMPORAL_CONTAINMENT` is a 2026 facility here, not a room |
+| time jump | 时间迁跃 | costs 2 AP and keeps the room |
+| cycle | 轮 | round label for the foundation |
+| causal revision | 因果改写 | counts material changes to the 2026 state |
+| sealed case file | 密封案卷 | owner-only evidence until shared by a later rule |
+| intervention | 干预 | a 1996 decision resolved by the server |
+| official account / corrected report | 官方版本 / 已更正报告 | separate from fixed facts |
+| numbered relic / source obligation | 编号遗物 / 来源义务 | one conserved item instance across years |
+| protected storage / Temporal Containment | 保护存放处 / 时间收容设施 | facilities inside existing rooms |
+| Phase Battery / Sedative | 相位电池 / 镇静剂 | ordinary consumables in the Scenario 03 pool |
+| Archive / Field / Stabilization scan | 档案扫描 / 现场扫描 / 稳定扫描 | one ordinary server roll per cycle, with distinct success-kind bits |
+| public anomaly | 公共异常事件 | Scenario 03's own five-card event deck |

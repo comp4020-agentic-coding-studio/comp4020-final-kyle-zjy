@@ -242,6 +242,10 @@ export function endingText(outcome: Outcome, reason: FailReason | null): EndingT
       return { won: true, kicker: "Escaped · True ending", title: "One more passenger.", lines: ["Three escape locks turn.", "Someone punches one more ticket.", "The passenger without a name takes the seat beside you."] };
     case "S02_EVACUATED":
       throw new Error("scenario 02 endings are its own");
+    case "S03_OFFICIAL_HISTORY":
+    case "S03_NO_TOMORROW":
+    case "S03_DECEIVE_HISTORY":
+      throw new Error("scenario 03 endings are its own");
     case "FAILED":
       if (reason === "COLLAPSE") return { won: false, kicker: "Lost · The train collapsed", title: "Passenger count: zero.", lines: ["The carriages fold into each other.", "The lights go out one by one.", "N13 keeps running, empty."] };
       if (reason === "ALL_LOST") return { won: false, kicker: "Lost · Nobody is left", title: "No one remembers their name.", lines: ["Every seat is taken.", "Nobody in them can say who they are.", "The train keeps every one of you."] };

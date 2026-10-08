@@ -17,7 +17,7 @@ export type EventCard = {
   kind: EventKind;
   bias: EventBias;
   /** Acts in which this card can be drawn. */
-  acts: (1 | 2 | 3)[];
+  acts: (1 | 2 | 3 | 4)[];
   /** Art key for the event card illustration. */
   art: "bell" | "lights" | "speaker" | "umbrella" | "static" | "suitcase" | "clock" | "seat" | "window" | "draft" | "whistle" | "music" | "moon" | "bolt" | "ticket" | "count" | "footsteps" | "brake" | "voice" | "platform"
     // scenario 02

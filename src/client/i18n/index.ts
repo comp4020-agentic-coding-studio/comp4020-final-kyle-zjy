@@ -12,9 +12,11 @@ import { format } from "../../shared/i18n/format.ts";
 import { DEFAULT_LOCALE, isLocale, type Locale, type Msg } from "../../shared/i18n/types.ts";
 import { useStore } from "../store.ts";
 import { en } from "./en.ts";
-import type { Catalog, MessageKey, Params, S2Key } from "./types.ts";
+import type { Catalog, MessageKey, Params, S2Key, S3Key } from "./types.ts";
 import { s2en } from "./s2-en.ts";
 import { s2zhCN } from "./s2-zh-CN.ts";
+import { s3en } from "./s3-en.ts";
+import { s3zhCN } from "./s3-zh-CN.ts";
 import { zhCN } from "./zh-CN.ts";
 
 export type { Locale } from "../../shared/i18n/types.ts";
@@ -22,7 +24,10 @@ export type { MessageKey, Params } from "./types.ts";
 
 export const STORAGE_KEY = "fate:locale";
 
-export const CATALOGS: Record<Locale, Catalog & Record<S2Key, string>> = { en: { ...en, ...s2en }, "zh-CN": { ...zhCN, ...s2zhCN } };
+export const CATALOGS: Record<Locale, Catalog & Record<S2Key | S3Key, string>> = {
+  en: { ...en, ...s2en, ...s3en },
+  "zh-CN": { ...zhCN, ...s2zhCN, ...s3zhCN },
+};
 
 /** Fills {name} placeholders; unknown placeholders are left as written. */
 export function interpolate(template: string, params?: Params): string {

@@ -30,7 +30,7 @@ export const PARTS: Record<PartId, { name: string; text: string }> = {
   ENGINE: { name: "Engine Block", text: "Heavy, oily, and the only one in the city that still turns over." },
   FUEL: { name: "Fuel Drums", text: "Enough diesel to get one boat out past the breakwater." },
   NAV: { name: "Navigation Module", text: "Charts the way out through streets that are now sea." },
-  CHIP: { name: "Auto-Control Chip", text: "Runs the pier gate from the boat. Not every run has one. With it fitted, nobody has to stay behind." },
+  CHIP: { name: "Auto-Control Chip", text: "Starts the boat's engine from the deck. Not every run has one. With it fitted, nobody has to go back for the generator." },
 };
 export const PART_IDS = Object.keys(PARTS) as PartId[];
 /** The three the boat cannot leave without. */

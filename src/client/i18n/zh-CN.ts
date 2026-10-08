@@ -253,7 +253,14 @@ export const zhCN: Catalog = {
 
   // ---- dock ---------------------------------------------------------------
   "action.MOVE": "移动",
+  "action.TIME_JUMP": "时间迁跃",
+  "action.INTERVENE": "干预",
+  "action.RESOLVE_HISTORY": "决定历史",
+  "action.PICK_UP": "拾取",
+  "action.STORE_ITEM": "存放道具",
   "action.INVESTIGATE": "调查",
+  "action.SCAN": "时间扫描",
+  "action.INTERACT_NPC": "交谈",
   "action.SEARCH": "搜索",
   "action.REPAIR": "修复",
   "action.HELP": "协助",

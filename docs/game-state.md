@@ -1,7 +1,7 @@
 # Game state & state machine
 
-Status: PHASE 0 design. Types live in `src/shared/game/*.ts` and
-`src/shared/characters/types.ts`; this document explains them.
+Types live in `src/shared/game/*.ts` and `src/shared/characters/types.ts`;
+this document explains them. The main diagram below describes Scenario 01.
 
 ## 1. Two levels of state
 
@@ -37,6 +37,70 @@ the room and the members' character picks).
 
 A fail condition (collapse = 12, all members lost) can fire from any act;
 it jumps straight to `ENDING` with `outcome = FAILED`.
+
+### Scenario 03, PHASE 1 foundation
+
+`GAME_PHASES` includes `ACT_4`, but only Scenario 03's registered round rule
+enters it. Scenario 01 and 02 keep their own transitions. Scenario 03's
+foundation spans rounds 1–3, 4–6, 7–9 and 10–12 across four acts; round 12
+ends in failure if the team has not resolved a history route.
+
+Act I now persists public, once-only story beat IDs in `temporal.story.revealed`.
+`INTERACT_NPC` grants only the acting player an `ARCHIVIST_NOTE` under
+`temporal.evidence`; the viewer projection exposes that player's own notes,
+while the public story IDs, interventions and 2026 present are shared.
+
+In Act II, `temporal.sealedProfiles` and trace actors remain server-only.
+`temporal.surveillance` records validated 1996 arrivals, movements,
+interventions and relic storage in order. The public projection withholds
+traces until surveillance is discovered, then shows signatures without actor
+IDs. It also masks the actor on public intervention records until the
+round-6 `INTRUDERS_IDENTIFIED` beat. At that point the server stores the
+profile matches and opens an acknowledged `S3_IDENTITY` sequence. Unreviewed
+private evidence remains owner-only.
+
+Act III adds `temporal.story.availableRoutes` and `discoveredFacts` to the
+public projection, while individual investigation IDs and ZERO's transcript
+remain in owner-only evidence. `PROTOTYPE_CORE: SHUT_DOWN` sets derived
+`present.powerRoomExists = false` and `administrationIntegrity = FADING`;
+the server rejects moves and jumps into the missing 2026 Power Room. Its
+1996 counterpart remains accessible. The material rewrite increments
+`causalRevision` and Collapse once. A round-8 fact/charter event grounds the
+round-9 `S3_THIRD_ROUTE` acknowledged scene. Available routes have no effect
+on ending state during PHASE 6.
+
+Act IV stores `temporal.finalRoute` only after a validated 1996 Archives
+resolution. Four causal nodes set the accident record, staff evacuation,
+staged founder death and hidden prototype. Stable history requires both
+assigned bootstrap source placements; no tomorrow erases the relic instances.
+Three additive Scenario 03 outcomes drive synchronized Ending and Results.
+The true route alone reveals Archivist 00's identity. Projection sends public
+bootstrap progress while keeping assignments, holdings and private evidence
+server-side or owner-only.
+
+The optional `temporal.locations` maps every player to a physical room and
+year. Each physical room exists once in an eight-room tree, with a 1996 and
+2026 state. A shared `carriageIndex` presence key encodes room and year for
+co-location, while walking uses tree adjacency. `TIME_JUMP` keeps the room
+and changes year. The server persists this state and projects public
+teammate locations to each viewer. Other temporal fields are planned for
+later phases.
+
+PHASE 2 adds `baselinePresent`, derived `present`, ordered `interventions`,
+private per-player `evidence` and `causalRevision`. The 2026 state is
+recomputed from the saved baseline for every 1996 decision. The public view
+receives the current present and intervention record; only the viewer's own
+evidence is included. An unchanged decision is recorded without incrementing
+the material rewrite revision.
+
+PHASE 3 adds `temporal.storedItems` with one record per numbered relic.
+Availability, year-specific ownership and protected storage are statuses of
+that record. `temporal.bootstrap` links seeded 2026 relics to assigned 1996
+source obligations; only a validated storage action marks an obligation
+placed. `temporal.holdings` keeps objective artifacts outside ordinary player
+items and generic item effects. Projection exposes visible world items and the
+viewer's own relics and obligations, never the holdings or another player's
+carried relics.
 
 ### Character selection and reveal are member stages, not room phases
 

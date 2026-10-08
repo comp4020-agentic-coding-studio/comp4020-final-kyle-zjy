@@ -17,24 +17,42 @@ const named = <K extends string>(load: () => Promise<Record<K, ComponentType>>, 
 const Intro = named(() => import("./Intro.tsx"), "Intro");
 const Game = named(() => import("./Game.tsx"), "Game");
 const CityGame = named(() => import("./CityGame.tsx"), "CityGame");
+const Scenario03Game = named(() => import("./Scenario03Screens.tsx"), "Scenario03Game");
+const Scenario03Intro = named(() => import("./Scenario03Screens.tsx"), "Scenario03Intro");
+const Scenario03Ending = named(() => import("./Scenario03Screens.tsx"), "Scenario03Ending");
+const Scenario03Results = named(() => import("./Scenario03Screens.tsx"), "Scenario03Results");
 const Ending = named(() => import("./Ending.tsx"), "Ending");
 const Results = named(() => import("./Results.tsx"), "Results");
 
 /** A run's screen: the train or the city, by the run's scenario. */
 function Run() {
   const scenario = useStore((s) => s.snapshot?.game?.scenarioId);
-  return scenario === "S02_SUNKEN_CITY" ? <CityGame /> : <Game />;
+  return scenario === "S03_INCIDENT_ZERO" ? <Scenario03Game /> : scenario === "S02_SUNKEN_CITY" ? <CityGame /> : <Game />;
+}
+
+function ScenarioIntro() {
+  const scenario = useStore((s) => s.snapshot?.game?.scenarioId);
+  return scenario === "S03_INCIDENT_ZERO" ? <Scenario03Intro /> : <Intro />;
+}
+function ScenarioEnding() {
+  const scenario = useStore((s) => s.snapshot?.game?.scenarioId);
+  return scenario === "S03_INCIDENT_ZERO" ? <Scenario03Ending /> : <Ending />;
+}
+function ScenarioResults() {
+  const scenario = useStore((s) => s.snapshot?.game?.scenarioId);
+  return scenario === "S03_INCIDENT_ZERO" ? <Scenario03Results /> : <Results />;
 }
 
 // One screen per phase.
 const SCREENS: Record<GamePhase, ComponentType> = {
   LOBBY: Lobby,
-  INTRO: Intro,
+  INTRO: ScenarioIntro,
   ACT_1: Run,
   ACT_2: Run,
   ACT_3: Run,
-  ENDING: Ending,
-  RESULTS: Results,
+  ACT_4: Run,
+  ENDING: ScenarioEnding,
+  RESULTS: ScenarioResults,
 };
 
 export function RoomGate({ code }: { code: string }) {

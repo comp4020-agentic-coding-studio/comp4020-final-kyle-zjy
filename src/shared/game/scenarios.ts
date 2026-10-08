@@ -14,6 +14,7 @@ export type ScenarioMeta = {
 export const SCENARIOS: Record<ScenarioId, ScenarioMeta> = {
   S01_LAST_TRAIN: { id: "S01_LAST_TRAIN", number: "01", open: true },
   S02_SUNKEN_CITY: { id: "S02_SUNKEN_CITY", number: "02", open: true },
+  S03_INCIDENT_ZERO: { id: "S03_INCIDENT_ZERO", number: "03", open: true },
 };
 
 export const DEFAULT_SCENARIO: ScenarioId = "S01_LAST_TRAIN";

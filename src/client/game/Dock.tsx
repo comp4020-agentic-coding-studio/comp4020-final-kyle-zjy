@@ -18,9 +18,9 @@ import { characterSkill } from "../../shared/game/skills.ts";
 
 const GRID: GameActionType[] = ["MOVE", "INVESTIGATE", "SEARCH", "REPAIR", "HELP", "TRADE", "STABILIZE", "CONFRONT"];
 /** Scenario 02: the city's actions (abilities, items and ending the turn have their own row). */
-const GRID02: GameActionType[] = ["MOVE", "SEARCH", "INVESTIGATE", "REPAIR", "OPERATE", "RESCUE", "SALVAGE", "HELP", "STABILIZE", "TRADE", "INSTALL", "REGISTER", "SHARE_INTEL"];
+const GRID02: GameActionType[] = ["MOVE", "SEARCH", "INVESTIGATE", "REPAIR", "OPERATE", "RESCUE", "SALVAGE", "HELP", "STABILIZE", "TRADE", "INSTALL", "REGISTER", "RESTART_GENERATOR", "SHARE_INTEL"];
 /** Actions that need no choice: pressing them acts. */
-const DIRECT = new Set<GameActionType>(["INVESTIGATE", "SEARCH", "REPAIR", "END_TURN", "OPERATE", "SALVAGE", "REGISTER"]);
+const DIRECT = new Set<GameActionType>(["INVESTIGATE", "SEARCH", "REPAIR", "END_TURN", "OPERATE", "SALVAGE", "REGISTER", "RESTART_GENERATOR"]);
 
 export type Mode = null | "MOVE" | "HELP" | "TRADE" | "CONFRONT" | "USE_SKILL" | "USE_ITEM" | "STABILIZE" | "RESCUE" | "INSTALL" | "SHARE_INTEL";
 

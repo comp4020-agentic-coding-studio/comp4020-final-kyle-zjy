@@ -263,6 +263,22 @@ engine, dice, abilities, windows and log. The client picks each phase's screen
 by the run's scenario (`RoomGate` → `Game` or `CityGame`; Intro, Ending and
 Results branch the same way).
 
+Scenario 03's implemented design and phase history are in
+[`scenario03-technical-design.md`](scenario03-technical-design.md). PHASE 1
+added its registration, eight-room two-year map, basic movement,
+time jumps, and four-act round loop. PHASE 2 adds ordered 1996 interventions,
+derived 2026 consequences and private case-file evidence through the existing
+scenario action and server projection hooks. PHASE 3 adds numbered relic
+instances, protected 1996 storage and consensual transfers through the shared
+decision window. PHASE 4 adds Act I story and Archivist 00; PHASE 5 adds
+server-recorded intruder traces and the round-6 identity scene. PHASE 6 adds
+Act III's ZERO interaction, prototype shutdown, official-claim comparison and
+the round-9 third-route scene through the same scenario hooks and projection.
+PHASE 7 adds the final 1996 interventions, a validated history-resolution
+intent and three ending/results routes through `startEnding`.
+The completed scenario is selectable in the lobby. The shared fourth phase is additive;
+Scenario 01/02 phase transitions remain unchanged.
+
 ## 15. PHASE 8: the Skill Resolver
 
 Abilities are layered so a new scenario never copies 192 skills:

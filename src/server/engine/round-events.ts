@@ -205,7 +205,7 @@ onResume("EVENT_VOTE", (ctx, w, answers) => {
   const summary = list(card.options!.map((o) => m`${ref.option(card.id, o.id)} ${counts[o.id]}`));
   const choice = ref.option(card.id, option.id);
   const who = run.decider ? ctx.s.players[run.decider]?.nickname : undefined;
-  log(ctx, who ? m`${who} decides: ${choice}. (${summary})` : tie ? m`The passengers decide: ${choice}. (${summary}, tie settled by chance)` : m`The passengers decide: ${choice}. (${summary})`, "VOTE");
+  log(ctx, who ? m`${who} decides: ${choice}. (${summary})` : ctx.s.scenarioId === "S03_INCIDENT_ZERO" ? tie ? m`The team decides: ${choice}. (${summary}, tie settled by chance)` : m`The team decides: ${choice}. (${summary})` : tie ? m`The passengers decide: ${choice}. (${summary}, tie settled by chance)` : m`The passengers decide: ${choice}. (${summary})`, "VOTE");
   // a vote on an everyone-chooses card gives every participant the winning option
   settle(ctx, run, ref.event(card.id), () => {
     if (card.kind === "EACH_CHOOSE") for (const id of run.pool) applyEffects(ctx, effectsOf(run, option.effects), { ownerId: "SYSTEM", self: id, targets: [], label: ref.event(card.id) });

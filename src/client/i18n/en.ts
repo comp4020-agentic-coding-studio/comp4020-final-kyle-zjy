@@ -257,7 +257,14 @@ export const en = {
 
   // ---- dock ---------------------------------------------------------------
   "action.MOVE": "Move",
+  "action.TIME_JUMP": "Time jump",
+  "action.INTERVENE": "Intervene",
+  "action.RESOLVE_HISTORY": "Resolve history",
+  "action.PICK_UP": "Pick up",
+  "action.STORE_ITEM": "Store item",
   "action.INVESTIGATE": "Investigate",
+  "action.SCAN": "Temporal scan",
+  "action.INTERACT_NPC": "Speak",
   "action.SEARCH": "Search",
   "action.REPAIR": "Repair",
   "action.HELP": "Help",

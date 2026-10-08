@@ -7,10 +7,11 @@
 // they find to the pier; others repair the power station, the pier gate and
 // the pumps, and run the pumps once fixed; anyone near a waiting stranger
 // rescues them. Nobody stays in a zone that goes under at the next rise.
-// When the boat is ready, everyone heads for the pier. At the departure: pass
-// holders board; someone ashore (or, failing that, the least-contributing
-// person aboard) holds the gate; those aboard wait for stragglers until the
-// water is high.
+// Once the boat is ready, nobody runs the pumps (boarding waits for act 2, at
+// Collapse 5). When the departure countdown starts, everyone heads for the
+// pier, except those with no pass, who go to the power station to be ready.
+// At the departure, pass-holders board; once someone is aboard, those left in
+// the city with no seat to wait for restart the generator.
 import type { MBTI, Zodiac } from "../src/shared/characters/types.ts";
 import type { GameAction } from "../src/shared/game/actions.ts";
 import { BOAT_PARTS } from "../src/shared/game/scenario02/items.ts";
@@ -61,8 +62,18 @@ function goal(s: GameState, id: PlayerId): Goal | null {
   // anything I carry for the boat goes to the pier first
   const fit = mine.parts.find((p) => !b.installed.includes(p));
   if (fit) return { at: PIER, action: { type: "INSTALL", part: fit } };
+  if (b.aboard.length && !b.launched) {
+    // someone is aboard: the boat only needs its generator. A pass-holder waits at the pier while a seat is free; everyone else goes to restart it
+    const pierInReach = me.carriageIndex === PIER || nextStep(s, me.carriageIndex, PIER) !== null;
+    if (mine.passes > 0 && b.capacity > b.aboard.length && pierInReach) return { at: PIER, action: { type: "END_TURN" } };
+    return { at: zoneIndex("POWER_STATION"), action: { type: "RESTART_GENERATOR" } };
+  }
   if (b.readyRound !== null || s.collapse >= 9) {
     if (mine.passes === 0 && s.act >= 2 && city.passSources.includes("EXCHANGE") && me.fate >= 3 && me.items.length) return { at: PIER, action: { type: "REGISTER" } };
+    // whoever won't take a seat (no pass, or outranked for the seats by those with more public work) goes to the generator now,
+    // before the water cuts the power station off from the pier
+    const holders = s.turnOrder.filter((x) => city.holdings[x].passes > 0 && !b.aboard.includes(x)).sort((x, y) => (city.contrib[y] ?? 0) - (city.contrib[x] ?? 0));
+    if (mine.passes === 0 || holders.indexOf(id) >= b.capacity - b.aboard.length) return { at: zoneIndex("POWER_STATION"), action: { type: "END_TURN" } };
     return { at: PIER, action: { type: "END_TURN" } };
   }
   const role = ROLES[s.turnOrder.indexOf(id) % ROLES.length];
@@ -89,7 +100,9 @@ function goal(s: GameState, id: PlayerId): Goal | null {
     PUMPS: () => {
       const f = city.facilities.PUMP_STATION;
       if (!f.done) return { at: zoneIndex("PUMP_STATION"), action: { type: "REPAIR" } };
-      return city.pumpedRound !== s.round ? { at: zoneIndex("PUMP_STATION"), action: { type: "OPERATE" } } : null;
+      // a ready boat waits for the evacuation window (act 2): a team that wants out stops holding the water back
+      const waiting = BOAT_PARTS.every((p) => b.installed.includes(p)) && city.facilities.HARBOUR_GATE.done && (city.facilities.POWER_STATION.done || b.batteryPower);
+      return !waiting && city.pumpedRound !== s.round ? { at: zoneIndex("PUMP_STATION"), action: { type: "OPERATE" } } : null;
     },
     PEOPLE: () => {
       const npc = city.npcs.find((n) => n.state === "WAITING" && nextStep(s, me.carriageIndex, n.zone) !== null);
@@ -111,6 +124,8 @@ export function turn02(s: GameState, id: PlayerId): GameAction {
   const city = s.city!;
   const me = s.players[id];
   if (city.boat.aboard.includes(id)) return { type: "END_TURN" };
+  // the generator comes before steadying yourself: it is the only way the boat leaves
+  if (enabled(s, id, "RESTART_GENERATOR")) return { type: "RESTART_GENERATOR" };
   if (me.lost && enabled(s, id, "STABILIZE")) return { type: "STABILIZE", mode: "SANITY" };
   const here = me.carriageIndex;
   const g = goal(s, id);
@@ -133,20 +148,12 @@ export function turn02(s: GameState, id: PlayerId): GameAction {
 }
 
 /** Answers a decision for a sensible team. */
-export function answer02(s: GameState, id: PlayerId, w: GameState["pending"][number]): string {
-  const b = s.city!.boat;
+export function answer02(s: GameState, _id: PlayerId, w: GameState["pending"][number]): string {
   if (w.kind === "FATE_SPEND" && s.roll) {
     const need = Math.max(0, 4 - s.roll.final);
     return w.options.some((o) => o.id === String(need)) ? String(need) : "0";
   }
   if (w.resume.kind === "S2_BOARD") return "BOARD";
-  if (w.resume.kind === "S2_GATE") {
-    const ashore = w.addressees.filter((x) => !b.aboard.includes(x));
-    if (ashore.length) return ashore[0] === id ? "HOLD" : "NO";
-    const least = [...w.addressees].sort((x, y) => (s.city!.contrib[x] ?? 0) - (s.city!.contrib[y] ?? 0))[0];
-    return least === id ? "HOLD" : "NO";
-  }
-  if (w.resume.kind === "S2_LAUNCH") return s.collapse >= 10 ? "LEAVE" : "WAIT";
   if (w.kind === "TRADE_OFFER") {
     const want = JSON.parse(String(w.resume.payload?.want ?? "{}")) as { items?: unknown[]; fate?: number; parts?: unknown[]; passes?: number };
     if (!want.items?.length && !want.fate && !want.parts?.length && !want.passes) return "ACCEPT";

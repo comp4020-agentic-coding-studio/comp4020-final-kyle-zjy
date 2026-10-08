@@ -47,7 +47,7 @@ export interface SkillEngine {
   wakes(state: GameState, event: TriggerEvent): PlayerId[];
 }
 
-const IN_RUN = new Set(["ACT_1", "ACT_2", "ACT_3"]);
+const IN_RUN = new Set(["ACT_1", "ACT_2", "ACT_3", "ACT_4"]);
 
 export function characterOf(state: GameState, playerId: PlayerId): Character | null {
   const p = state.players[playerId];

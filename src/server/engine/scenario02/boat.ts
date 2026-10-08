@@ -1,16 +1,18 @@
 // The way out: the boat at the pier, the passes that let someone compete for
 // a seat on it, and the departure, which is its own explicit phase:
 //
-//   1. BOARD   pass-holders at the pier choose to board; seats go by
-//              contribution when there are more takers than seats
-//   2. GATE    someone at the pier must hold the gate, and stays (unless the
-//              auto-control chip is fitted)
-//   3. LAUNCH  if a seat is free and a pass-holder is still out in the city,
-//              those aboard vote to leave now or wait one more round
+//   1. READY   the boat has its parts, power and gate; boarding waits for act 2
+//   2. BOARD   from the round after the countdown starts, each round:
+//              pass-holders at the pier choose to board; seats go by
+//              contribution when there are more takers than seats. Once
+//              aboard, a player is locked in and takes no more turns.
+//   3. START   someone still in the city restarts the generator at the power
+//              station (RESTART_GENERATOR, a roll that can be retried); on a
+//              success the boat leaves. The rare auto-control chip starts it
+//              from the deck instead.
 //
 // A pass is the right to compete for a seat, not a seat: there are always
-// more passes than seats. "Betrayer" is only ever someone who voted to leave
-// while a pass-holder was still outside and a seat was free.
+// more passes than seats.
 import { BOAT_PARTS } from "../../../shared/game/scenario02/items.ts";
 import { HARBOUR_ZONE, ZONES, zoneIndex } from "../../../shared/game/scenario02/map.ts";
 import type { GameState, PlayerGameState, PlayerId, PlayerResult } from "../../../shared/game/state.ts";
@@ -22,6 +24,7 @@ import { present } from "../players.ts";
 import { shuffle } from "../rng.ts";
 import { onResume, openWindow } from "../windows.ts";
 import { partSite } from "./city.ts";
+import { ensurePassContest } from "./passes.ts";
 
 const harbour = () => zoneIndex(HARBOUR_ZONE);
 const nick = (s: GameState, id: PlayerId) => s.players[id].nickname;
@@ -100,37 +103,66 @@ export function checkBoatLost(ctx: Ctx): boolean {
 // ---- departure ------------------------------------------------------------------------
 
 const atPier = (ctx: Ctx) => present(ctx).filter((p) => p.carriageIndex === harbour());
-/** Pass-holders not aboard (and not holding the gate), anywhere in the city. */
-const outside = (ctx: Ctx) => present(ctx).filter((p) => ctx.s.city!.holdings[p.playerId].passes > 0 && !ctx.s.city!.boat.aboard.includes(p.playerId) && ctx.s.city!.boat.gatekeeper !== p.playerId);
+const seatsLeft = (s: GameState) => s.city!.boat.capacity - s.city!.boat.aboard.length;
 
-/** The WORLD step: once the boat is ready, the round after, the departure runs. */
+/** Someone is aboard and the boat only waits for its generator: the last task in the city. */
+export const awaitingStart = (s: GameState) => {
+  const b = s.city!.boat;
+  return !b.launched && b.readyRound !== null && b.aboard.length > 0;
+};
+
+/**
+ * The WORLD step: once the boat is ready, the round after, the departure runs.
+ * The evacuation window only opens in act 2 (Collapse 5): a boat ready before
+ * that waits, and its countdown starts when the act changes (startCountdown).
+ */
 export function departureStep(ctx: Ctx): void {
   const s = ctx.s;
   const b = s.city!.boat;
   if (b.launched || !boatReady(s)) return;
-  if (b.readyRound === null) {
-    b.readyRound = s.round;
-    log(ctx, m`The boat is ready. It leaves at the end of next round. Anyone with a pass: get to the pier.`, "BOAT");
-    cue(ctx, "BOAT_READY", {});
+  if (s.act < 2) {
+    if (s.flags.s2_readyEarly) return;
+    s.flags.s2_readyEarly = 1;
+    log(ctx, m`The boat is ready, but the evacuation window isn't open yet. Boarding starts in Act II.`, "BOAT");
+    cue(ctx, "BOAT_READY", { early: true });
     return;
   }
+  if (b.readyRound === null) return startCountdown(ctx);
   if (s.round <= b.readyRound) return;
-  // nobody boards without knowing how many seats there are
-  checkReveal(ctx, true);
   board(ctx);
 }
 
-/** Step 1. Pass-holders at the pier choose whether to take a seat. */
+/**
+ * The departure countdown: boarding is in the next round's world step. The
+ * seats are shown now, so nobody spends their last round guessing, and the
+ * office is topped up if the contest for seats has died.
+ */
+export function startCountdown(ctx: Ctx): void {
+  const s = ctx.s;
+  const b = s.city!.boat;
+  if (b.launched || b.readyRound !== null || s.act < 2 || !boatReady(s)) return;
+  b.readyRound = s.round;
+  log(ctx, m`The boat is ready. Boarding opens next round. Anyone with a pass: get to the pier.`, "BOAT");
+  cue(ctx, "BOAT_READY", {});
+  checkReveal(ctx, true);
+  ensurePassContest(ctx);
+}
+
+/** Each world step from the round after the countdown: pass-holders at the pier choose whether to take a seat. */
 function board(ctx: Ctx): void {
   const s = ctx.s;
   const b = s.city!.boat;
+  const seats = seatsLeft(s);
   const askers = atPier(ctx).filter((p) => s.city!.holdings[p.playerId].passes > 0 && !b.aboard.includes(p.playerId));
-  if (!askers.length) return gate(ctx);
-  log(ctx, m`Boarding. ${b.capacity - b.aboard.length} seats left.`, "BOAT");
+  if (!askers.length || seats <= 0) return;
+  log(ctx, seats === 1 ? m`Boarding. 1 seat left.` : m`Boarding. ${seats} seats left.`, "BOAT");
   openWindow(ctx, {
     kind: "VOTE",
     title: m`Board the boat?`,
-    prompt: m`${b.capacity - b.aboard.length} seats left. Boarding uses your pass. If more board than there are seats, seats go to whoever did most for the city.`,
+    prompt:
+      seats === 1
+        ? m`1 seat left. Boarding uses your pass, and once aboard you stay aboard: no more turns in the city. If more board than there are seats, seats go to whoever did most for the city.`
+        : m`${seats} seats left. Boarding uses your pass, and once aboard you stay aboard: no more turns in the city. If more board than there are seats, seats go to whoever did most for the city.`,
     addressees: askers.map((p) => p.playerId),
     options: [
       { id: "BOARD", label: m`Board` },
@@ -147,7 +179,7 @@ onResume("S2_BOARD", (ctx, _w, answers) => {
   const city = s.city!;
   const b = city.boat;
   const wanting = Object.entries(answers).filter(([, a]) => a === "BOARD").map(([id]) => id);
-  const seats = b.capacity - b.aboard.length;
+  const seats = seatsLeft(s);
   // most public work first; ties by the run's generator, the same on replay
   const order = shuffle(s, wanting).sort((x, y) => (city.contrib[y] ?? 0) - (city.contrib[x] ?? 0));
   const taken = order.slice(0, seats);
@@ -159,99 +191,35 @@ onResume("S2_BOARD", (ctx, _w, answers) => {
   const left = order.slice(seats);
   if (left.length) log(ctx, m`No seat for ${list(left.map((id) => nick(s, id)))}. They did less for the city than those who took them.`, "BOAT");
   cue(ctx, "BOARD", { aboard: b.aboard });
-  gate(ctx);
+  if (!taken.length) return;
+  if (b.autoStart) {
+    log(ctx, m`The auto-control chip starts the boat's engine from the deck. Nobody has to go back for the generator.`, "BOAT");
+    return castOff(ctx, null);
+  }
+  if (!s.flags.s2_awaitStart) {
+    s.flags.s2_awaitStart = 1;
+    log(ctx, m`Those aboard can only wait. The boat's engine needs one last surge of power: someone still in the city has to reach ${ref.zone("POWER_STATION")} and restart the generator.`, "BOAT");
+    cue(ctx, "AWAIT_START", {});
+  }
 });
 
-/** Step 2. Someone at the pier holds the gate, and stays. The chip makes this unnecessary. */
-function gate(ctx: Ctx): void {
-  const s = ctx.s;
-  const b = s.city!.boat;
-  if (!b.aboard.length) return log(ctx, m`Nobody is aboard. The boat waits at the pier.`, "BOAT");
-  if (b.autoGate) {
-    log(ctx, m`The auto-control chip takes the gate. Nobody has to stay behind.`, "BOAT");
-    return launch(ctx);
-  }
-  const askers = atPier(ctx).map((p) => p.playerId);
-  openWindow(ctx, {
-    kind: "VOTE",
-    title: m`Who holds the gate?`,
-    prompt: m`The pier gate only stays open while someone works it by hand. Whoever holds it cannot reach the boat in time. If someone aboard volunteers, they give up their seat.`,
-    addressees: askers,
-    options: [
-      { id: "HOLD", label: m`I'll hold the gate` },
-      { id: "NO", label: m`Not me` },
-    ],
-    defaultOptionId: "NO",
-    resume: { kind: "S2_GATE" },
-    blocksTable: true,
-  });
-}
-
-onResume("S2_GATE", (ctx, _w, answers) => {
-  const s = ctx.s;
-  const city = s.city!;
-  const b = city.boat;
-  const volunteers = s.turnOrder.filter((id) => answers[id] === "HOLD");
-  // someone ashore first; a volunteer aboard steps off and frees their seat
-  const holder = volunteers.find((id) => !b.aboard.includes(id)) ?? volunteers[0];
-  if (!holder) return log(ctx, m`Nobody will hold the gate. The boat can't leave this round.`, "BOAT");
-  if (b.aboard.includes(holder)) {
-    b.aboard.splice(b.aboard.indexOf(holder), 1);
-    log(ctx, m`${nick(s, holder)} steps off the boat to hold the gate.`, "BOAT", holder);
-  } else log(ctx, m`${nick(s, holder)} takes the gate wheel.`, "BOAT", holder);
-  b.gatekeeper = holder;
-  cue(ctx, "GATE", { playerId: holder });
-  if (!b.aboard.length) {
-    b.gatekeeper = null;
-    return log(ctx, m`Nobody is left aboard. The boat waits at the pier.`, "BOAT");
-  }
-  launch(ctx);
-});
-
-/** Step 3. With a seat free and a pass-holder still out there, those aboard decide: go now, or wait a round. */
-function launch(ctx: Ctx): void {
-  const s = ctx.s;
-  const b = s.city!.boat;
-  const free = b.capacity - b.aboard.length;
-  const out = outside(ctx);
-  if (free <= 0 || !out.length) return castOff(ctx);
-  openWindow(ctx, {
-    kind: "VOTE",
-    title: m`Leave now?`,
-    prompt: m`${free} seats are still free, and ${list(out.map((p) => p.nickname))} still hold a pass somewhere in the city. Leave now, or wait one more round?`,
-    addressees: [...b.aboard],
-    options: [
-      { id: "LEAVE", label: m`Leave now` },
-      { id: "WAIT", label: m`Wait one more round` },
-    ],
-    defaultOptionId: "WAIT",
-    resume: { kind: "S2_LAUNCH", payload: { outside: JSON.stringify(out.map((p) => p.playerId)) } },
-    blocksTable: true,
-  });
-}
-
-onResume("S2_LAUNCH", (ctx, w, answers) => {
-  const s = ctx.s;
-  const b = s.city!.boat;
-  const leave = b.aboard.filter((id) => answers[id] === "LEAVE");
-  const wait = b.aboard.filter((id) => answers[id] !== "LEAVE");
-  // a tie waits: nobody is left behind on a coin toss
-  if (leave.length <= wait.length) {
-    b.gatekeeper = null;
-    return log(ctx, m`The boat waits one more round. Whoever held the gate can let go for now.`, "BOAT");
-  }
-  // an unambiguous act: you chose to go while a pass-holder was out there and a seat was free
-  const outsideIds = JSON.parse(String(w.resume.payload?.outside ?? "[]")) as string[];
-  if (outsideIds.length) for (const id of leave) if (!b.betrayers.includes(id)) b.betrayers.push(id);
-  log(ctx, m`${list(leave.map((id) => nick(s, id)))} vote to leave now.`, "BOAT");
-  castOff(ctx);
-});
-
-function castOff(ctx: Ctx): void {
+/** The generator caught (or the chip started the boat): it leaves with whoever is aboard. */
+export function castOff(ctx: Ctx, engineer: PlayerGameState | null): void {
   const s = ctx.s;
   const b = s.city!.boat;
   b.launched = true;
-  log(ctx, b.gatekeeper ? m`The gate swings open. The boat clears the breakwater with ${b.aboard.length} aboard. ${nick(s, b.gatekeeper)} watches it go.` : m`The gate swings open on its own. The boat clears the breakwater with ${b.aboard.length} aboard.`, "STORY");
+  b.engineer = engineer?.playerId ?? null;
+  log(
+    ctx,
+    engineer
+      ? b.aboard.length === 1
+        ? m`Power surges down to the pier. The boat clears the breakwater with 1 aboard. ${engineer.nickname} watches it go from the power station.`
+        : m`Power surges down to the pier. The boat clears the breakwater with ${b.aboard.length} aboard. ${engineer.nickname} watches it go from the power station.`
+      : b.aboard.length === 1
+        ? m`The boat clears the breakwater with 1 aboard.`
+        : m`The boat clears the breakwater with ${b.aboard.length} aboard.`,
+    "STORY",
+  );
   cue(ctx, "LAUNCH", { aboard: b.aboard });
   startEnding(ctx, "S02_EVACUATED");
 }
@@ -264,7 +232,7 @@ export function results02(ctx: Ctx): PlayerResult[] {
   const city = s.city!;
   const b = city.boat;
   const ids = s.turnOrder;
-  const escape = (id: PlayerId) => (b.launched ? (b.aboard.includes(id) ? "ESCAPED" : b.gatekeeper === id ? "GATEKEEPER" : "LEFT_BEHIND") : "DROWNED");
+  const escape = (id: PlayerId) => (b.launched ? (b.aboard.includes(id) ? "ESCAPED" : b.engineer === id ? "ENGINEER" : "LEFT_BEHIND") : "DROWNED");
   const most = (score: (id: PlayerId) => number, min: number) => {
     const best = Math.max(...ids.map(score));
     return best >= min ? ids.filter((id) => score(id) === best) : [];
@@ -279,10 +247,9 @@ export function results02(ctx: Ctx): PlayerResult[] {
   return ids.map((id) => {
     const fate = escape(id);
     const contrib = city.contrib[id] ?? 0;
-    const title: Msg = b.gatekeeper === id && b.launched
-      ? m`The Last Gatekeeper`
-      : b.betrayers.includes(id)
-        ? m`The Betrayer`
+    const title: Msg =
+      fate === "ENGINEER"
+        ? m`The Last Engineer`
         : escaped.length === 1 && escaped[0] === id && ids.length > 1
           ? m`The Last Survivor`
           : fate !== "ESCAPED" && b.launched && contrib >= 3
@@ -299,10 +266,15 @@ export function results02(ctx: Ctx): PlayerResult[] {
                       ? m`A Survivor`
                       : m`Taken by the Water`;
     const line: Msg =
-      fate === "ESCAPED" ? m`Escaped on the boat.` : fate === "GATEKEEPER" ? m`Held the gate so the others could leave.` : fate === "LEFT_BEHIND" ? m`Left behind when the boat sailed.` : m`Went down with the city.`;
+      fate === "ESCAPED"
+        ? m`Escaped on the boat.`
+        : fate === "ENGINEER"
+          ? m`Restarted the generator so the others could leave.`
+          : fate === "LEFT_BEHIND"
+            ? m`Left behind when the boat sailed.`
+            : m`Went down with the city.`;
     const highlights: Msg[] = [line, contrib === 1 ? m`1 point of public work` : m`${contrib} points of public work`];
     if (city.rescues[id]) highlights.push(city.rescues[id] === 1 ? m`1 rescue` : m`${city.rescues[id]} rescues`);
-    if (b.betrayers.includes(id)) highlights.push(m`voted to leave while someone with a pass was still out there`);
     return { playerId: id, obsession: null, obsessionMet: false, title, highlights, messages: [], escape: fate };
   });
 }
@@ -314,4 +286,3 @@ export function announce02(ctx: Ctx): void {
   if (s.outcome === "S02_EVACUATED") return log(ctx, m`Evacuated: ${b.aboard.length} of ${s.turnOrder.length}.`, "ENDING_WIN");
   log(ctx, s.failReason === "BOAT_LOST" ? m`No boat leaves the city. Nobody escapes.` : m`The city is gone. Nobody escapes.`, "ENDING_FAIL");
 }
-

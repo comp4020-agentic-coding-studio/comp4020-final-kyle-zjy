@@ -151,3 +151,40 @@ Generic words mean in the city:
 - **Task goals**: "find a boat part or a pass" stands for scenario 01's fragment goal, and "reach a zone you haven't been to" for its new-carriage goal.
 - **Items**: an item granted by an ability comes from the city's items.
 - **"Three kinds of roll"**: counts the city's rolls. Search, investigate, repair and rescue or salvage stand for scenario 01's investigate, search, repair and confront.
+
+## Scenario 03 (Incident Zero)
+
+`SCENARIO03_SKILLS` resolves the same 192 Core Skills through the shared
+resolver. It inherits setting-neutral wording from the complete Scenario 01
+catalog, applies the two setting-neutral Scenario 02 revisions, and replaces
+the eight entries below. `characterText` resolves all 192 English and Chinese
+names and descriptions; the only mechanical override discards Scenario 01's
+ticket pass for Pisces ENTP and uses its unchanged core shield. Scenario 01
+and 02 adapter tables are untouched.
+
+| Character | Earlier wording | Incident Zero wording and reason |
+| --- | --- | --- |
+| aries-isfp | The train or city offers boons | The Administration offers the same two instant boons |
+| aries-estj | Free Investigate roll | Free temporal scan at the player's location |
+| gemini-entj | Chosen quick roll resolves as Investigate | Chosen result resolves as a temporal scan |
+| taurus-istp | Same carriage or zone | Same physical room and year, validated by the shared presence key |
+| leo-entj | Move one carriage or zone | Move one open room in the target's year; the `movePlayer` hook follows the eight-room graph |
+| capricorn-estj | Two free Investigate rolls | Two free temporal scans; successful rollers receive the same Fate bonus |
+| pisces-entp | Ticket pass in Scenario 01; core shield in Scenario 02 | Core one-hit shield, since no ticket check exists |
+| sagittarius-istj | Three different ordinary roll kinds | Three temporal scan protocols, tracked by the same success-kind bits |
+
+The **ordinary roll** is a once-per-cycle temporal scan. Archive, field and
+stabilization protocols use the same server die, Fate spending and reaction
+pipeline. A Success grants 1 Fate, Perfect grants 2, Failure loses 1 Fate,
+and Disaster loses 1 Sanity. Shared forced Investigate effects resolve as a
+free field scan here. Help is a co-located, year-aware +1 to a later scan.
+
+The **public event** is an Incident Zero anomaly, drawn from its own seeded
+five-card deck after each cycle's story beat. Its instant, group-roll, vote
+and individual-choice cards make event preview, redraw, cancellation and
+reward skills meaningful. Generic item grants draw only the ordinary supply
+pool, never numbered relics or objective artifacts. Shared task goals map to
+causal intervention, new evidence, scan help and a new room/year location.
+Every rewording has matching English and Simplified Chinese text. Skill cues
+use the existing VFX family, with clock imagery for temporal previews,
+event control and movement.

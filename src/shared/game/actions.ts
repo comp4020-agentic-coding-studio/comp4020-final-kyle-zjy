@@ -1,5 +1,8 @@
 import type { Msg } from "../i18n/types.ts";
 import type { PartId } from "./scenario02/items.ts";
+import type { CausalNodeId03 } from "./scenario03/nodes.ts";
+import type { EndingRoute03 } from "./scenario03/story.ts";
+import type { NpcId03 } from "./scenario03/story.ts";
 // Intents a client may send. Nothing here carries a value the server should
 // decide (dice, fate totals, phase): the server validates every action against
 // the live state, then reduces it (docs/architecture.md §4).
@@ -20,11 +23,18 @@ export type LobbyAction =
   /** Host only, during a run: move a stalled table along one step (nothing has a time limit). */
   | { type: "SKIP_WAITING" };
 
-export type TradeOffer = { items: ItemId[]; fate: number; /** Scenario 02: boat parts. */ parts?: PartId[]; /** Scenario 02: evacuation passes. */ passes?: number };
+export type TradeOffer = { items: ItemId[]; fate: number; /** Scenario 02: boat parts. */ parts?: PartId[]; /** Scenario 02: evacuation passes. */ passes?: number; /** Scenario 03: numbered ordinary relics. */ instances?: string[] };
 
 export type GameAction =
   | { type: "MOVE"; toCarriage: number }
+  | { type: "TIME_JUMP" }
+  | { type: "INTERVENE"; nodeId: CausalNodeId03; choiceId: string }
+  | { type: "RESOLVE_HISTORY"; route: EndingRoute03 }
+  | { type: "PICK_UP"; instanceId: string }
+  | { type: "STORE_ITEM"; instanceId: string }
   | { type: "INVESTIGATE" }
+  | { type: "SCAN"; protocol: "ARCHIVE" | "FIELD" | "STABILIZE" }
+  | { type: "INTERACT_NPC"; npcId: NpcId03 }
   | { type: "SEARCH" }
   | { type: "REPAIR" }
   | { type: "HELP"; targetId: PlayerId }
@@ -41,6 +51,7 @@ export type GameAction =
   | { type: "SHARE_INTEL"; intelId: string }
   | { type: "INSTALL"; part: PartId | "BATTERIES" }
   | { type: "REGISTER" }
+  | { type: "RESTART_GENERATOR" }
   | { type: "RESPOND"; windowId: string; optionId: string }
   | { type: "ACK_SEQUENCE" };
 

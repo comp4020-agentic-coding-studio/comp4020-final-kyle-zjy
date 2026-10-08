@@ -4,6 +4,15 @@ Status: PHASE 0 design. Tokens are implemented in
 `src/client/styles/tokens.css`; every component reads colours, type, radii
 and motion from those variables, never from literals.
 
+Scenario 03 applies those tokens to two views of one eight-room building:
+warm gold for 1996, cyan signal for 2026. The same tree layout carries
+both years; room labels, occupancy, NPC and containment markers communicate
+state in text as well as colour. Numbered incident beats and the 1996-to-2026
+decision ribbon make the causal rewrite legible. Identity, third-route and
+ending scenes use separate light treatments while retaining the shared
+tarot frame and typography. On phones the map becomes a compact two-column
+tree, with every actionable room at least 48 px high.
+
 ## 1. One sentence
 
 **A modern city at 00:17 where something is slightly wrong** — midnight

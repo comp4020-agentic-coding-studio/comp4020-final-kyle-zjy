@@ -11,14 +11,15 @@ import { Icon } from "./Icon.tsx";
 export function TopBar({ g, onLog, onSecrets, secretsCount }: { g: PlayerView; onLog: () => void; onSecrets: () => void; secretsCount: number }) {
   const danger = g.collapse >= 9;
   const t = useT();
-  const actFull = t(`game.act.${g.act}.full`);
+  const act = Math.min(g.act, 3) as 1 | 2 | 3;
+  const actFull = t(`game.act.${act}.full`);
   return (
     <header className="relative z-20 border-b border-gold/15 bg-[#05060d]/85 px-3 pt-[max(8px,env(safe-area-inset-top))] pb-2 backdrop-blur-md sm:px-4">
       <div className="mx-auto flex max-w-6xl items-center gap-2 sm:gap-4">
         <div className="shrink-0">
           <p className="label text-[9px] leading-none sm:text-[10px]" title={actFull}>
             {/* phones show "Act II"; the act's name joins it from sm up */}
-            <span className="sm:hidden">{t(`game.act.${g.act}.short`)}</span>
+            <span className="sm:hidden">{t(`game.act.${act}.short`)}</span>
             <span className="hidden sm:inline">{actFull}</span>
           </p>
           <p className="font-mono text-lg leading-tight whitespace-nowrap text-moon sm:text-xl">

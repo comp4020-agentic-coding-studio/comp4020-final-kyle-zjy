@@ -18,6 +18,8 @@ import { randomBytes } from "node:crypto";
 import { tuningFor } from "../src/shared/game/scenario01/content.ts";
 import { ROSTER } from "../src/shared/characters/roster/index.ts";
 import { mkdirSync, writeFileSync } from "node:fs";
+import { boatReady } from "../src/server/engine/scenario02/boat.ts";
+import { passAvailability, type PassAvailability } from "../src/server/engine/scenario02/passes.ts";
 import type { CharacterId } from "../src/shared/characters/types.ts";
 import { playRun } from "../test/bot.ts";
 import { playRun02 } from "../test/bot02.ts";
@@ -69,10 +71,20 @@ if (arg("scenario", "01") === "02") {
       const seed = randomBytes(16).toString("hex");
       const collapse = new Map<string, number>();
       let seen = 0;
+      // the contest for seats: at the countdown's start (after any office top-up)
+      let atCountdown: PassAvailability | null = null;
+      // Collapse when the boat was first ready, when boarding first opened, and the highest act reached
+      let readyAt: number | null = null;
+      let boardingAt: number | null = null;
+      let maxAct = 1;
       const run = playRun02({
         seed,
         chars: picks.map((c) => [c.zodiac, c.mbti]),
         onStep: (st) => {
+          if (readyAt === null && boatReady(st)) readyAt = st.collapse;
+          if (!atCountdown && st.city!.boat.readyRound !== null) atCountdown = passAvailability(st);
+          if (boardingAt === null && st.pending.at(-1)?.resume.kind === "S2_BOARD") boardingAt = st.collapse;
+          maxAct = Math.max(maxAct, st.act);
           for (const l of st.log.filter((x) => x.seq >= seen && x.kind === "COLLAPSE_UP")) {
             const why = l.text.match(/\((.+)\)\.$/)?.[1] ?? "?";
             collapse.set(why, (collapse.get(why) ?? 0) + 1);
@@ -83,15 +95,44 @@ if (arg("scenario", "01") === "02") {
       const st = run.state;
       if (LOGS) writeFileSync(`${LOGS}/s02-${n}p-${String(++logNo).padStart(3, "0")}.json`, JSON.stringify({ scenario: "S02_SUNKEN_CITY", seed, characters: picks.map((c) => c.id), outcome: st.outcome, failReason: st.failReason, round: st.round, inputs: run.inputs }));
       const b = st.city!.boat;
-      return { left: st.outcome === "S02_EVACUATED", stuck: st.phase !== "RESULTS", reason: st.failReason, aboard: b.aboard.length, seats: b.capacity, chip: b.autoGate, round: st.round, collapse };
+      return {
+        left: st.outcome === "S02_EVACUATED",
+        stuck: st.phase !== "RESULTS",
+        reason: st.failReason,
+        aboard: b.aboard.length,
+        seats: b.capacity,
+        chip: b.autoStart && b.launched && !b.engineer,
+        round: st.round,
+        collapse,
+        readyAt: readyAt as number | null,
+        boardingAt: boardingAt as number | null,
+        launchAt: b.launched ? st.collapse : null,
+        maxAct,
+        fallback: !!st.flags.s2_act2Deadline,
+        restarts: st.flags.s2_restartAttempts ?? 0,
+        atCountdown: atCountdown as PassAvailability | null,
+        officeAdded: st.flags.s2_officeAdded ?? 0,
+      };
     });
+    type Row = (typeof rows)[number];
+    const avg = (of: Row[], f: (r: Row) => number) => (of.length ? (of.reduce((a, r) => a + f(r), 0) / of.length).toFixed(1) : "-");
+    const pct = (k: number) => `${Math.round((100 * k) / RUNS)}%`;
     const left = rows.filter((r) => r.left);
+    const ready = rows.filter((r) => r.readyAt !== null);
+    const boarded = rows.filter((r) => r.boardingAt !== null);
+    const byGenerator = left.filter((r) => !r.chip);
     const reasons = ["COLLAPSE", "BOAT_LOST"].map((x) => `${x.toLowerCase()} ${rows.filter((r) => r.reason === x).length}`).join(", ");
-    const aboard = left.reduce((a, r) => a + r.aboard, 0);
-    const seats = left.reduce((a, r) => a + r.seats, 0);
     console.log(
-      `${String(n).padStart(2)} players: boat left ${left.length}/${RUNS} · escaped ${aboard}/${left.length * n} players when it did (${seats} seats)` +
-        ` · no sacrifice (chip) ${left.filter((r) => r.chip).length} · lost: ${reasons} · stuck ${rows.filter((r) => r.stuck).length} · avg rounds ${(rows.reduce((a, r) => a + r.round, 0) / RUNS).toFixed(1)}`,
+      `${String(n).padStart(2)} players: boat left ${left.length}/${RUNS} (${pct(left.length)}) · drowned ${pct(rows.filter((r) => r.reason).length)} (${reasons}) · stuck ${rows.filter((r) => r.stuck).length}` +
+        ` · escaped ${left.reduce((a, r) => a + r.aboard, 0)}/${left.length * n} players when it left · avg rounds ${avg(rows, (r) => r.round)}`,
+    );
+    console.log(
+      `   Collapse at boat ready ${avg(ready, (r) => r.readyAt!)} (${ready.length} runs) · at boarding ${avg(boarded, (r) => r.boardingAt!)} (${boarded.length}) · at launch ${avg(left, (r) => r.launchAt!)}` +
+        ` · act II reached ${pct(rows.filter((r) => r.maxAct >= 2).length)} · act III ${pct(rows.filter((r) => r.maxAct >= 3).length)} · round-6 fallback ${pct(rows.filter((r) => r.fallback).length)}`,
+    );
+    console.log(
+      `   generator restarts per launch ${avg(byGenerator, (r) => r.restarts)} (${byGenerator.length} launches by the generator, ${left.length - byGenerator.length} by the chip)` +
+        ` · contest at the countdown (more in the running than seats) ${rows.filter((r) => r.atCountdown && r.atCountdown.effective > r.seats).length}/${rows.filter((r) => r.atCountdown).length} · office top-ups in ${rows.filter((r) => r.officeAdded).length} runs`,
     );
     const sources = new Map<string, number>();
     for (const r of rows) for (const [k, v] of r.collapse) sources.set(k, (sources.get(k) ?? 0) + v);

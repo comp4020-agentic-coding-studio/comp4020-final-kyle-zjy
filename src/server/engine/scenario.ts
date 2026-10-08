@@ -30,6 +30,8 @@ export type ScenarioRules = {
   apFor(s: GameState, p: PlayerGameState): number;
   /** Per player, after AP and prepared shields. */
   playerRoundStart?(ctx: Ctx, p: PlayerGameState): void;
+  /** Whether this player still takes turns (scenario 02: not once aboard the boat). Everyone does if absent. */
+  takesTurn?(s: GameState, p: PlayerGameState): boolean;
   /** After every player's round start: scripted beats. */
   onRoundStart(ctx: Ctx): void;
   /** The step after the last turn. */

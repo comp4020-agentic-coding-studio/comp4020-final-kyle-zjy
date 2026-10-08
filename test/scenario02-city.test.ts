@@ -56,11 +56,10 @@ describe("drawing a city", () => {
     expect(fresh(7)).not.toEqual(fresh(8));
   });
 
-  it("starts everyone together at a dry Civic Square, for 2 and for 10 players", () => {
+  it("seats 2 and 10 players, with Civic Square (the fallback ground) dry when the sirens stop", () => {
     for (const n of [2, 10]) {
       const s = city(n);
       expect(s.turnOrder).toHaveLength(n);
-      for (const id of s.turnOrder) expect(s.players[id].carriageIndex).toBe(at("CIVIC_SQUARE"));
       expect(s.city!.zones[at("CIVIC_SQUARE")].status).toBe("NORMAL");
     }
   });
@@ -81,12 +80,13 @@ describe("the water rises", () => {
       });
       for (const e of s.city!.edges) if (e.breakAt !== null) expect(e.broken).toBe(c >= e.breakAt);
       if (c === 10) {
-        // by then only the high ground and the pier are left
+        // by then only the high ground, the pier and the power station's raised generator hall are left
         const dry = s.city!.zones.map((z, i) => (z.status === "SUBMERGED" ? null : ZONES[i])).filter(Boolean);
-        expect(dry.every((z) => z!.elevation === "HIGH" || z!.id === "HARBOUR")).toBe(true);
+        expect(dry.every((z) => z!.elevation === "HIGH" || z!.id === "HARBOUR" || z!.id === "POWER_STATION")).toBe(true);
       }
     }
     expect(s.city!.zones[at("HARBOUR")].status).not.toBe("SUBMERGED");
+    expect(s.city!.zones[at("POWER_STATION")].status).not.toBe("SUBMERGED");
     changeCollapse(ctx, -3, m`test`);
     expect(s.city!.zones.map((z) => z.status)).toEqual(seen);
   });

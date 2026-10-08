@@ -218,7 +218,7 @@ registerHandler("VOTE", (ctx, e, scope) => {
       : e.question === "CONFIRM_REROLL"
         ? [{ id: "YES", label: m`Throw it out` }, { id: "NO", label: m`Keep it` }]
         : [{ id: "LEFT", label: m`The left door` }, { id: "RIGHT", label: m`The right door` }];
-  const prompt = { PICK_PLAYER: m`Vote for one passenger.`, CONFIRM_REROLL: m`Throw out the next public event and draw another?`, MINORITY_REWARD: m`Choose a door, in secret. The fewer who pick it, the better.`, PICK_OUTCOME: m`` }[e.question];
+  const prompt = { PICK_PLAYER: ctx.s.scenarioId === "S03_INCIDENT_ZERO" ? m`Vote for one teammate.` : m`Vote for one passenger.`, CONFIRM_REROLL: m`Throw out the next public event and draw another?`, MINORITY_REWARD: m`Choose a door, in secret. The fewer who pick it, the better.`, PICK_OUTCOME: m`` }[e.question];
   openWindow(ctx, {
     kind: "VOTE",
     title: scope.label,
@@ -237,7 +237,7 @@ onResume("SKILL_VOTE", (ctx, w, answers) => {
   const question = String(w.resume.payload?.question);
   const { winner, counts } = tally(ctx, answers, w.options.map((o) => o.id));
   if (question === "PICK_PLAYER") {
-    log(ctx, m`${sv.label}: the passengers choose ${nick(ctx, winner)}.`, "VOTE", winner);
+    log(ctx, ctx.s.scenarioId === "S03_INCIDENT_ZERO" ? m`${sv.label}: the team chooses ${nick(ctx, winner)}.` : m`${sv.label}: the passengers choose ${nick(ctx, winner)}.`, "VOTE", winner);
     return applyEffects(ctx, reward, restore(sv, { triggerSubject: winner }));
   }
   if (question === "CONFIRM_REROLL") {
@@ -292,9 +292,11 @@ registerHandler("REVISE_CHOICE", (ctx, _e, scope) => {
 function forced(ctx: Ctx, id: PlayerId, kind: string, scope: Scope): boolean {
   const p = ctx.s.players[id];
   if (kind === "ORDINARY") {
-    // a real Investigate where they stand, at no cost
+    // A free scan is the ordinary roll of Incident Zero; the other scenarios
+    // retain their existing Investigate outcome.
     const { value, tier } = quickRoll(ctx, p);
-    resolveAs(ctx, p, "INVESTIGATE", value, m`${scope.label} (Investigate)`);
+    if (ctx.s.scenarioId === "S03_INCIDENT_ZERO") resolveAs(ctx, p, "S3_SCAN_FIELD", value, m`${scope.label} (temporal scan)`);
+    else resolveAs(ctx, p, "INVESTIGATE", value, m`${scope.label} (Investigate)`);
     return isSuccess(tier);
   }
   const { value, tier } = quickRoll(ctx, p);
@@ -340,7 +342,7 @@ registerHandler("GROUP_ROLL", (ctx, e, scope) => {
   for (const r of rolls) cue(ctx, "QUICK_ROLL", { playerId: r.id, value: r.value, tier: tierOf(r.value) });
   log(ctx, m`${scope.label}: ${rolls.map((r) => `${nick(ctx, r.id)} ${r.value}`).join(" · ")}.`, "ROLL");
   if (e.mode === "PICK_ONE") {
-    return choose(ctx, scope, m`Which result counts? It resolves as an Investigate where that player stands.`, rolls.map((r) => ({ id: r.id, label: m`${nick(ctx, r.id)}: ${r.value}` })), "PICK_ROLL", rolls);
+    return choose(ctx, scope, ctx.s.scenarioId === "S03_INCIDENT_ZERO" ? m`Which result counts? It resolves as a temporal scan where that player stands.` : m`Which result counts? It resolves as an Investigate where that player stands.`, rolls.map((r) => ({ id: r.id, label: m`${nick(ctx, r.id)}: ${r.value}` })), "PICK_ROLL", rolls);
   }
   if (e.mode === "SUM_THRESHOLD") {
     const total = rolls.reduce((sum, r) => sum + r.value, 0);
@@ -357,7 +359,10 @@ registerHandler("GROUP_ROLL", (ctx, e, scope) => {
 });
 CHOICES.set("PICK_ROLL", (ctx, scope, answer, data: { id: PlayerId; value: number }[]) => {
   const r = data.find((x) => x.id === answer) ?? data[0];
-  if (ctx.s.players[r.id]) resolveAs(ctx, ctx.s.players[r.id], "INVESTIGATE", r.value, m`${scope.label} (Investigate)`);
+  if (ctx.s.players[r.id]) {
+    if (ctx.s.scenarioId === "S03_INCIDENT_ZERO") resolveAs(ctx, ctx.s.players[r.id], "S3_SCAN_FIELD", r.value, m`${scope.label} (temporal scan)`);
+    else resolveAs(ctx, ctx.s.players[r.id], "INVESTIGATE", r.value, m`${scope.label} (Investigate)`);
+  }
 });
 
 registerHandler("WAGER", (ctx, e, scope) => {
@@ -402,7 +407,7 @@ const GOALS = Object.keys(TASK_GOALS) as TaskGoal[];
 
 export function taskProgress(ctx: Ctx, id: PlayerId, goal: TaskGoal): number {
   const st = ctx.s.players[id].stats;
-  const places = ctx.s.city ? (ctx.s.players[id].counters.zonesVisited ?? 1) : st.carriagesVisited.length;
+  const places = ctx.s.city || ctx.s.temporal ? (ctx.s.players[id].counters.zonesVisited ?? 1) : st.carriagesVisited.length;
   return { REPAIR: st.repairs, FRAGMENT: st.fragmentsFound, HELP: st.helpsGiven, NEW_CARRIAGE: places }[goal];
 }
 
@@ -411,8 +416,9 @@ registerHandler("SET_TASK", (ctx, e, scope) => {
   if (!setBy) return;
   for (const id of subjects(ctx, scope, e.who)) {
     const goal = pick(ctx.s, GOALS);
-    ctx.s.secrets[id].tasks.push({ id: newId(ctx, "task"), text: ctx.s.city ? ref.goal02(goal) : ref.goal(goal), untilRound: ctx.s.round + e.rounds, done: false, goal, baseline: taskProgress(ctx, id, goal), reward: e.reward, setBy });
-    log(ctx, e.secret ? m`${nick(ctx, id)} draws a secret goal.` : m`${scope.label}: by the end of round ${ctx.s.round + e.rounds}, ${nick(ctx, id)} must: ${ctx.s.city ? ref.goal02(goal) : ref.goal(goal)}.`, "SKILL", id);
+    const words = ctx.s.temporal ? ref.goal03(goal) : ctx.s.city ? ref.goal02(goal) : ref.goal(goal);
+    ctx.s.secrets[id].tasks.push({ id: newId(ctx, "task"), text: words, untilRound: ctx.s.round + e.rounds, done: false, goal, baseline: taskProgress(ctx, id, goal), reward: e.reward, setBy });
+    log(ctx, e.secret ? m`${nick(ctx, id)} draws a secret goal.` : m`${scope.label}: by the end of round ${ctx.s.round + e.rounds}, ${nick(ctx, id)} must: ${words}.`, "SKILL", id);
   }
 });
 

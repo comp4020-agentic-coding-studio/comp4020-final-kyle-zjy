@@ -12,7 +12,8 @@ import { int, pick } from "../rng.ts";
 import { registerScenario } from "../scenario.ts";
 import { s02Actions } from "./actions.ts";
 import { applyFlood, moveTargets, stepToward } from "./city.ts";
-import { announce02, checkBoatLost, checkReveal, departureStep, results02 } from "./boat.ts";
+import { announce02, checkBoatLost, checkReveal, departureStep, results02, startCountdown } from "./boat.ts";
+import { ensurePassContest } from "./passes.ts";
 import { createScenario02 } from "./create.ts";
 import { drawRoundEvent } from "../round-events.ts";
 import "./events.ts";
@@ -30,14 +31,26 @@ const BANDS: [number, Msg][] = [
 ];
 
 /**
- * Round-end water. It holds half the time, rises by 1 a third of the time and
- * surges by 2 otherwise (about 0.67 a round), so nobody can count the rounds left; held rounds (pumps, good
- * events) cancel part of a rise.
+ * The round-end water, by table size, out of 20: how often it holds and how
+ * often it surges by 2 (otherwise it rises by 1). Bigger tables have more hands
+ * and more seats to fight over, so the sea presses harder; it still holds
+ * often enough that nobody can count the rounds left. Expected rise a round:
+ * 2 players 0.60, 3–4 0.80, 5–6 0.85, 7–8 0.90, 9–10 0.95.
  */
+export function waterOdds(players: number): { hold: number; surge: number } {
+  if (players <= 2) return { hold: 10, surge: 2 };
+  if (players <= 4) return { hold: 7, surge: 3 };
+  if (players <= 6) return { hold: 6, surge: 3 };
+  if (players <= 8) return { hold: 6, surge: 4 };
+  return { hold: 5, surge: 4 };
+}
+
+/** Round-end water: held, +1 or +2 by the table's odds, plus surges, minus what the pumps and good events hold back. */
 function roundWater(ctx: Ctx): void {
   const city = ctx.s.city!;
-  const d = int(ctx.s, 6);
-  let rise = (d <= 2 ? 0 : d === 5 ? 2 : 1) + city.surge;
+  const odds = waterOdds(ctx.s.turnOrder.length);
+  const d = int(ctx.s, 20);
+  let rise = (d < odds.hold ? 0 : d >= 20 - odds.surge ? 2 : 1) + city.surge;
   city.surge = 0;
   const held = Math.min(city.hold, rise);
   city.hold = 0;
@@ -63,8 +76,28 @@ function waterMoved(ctx: Ctx, from: number): void {
     s.phase = act === 3 ? "ACT_3" : "ACT_2";
     s.sequence = { kind: "FLOOD", acks: [], stage: act };
     cue(ctx, "FLOOD_STAGE", { act });
+    checkReveal(ctx);
+    // the evacuation window opens: a boat already waiting starts its countdown, and the contest for seats is checked
+    startCountdown(ctx);
+    ensurePassContest(ctx);
   }
   checkReveal(ctx);
+}
+
+/** By this round the city is past its first act, however well the pumps have held. */
+export const ACT2_BY_ROUND = 6;
+
+/**
+ * The soft deadline on act 1: a round starting at ACT2_BY_ROUND or later with
+ * the water still below 5 brings it to 5 (nothing else is added; the pumps
+ * can't hold this back). Pumps slow the water; they can't keep the city in act 1.
+ */
+function act2Deadline(ctx: Ctx): void {
+  const s = ctx.s;
+  if (s.round < ACT2_BY_ROUND || s.act >= 2 || s.collapse >= 5 || s.outcome) return;
+  s.flags.s2_act2Deadline = s.round;
+  log(ctx, m`The sea wall at the harbour mouth gives way. No pump in the city can hold back what comes through.`, "STORY");
+  changeCollapse(ctx, 5 - s.collapse, m`the sea wall giving way`);
 }
 
 registerScenario({
@@ -76,11 +109,14 @@ registerScenario({
   },
   itemPools: { any: ITEM_IDS02, buff: BUFF_ITEMS02 },
   roundHeader: (s) => m`— Round ${s.round} —`,
-  // three action points a round in the city (one when in despair)
-  apFor: (s, p) => (p.lost ? 1 : 3) + s.config.bonusAp,
+  // three action points a round in the city (one when in despair); none once aboard
+  apFor: (s, p) => (s.city!.boat.aboard.includes(p.playerId) ? 0 : (p.lost ? 1 : 3) + s.config.bonusAp),
+  // those aboard are locked in: no more turns, only the view
+  takesTurn: (s, p) => !s.city!.boat.aboard.includes(p.playerId),
   onRoundStart: (ctx) => {
     // a crew is whoever worked a job this round
     for (const fac of Object.values(ctx.s.city!.facilities)) fac.workedThisRound = [];
+    act2Deadline(ctx);
   },
   afterTurns: () => "WORLD",
   worldStep: departureStep,
