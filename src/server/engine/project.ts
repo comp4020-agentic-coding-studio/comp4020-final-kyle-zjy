@@ -5,6 +5,7 @@
 // doesn't learn whether their own message or dream is true until the end.
 import type { GameState, PlayerId, PlayerSecrets, PlayerView, PublicPlayerState, PublicWindow, ViewerSecrets } from "../../shared/game/state.ts";
 import { availableActions } from "./actions.ts";
+import { publicCity } from "./scenario02/city.ts";
 
 export function project(s: GameState, viewerId: PlayerId): PlayerView {
   const {
@@ -22,6 +23,7 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
     jobs: _jobs,
     triggerQueue: _triggerQueue,
     roundRecord: _roundRecord,
+    city: _city,
     ...shared
   } = s;
   const over = s.phase === "RESULTS" || s.phase === "ENDING";
@@ -52,6 +54,7 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
     bonds: bonds.filter((b) => !b.secret || b.members.includes(viewerId) || b.ownerId === viewerId).map(({ fired: _fired, ...b }) => b),
     myActions: availableActions(s, viewerId),
     deckSize: eventDeck.length,
+    city: publicCity(s, viewerId),
   };
 }
 

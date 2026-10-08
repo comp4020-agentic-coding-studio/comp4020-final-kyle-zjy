@@ -2,7 +2,7 @@
 // from the canonical game data (no copy); other locales fill the same shape,
 // keyed by stable ids, so the compiler lists anything missing.
 import type { CharacterId, MBTI, Zodiac } from "../characters/types.ts";
-import type { AnchorId, CarriageIdentity, FragmentType, ItemId, NightRuleId, ObsessionId, TaskGoal, EscapeLockId } from "../game/state.ts";
+import type { AnchorId, CarriageIdentity, FragmentType, ItemId, NightRuleId, ObsessionId, TaskGoal, EscapeLockId, S01ItemId } from "../game/state.ts";
 
 export type NameText = { name: string; text: string };
 export type CharacterText = { title: string; skillName: string; skillDescription: string };
@@ -13,7 +13,7 @@ export type ScenarioText = {
   scenario: { title: string; tagline: string };
   carriages: Record<CarriageIdentity, { name: string; theme: string; blurb: string; investigateHint: string; searchHint: string }>;
   fragments: Record<FragmentType, NameText>;
-  items: Record<ItemId, NameText>;
+  items: Record<S01ItemId, NameText>;
   nightRules: Record<NightRuleId, NameText>;
   obsessions: Record<ObsessionId, NameText>;
   statuses: Record<string, { short: string; long: string }>;

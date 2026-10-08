@@ -2,7 +2,7 @@
 // carriages, items, night rules, obsessions and player-count tuning. Shared by
 // the server (rules) and the client (names, descriptions, art cues).
 import type { Effect } from "../effects.ts";
-import type { AnchorId, CarriageIdentity, EscapeLockId, FailReason, FragmentType, GameConfig, ItemId, KeyItemId, NightRuleId, ObsessionId, Outcome, TaskGoal } from "../state.ts";
+import type { AnchorId, CarriageIdentity, EscapeLockId, FailReason, FragmentType, GameConfig, ItemId, KeyItemId, NightRuleId, ObsessionId, Outcome, TaskGoal, S01ItemId } from "../state.ts";
 
 export const SCENARIO = {
   id: "S01_LAST_TRAIN",
@@ -123,7 +123,7 @@ export const FRAGMENTS: Record<FragmentType, { name: string; text: string }> = {
 export type ItemTag = "KEY_ITEM" | "OBJECTIVE_ITEM";
 export type ItemInfo = { name: string; text: string; effects: Effect[]; needsTarget?: "SAME_CARRIAGE_OR_SELF"; tags?: ItemTag[] };
 
-export const ITEMS: Record<ItemId, ItemInfo> = {
+export const ITEMS: Record<S01ItemId, ItemInfo> = {
   OLD_KEY: { name: "Old Key", text: "+2 to your next Repair roll.", effects: [{ kind: "ADD_STATUS", who: "SELF", status: "REPAIR_BONUS", rounds: 99, value: 2, polarity: "POSITIVE" }] },
   FLASHLIGHT: { name: "Flashlight", text: "+2 to your next Investigate roll.", effects: [{ kind: "ADD_STATUS", who: "SELF", status: "INVESTIGATE_BONUS", rounds: 99, value: 2, polarity: "POSITIVE" }] },
   MEDKIT: { name: "Medkit", text: "Restore 1 Sanity to yourself or someone in your carriage.", effects: [{ kind: "GAIN_SANITY", who: "TARGET", amount: 1 }], needsTarget: "SAME_CARRIAGE_OR_SELF" },
@@ -142,10 +142,10 @@ export const ITEMS: Record<ItemId, ItemInfo> = {
  * Key items are made only by restoring an anchor, are never used up, and move
  * only by a trade: no random grant, steal, copy, swap or loss touches them.
  */
-export const isKeyItem = (id: ItemId): id is KeyItemId => !!ITEMS[id].tags?.includes("KEY_ITEM");
+export const isKeyItem = (id: ItemId): id is KeyItemId => !!ITEMS[id as S01ItemId]?.tags?.includes("KEY_ITEM");
 
 /** Ordinary items: the pool for starting items, rewards and random grants. */
-export const ITEM_IDS = (Object.keys(ITEMS) as ItemId[]).filter((id) => !isKeyItem(id));
+export const ITEM_IDS = (Object.keys(ITEMS) as S01ItemId[]).filter((id) => !isKeyItem(id));
 
 export const ESCAPE_LOCKS: EscapeLockId[] = ["power", "identity", "memory"];
 /** Where each escape lock stands (it moves with its carriage in a Reality Fold). */
@@ -240,6 +240,8 @@ export function endingText(outcome: Outcome, reason: FailReason | null): EndingT
       return { won: true, kicker: "Escaped · True ending", title: "You arrive lighter.", lines: ["Three escape locks turn.", "The blank name on the manifest fades away,", "and so does the weight you didn't know you carried."] };
     case "TRUE_TICKET":
       return { won: true, kicker: "Escaped · True ending", title: "One more passenger.", lines: ["Three escape locks turn.", "Someone punches one more ticket.", "The passenger without a name takes the seat beside you."] };
+    case "S02_EVACUATED":
+      throw new Error("scenario 02 endings are its own");
     case "FAILED":
       if (reason === "COLLAPSE") return { won: false, kicker: "Lost · The train collapsed", title: "Passenger count: zero.", lines: ["The carriages fold into each other.", "The lights go out one by one.", "N13 keeps running, empty."] };
       if (reason === "ALL_LOST") return { won: false, kicker: "Lost · Nobody is left", title: "No one remembers their name.", lines: ["Every seat is taken.", "Nobody in them can say who they are.", "The train keeps every one of you."] };

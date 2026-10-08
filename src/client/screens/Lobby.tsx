@@ -7,7 +7,8 @@ import { CharacterCard } from "../components/CharacterCard.tsx";
 import { Avatar } from "../components/Avatar.tsx";
 import { LanguageSwitch } from "../components/LanguageSwitch.tsx";
 import { Sigil } from "../components/Sigil.tsx";
-import { useScenarioText, useT } from "../i18n/index.ts";
+import { useScenario02Text, useScenarioText, useT } from "../i18n/index.ts";
+import { SCENARIOS } from "../../shared/game/scenarios.ts";
 import { rich } from "../i18n/rich.ts";
 import { sendLobby, useMe, useStore } from "../store.ts";
 import { CharacterPicker } from "./CharacterPicker.tsx";
@@ -57,7 +58,7 @@ export function Lobby() {
                 aria-describedby="start-reason"
                 onClick={() => sendLobby({ type: "START_GAME" })}
               >
-                {t("lobby.depart")}
+                {t(room.scenarioId === "S02_SUNKEN_CITY" ? "s2.lobby.depart" : "lobby.depart")}
               </button>
               <p id="start-reason" className="mt-1 text-center text-xs text-ash sm:text-right">
                 {startBlocker ?? t("lobby.allReadyHost")}
@@ -124,10 +125,10 @@ function TopBar({ code, count }: { code: string; count: number }) {
           </button>
         </div>
         <div className="flex shrink-0 gap-1">
-          <button className="hidden min-h-12 rounded-full px-3 text-xs font-bold tracking-wider text-mist hover:text-moon sm:block" onClick={() => copy("code")}>
+          <button className="hidden min-h-12 min-w-12 rounded-full px-3 text-xs font-bold tracking-wider text-mist hover:text-moon sm:block" onClick={() => copy("code")}>
             {t("lobby.copy")}
           </button>
-          <button className="min-h-12 rounded-full px-3 text-xs font-bold tracking-wider text-mist hover:text-moon" onClick={() => copy("link")}>
+          <button className="min-h-12 min-w-12 rounded-full px-3 text-xs font-bold tracking-wider text-mist hover:text-moon" onClick={() => copy("link")}>
             {t("lobby.invite")}
           </button>
         </div>
@@ -368,27 +369,52 @@ function ReadyButton({ me, onPick }: { me: Member; onPick: () => void }) {
   );
 }
 
-const SCENARIOS = Array.from({ length: 10 }, (_, i) => i + 1);
+const SLOTS = Array.from({ length: 10 }, (_, i) => i + 1);
+const PLAYABLE = Object.values(SCENARIOS).filter((x) => x.open);
 
+/** The room's scenario. The host picks among the open ones; the rest are still to come. */
 function ScenarioStrip() {
   const t = useT();
-  const { scenario } = useScenarioText();
+  const me = useMe();
+  const chosen = useStore((st) => st.snapshot?.room.scenarioId) ?? "S01_LAST_TRAIN";
+  const s01 = useScenarioText().scenario;
+  const s02 = useScenario02Text().scenario;
+  const card = chosen === "S02_SUNKEN_CITY" ? { route: t("s2.lobby.route"), ...s02, meta: t("s2.lobby.meta") } : { route: t("lobby.scenarioRoute"), ...s01, meta: t("lobby.scenarioMeta") };
   return (
     <div className="glass rounded-2xl p-4">
       <p className="label mb-3 text-gold">{t("lobby.scenario")}</p>
       <div className="tarot overflow-hidden p-4">
-        <p className="font-mono text-xs text-signal">{t("lobby.scenarioRoute")}</p>
-        <p className="mt-1 font-display text-2xl leading-tight font-semibold">{scenario.title}</p>
-        <p className="mt-2 text-sm text-mist italic">{t("common.quote", { text: scenario.tagline })}</p>
-        <p className="mt-3 text-xs text-ash">{t("lobby.scenarioMeta")}</p>
+        <p className="font-mono text-xs text-signal">{card.route}</p>
+        <p className="mt-1 font-display text-2xl leading-tight font-semibold">{card.title}</p>
+        <p className="mt-2 text-sm text-mist italic">{t("common.quote", { text: card.tagline })}</p>
+        <p className="mt-3 text-xs text-ash">{card.meta}</p>
       </div>
-      <ul className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label={t("lobby.otherScenarios")}>
-        {SCENARIOS.slice(1).map((n) => (
-          <li key={n} className="flex h-16 w-14 shrink-0 flex-col items-center justify-center rounded-md border border-dashed border-indigo text-center">
-            <span className="font-mono text-sm text-ash">{String(n).padStart(2, "0")}</span>
-            <span className="text-center text-[8px] leading-tight font-bold tracking-wider text-ash">{t("lobby.comingSoon")}</span>
-          </li>
-        ))}
+      <p className="mt-3 text-xs text-mist">{t(me?.isHost ? "s2.lobby.pick" : "s2.lobby.hostPicks")}</p>
+      <ul className="mt-2 flex gap-2 overflow-x-auto pb-1" aria-label={t("lobby.otherScenarios")}>
+        {SLOTS.map((n) => {
+          const open = PLAYABLE.find((x) => Number(x.number) === n);
+          const on = open?.id === chosen;
+          if (!open)
+            return (
+              <li key={n} className="flex h-16 w-14 shrink-0 flex-col items-center justify-center rounded-md border border-dashed border-indigo text-center">
+                <span className="font-mono text-sm text-ash">{String(n).padStart(2, "0")}</span>
+                <span className="text-center text-[8px] leading-tight font-bold tracking-wider text-ash">{t("lobby.comingSoon")}</span>
+              </li>
+            );
+          return (
+            <li key={n} className="shrink-0">
+              <button
+                className={`flex h-16 min-w-14 flex-col items-center justify-center rounded-md border px-2 text-center ${on ? "border-gold bg-gold/15 text-gold-bright" : "border-gold/30 text-mist"}`}
+                aria-pressed={on}
+                disabled={!me?.isHost || on}
+                onClick={() => void sendLobby({ type: "SELECT_SCENARIO", scenarioId: open.id })}
+              >
+                <span className="font-mono text-sm">{open.number}</span>
+                <span className="text-[8px] leading-tight font-bold tracking-wider">{t(on ? "s2.lobby.chosen" : "s2.lobby.choose")}</span>
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

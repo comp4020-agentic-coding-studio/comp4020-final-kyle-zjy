@@ -5,6 +5,9 @@
 //   node scripts/sim.ts [--runs 40] [--players 2,4,6,10] [--abilities] [--logs dir]
 //   node scripts/sim.ts --coverage 6        every character as seat 0, 6 runs each:
 //                                           which abilities never get used, and why to look
+//   node scripts/sim.ts --scenario 02 [--runs 40] [--players 2,4,6,10] [--logs dir]
+//                                           the sinking city: how often the boat leaves,
+//                                           how many get out, and what ended the rest
 //
 // --abilities: players use their active ability once it can act, and accept
 // every reaction. --logs: one JSON file per run (seed, characters, every input,
@@ -17,6 +20,7 @@ import { ROSTER } from "../src/shared/characters/roster/index.ts";
 import { mkdirSync, writeFileSync } from "node:fs";
 import type { CharacterId } from "../src/shared/characters/types.ts";
 import { playRun } from "../test/bot.ts";
+import { playRun02 } from "../test/bot02.ts";
 import { characterSkill } from "../src/shared/game/scenario01/skills.ts";
 
 const arg = (name: string, fallback: string) => {
@@ -55,6 +59,45 @@ function play(n: number, first?: CharacterId): Result {
   const s = run.state;
   if (LOGS) writeFileSync(`${LOGS}/run-${n}p-${String(++logNo).padStart(3, "0")}.json`, JSON.stringify({ seed, characters: picks.map((c) => c.id), abilities: ABILITIES, outcome: s.outcome, failReason: s.failReason, round: s.round, inputs: run.inputs }));
   return { turns: run.turns, emptyTurns: run.emptyTurns, used: run.usedAbility, seat0Used: run.usedAbility.includes(picks[0].id), outcome: s.outcome ?? "STUCK", reason: s.failReason, round: s.round, anchors: Object.values(s.anchors).filter((a) => a.repaired).length, fragments: s.fragments.length, collapse };
+}
+
+if (arg("scenario", "01") === "02") {
+  // scenario 02: the team in test/bot02.ts
+  for (const n of SIZES) {
+    const rows = Array.from({ length: RUNS }, () => {
+      const picks = [...ROSTER].sort(() => Math.random() - 0.5).slice(0, n);
+      const seed = randomBytes(16).toString("hex");
+      const collapse = new Map<string, number>();
+      let seen = 0;
+      const run = playRun02({
+        seed,
+        chars: picks.map((c) => [c.zodiac, c.mbti]),
+        onStep: (st) => {
+          for (const l of st.log.filter((x) => x.seq >= seen && x.kind === "COLLAPSE_UP")) {
+            const why = l.text.match(/\((.+)\)\.$/)?.[1] ?? "?";
+            collapse.set(why, (collapse.get(why) ?? 0) + 1);
+          }
+          seen = st.logSeq;
+        },
+      });
+      const st = run.state;
+      if (LOGS) writeFileSync(`${LOGS}/s02-${n}p-${String(++logNo).padStart(3, "0")}.json`, JSON.stringify({ scenario: "S02_SUNKEN_CITY", seed, characters: picks.map((c) => c.id), outcome: st.outcome, failReason: st.failReason, round: st.round, inputs: run.inputs }));
+      const b = st.city!.boat;
+      return { left: st.outcome === "S02_EVACUATED", stuck: st.phase !== "RESULTS", reason: st.failReason, aboard: b.aboard.length, seats: b.capacity, chip: b.autoGate, round: st.round, collapse };
+    });
+    const left = rows.filter((r) => r.left);
+    const reasons = ["COLLAPSE", "BOAT_LOST"].map((x) => `${x.toLowerCase()} ${rows.filter((r) => r.reason === x).length}`).join(", ");
+    const aboard = left.reduce((a, r) => a + r.aboard, 0);
+    const seats = left.reduce((a, r) => a + r.seats, 0);
+    console.log(
+      `${String(n).padStart(2)} players: boat left ${left.length}/${RUNS} · escaped ${aboard}/${left.length * n} players when it did (${seats} seats)` +
+        ` · no sacrifice (chip) ${left.filter((r) => r.chip).length} · lost: ${reasons} · stuck ${rows.filter((r) => r.stuck).length} · avg rounds ${(rows.reduce((a, r) => a + r.round, 0) / RUNS).toFixed(1)}`,
+    );
+    const sources = new Map<string, number>();
+    for (const r of rows) for (const [k, v] of r.collapse) sources.set(k, (sources.get(k) ?? 0) + v);
+    console.log(`   Collapse per run: ${[...sources].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${(v / RUNS).toFixed(1)}`).join(" · ")}`);
+  }
+  process.exit(0);
 }
 
 if (COVERAGE) {

@@ -7,7 +7,7 @@
 //
 // Content (carriage names, items, skills…) goes in as a reference, never as
 // an English string, so a Chinese sentence never ends up holding English words.
-import type { CarriageIdentity, FragmentType, ItemId, NightRuleId, ObsessionId, AnchorId, EscapeLockId } from "../game/state.ts";
+import type { CarriageIdentity, FragmentType, ItemId, NightRuleId, ObsessionId, AnchorId, EscapeLockId, ScenarioId } from "../game/state.ts";
 import type { CharacterId, Zodiac } from "../characters/types.ts";
 import type { Msg, MsgParam } from "./types.ts";
 
@@ -29,7 +29,8 @@ export const ref = {
   status: (kind: string) => r("status", kind),
   anchor: (id: AnchorId) => r("anchor", id),
   lock: (id: EscapeLockId) => r("lock", id),
-  skill: (id: CharacterId) => r("skill", id),
+  /** In a scenario that re-words abilities, pass it (scenario 01 by default). */
+  skill: (id: CharacterId, scenarioId?: ScenarioId) => (scenarioId && scenarioId !== "S01_LAST_TRAIN" ? r("skill", id, scenarioId) : r("skill", id)),
   title: (id: CharacterId) => r("title", id),
   event: (id: string) => r("event", id),
   option: (eventId: string, optionId: string) => r("option", eventId, optionId),
@@ -41,10 +42,16 @@ export const ref = {
   zodiac: (id: Zodiac) => r("zodiac", id),
   ruleChange: (id: string) => r("ruleChange", id),
   goal: (id: string) => r("goal", id),
+  /** Scenario 02's wording of the same goal. */
+  goal02: (id: string) => r("goal02", id),
   boon: (id: string) => r("boon", id),
   investigateHint: (id: CarriageIdentity) => r("investigateHint", id),
   searchHint: (id: CarriageIdentity) => r("searchHint", id),
-  skillDescription: (id: CharacterId) => r("skillDescription", id),
+  skillDescription: (id: CharacterId, scenarioId?: ScenarioId) => (scenarioId && scenarioId !== "S01_LAST_TRAIN" ? r("skillDescription", id, scenarioId) : r("skillDescription", id)),
+  /** Scenario 02: a city zone, by its id in scenario02/map.ts. */
+  zone: (id: string) => r("zone", id),
+  part: (id: string) => r("part", id),
+  npc: (id: string) => r("npc", id),
 };
 
 /** Joins messages with the locale's list separator (", " / "、"). */

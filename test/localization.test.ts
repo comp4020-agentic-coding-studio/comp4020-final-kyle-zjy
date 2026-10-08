@@ -14,7 +14,12 @@ import { isMsg, type Msg } from "../src/shared/i18n/types.ts";
 import { ZH_CHARACTERS } from "../src/shared/i18n/zh-CN/characters/index.ts";
 import { ZH_MESSAGES } from "../src/shared/i18n/zh-CN/messages.ts";
 import { ZH_SCENARIO } from "../src/shared/i18n/zh-CN/scenario.ts";
+import { EN_SCENARIO02 } from "../src/shared/i18n/scenario02.ts";
+import { ZH_SCENARIO02 } from "../src/shared/i18n/zh-CN/scenario02.ts";
+import { ZH_S02_SKILL_TEXT } from "../src/shared/i18n/zh-CN/skills02.ts";
+import { S02_SKILL_TEXT } from "../src/shared/game/scenario02/skill-adapters.ts";
 import type { RunInput } from "./bot.ts";
+import type { ScenarioId } from "../src/shared/game/state.ts";
 
 // English is canonical; zh-CN must cover all of it with the same placeholders,
 // the locale is a per-browser choice locked for the run, and translated text
@@ -76,6 +81,15 @@ describe("catalog coverage", () => {
     const { zhCN } = await import("../src/client/i18n/zh-CN.ts");
     expect(Object.keys(zhCN).sort()).toEqual(Object.keys(en).sort());
     for (const k of Object.keys(en) as (keyof typeof en)[]) expect(placeholders(zhCN[k]), k).toEqual(placeholders(en[k]));
+    // scenario 02's own copy
+    const { s2en } = await import("../src/client/i18n/s2-en.ts");
+    const { s2zhCN } = await import("../src/client/i18n/s2-zh-CN.ts");
+    expect(Object.keys(s2zhCN).sort()).toEqual(Object.keys(s2en).sort());
+    for (const k of Object.keys(s2en) as (keyof typeof s2en)[]) {
+      expect(placeholders(s2zhCN[k]), k).toEqual(placeholders(s2en[k]));
+      // words in the English need words in the Chinese ("{name}: {progress} / {required}" has none)
+      if (/[A-Za-z]{2}/.test(s2en[k].replace(/\{\w+\}/g, ""))) expect(s2zhCN[k], k).toMatch(HAN);
+    }
   });
 
   it("every engine message template in src/ has a Chinese entry with the same placeholders, and none is stale", () => {
@@ -112,6 +126,23 @@ describe("catalog coverage", () => {
     };
     walk(EN_SCENARIO, ZH_SCENARIO, "scenario");
   });
+
+  it("every Scenario 02 content id has Chinese text, and its re-worded abilities say the same in both", () => {
+    const walk = (en: unknown, zh: unknown, path: string): void => {
+      if (typeof en === "string") return void expect(typeof zh === "string" && HAN.test(zh), path).toBe(true);
+      if (en == null || !Object.keys(en).length) return;
+      expect(zh, path).toBeTypeOf("object");
+      for (const k of Object.keys(en as object)) walk((en as Record<string, unknown>)[k], (zh as Record<string, unknown>)[k], `${path}.${k}`);
+    };
+    walk(EN_SCENARIO02, ZH_SCENARIO02, "scenario02");
+    for (const [id, text] of Object.entries(S02_SKILL_TEXT)) {
+      const zh = ZH_S02_SKILL_TEXT[id as keyof typeof ZH_S02_SKILL_TEXT]!;
+      expect(zh.name, id).toMatch(HAN);
+      for (const d of digits(zh.description)) expect(numbers(text!.description).has(d), `${id}: ${d}`).toBe(true);
+      for (const d of digits(text!.description)) expect(numbers(zh.description).has(d), `${id}: ${d}`).toBe(true);
+      expect(format("zh-CN", ref.skill(id as never, "S02_SUNKEN_CITY"))).toBe(zh.name);
+    }
+  });
 });
 
 describe("rendering", () => {
@@ -129,14 +160,14 @@ describe("rendering", () => {
 
   // the kept simulations (docs/simulations) cover every act, ending and most effects
   const DIR = new URL("../docs/simulations/", import.meta.url);
-  type Log = { seed: string; characters: CharacterId[]; inputs: RunInput[] };
+  type Log = { scenario?: ScenarioId; seed: string; characters: CharacterId[]; inputs: RunInput[] };
   const runs = readdirSync(DIR).filter((f) => f.endsWith(".json"));
   const NAMES = "甲乙丙丁戊己庚辛壬癸";
   function* states(file: string): Generator<GameState> {
     const log = JSON.parse(readFileSync(new URL(file, DIR), "utf8")) as Log;
     const seats = log.characters.map((id, i) => ({ playerId: `p${i}`, nickname: NAMES[i], seat: i, zodiac: getCharacterById(id).zodiac, mbti: getCharacterById(id).mbti }));
     const t0 = 1_800_000_000_000;
-    let s = startGame(createGame("run", seats, log.seed, t0), t0).state;
+    let s = startGame(createGame("run", seats, log.seed, t0, log.scenario), t0).state;
     yield s;
     for (const i of log.inputs) yield (s = i.kind === "TICK" ? tickGame(s, i.at).state : applyGameAction(s, i.actor!, i.action!, i.at).state);
   }

@@ -8,6 +8,7 @@ import { HostSkip } from "../game/HostSkip.tsx";
 import { notYet } from "../game/waiting.ts";
 import { useScenarioText, useT, type MessageKey } from "../i18n/index.ts";
 import { sendGame, useGame } from "../store.ts";
+import { CityIntro } from "./CityScreens.tsx";
 
 const LINES: { key: MessageKey; broadcast?: boolean }[] = [
   { key: "intro.line1" },
@@ -26,6 +27,7 @@ export function Intro() {
   const t = useT();
   const text = useScenarioText();
   if (!g) return null;
+  if (g.city) return <CityIntro g={g} />;
   const after = LINES.length * STEP + 0.4;
   const boarded = g.sequence?.acks.includes(g.viewerId) ?? false;
   return (
@@ -66,10 +68,12 @@ export function Intro() {
               );
             })}
           </ul>
-          <div className="mt-6 rounded-xl border border-gold/30 p-3">
-            <p className="label text-gold">{t("intro.rule", { name: text.nightRules[g.nightRule].name })}</p>
-            <p className="mt-1 text-sm text-mist">{text.nightRules[g.nightRule].text}</p>
-          </div>
+          {g.nightRule && (
+            <div className="mt-6 rounded-xl border border-gold/30 p-3">
+              <p className="label text-gold">{t("intro.rule", { name: text.nightRules[g.nightRule].name })}</p>
+              <p className="mt-1 text-sm text-mist">{text.nightRules[g.nightRule].text}</p>
+            </div>
+          )}
           <button className="btn btn-gold mt-6 w-full" disabled={boarded} onClick={() => void sendGame({ type: "ACK_SEQUENCE" })}>
             {boarded ? t("intro.boarded", { names: notYet(g, t) }) : t("intro.board")}
           </button>

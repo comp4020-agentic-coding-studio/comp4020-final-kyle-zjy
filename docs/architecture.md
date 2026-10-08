@@ -253,6 +253,16 @@ are evicted from memory (they stay in SQLite and rehydrate on the next
 - Vitest has two projects: `spec` (against the running app) and `unit`
   (`test/`, pure code). `pnpm check` runs both; `pnpm test:unit` runs only unit.
 
+## 14b. Scenarios
+
+A room plays one scenario (`rooms.scenario_id`, chosen by the host). Each
+scenario registers its rules with the engine (`src/server/engine/scenario.ts`):
+creation, actions, round steps, Collapse, act changes, the end check and
+results. Scenario 01 (the train) and scenario 02 (the sinking city) share the
+engine, dice, abilities, windows and log. The client picks each phase's screen
+by the run's scenario (`RoomGate` → `Game` or `CityGame`; Intro, Ending and
+Results branch the same way).
+
 ## 15. PHASE 8: the Skill Resolver
 
 Abilities are layered so a new scenario never copies 192 skills:

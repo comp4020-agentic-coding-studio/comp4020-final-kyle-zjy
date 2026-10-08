@@ -2,10 +2,11 @@
 // when resolved, then folds into a small chip so it never covers the train.
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
-import { EVENT_BY_ID } from "../../shared/game/scenario01/events.ts";
+import { EVENT_BY_ID } from "../../shared/game/events.ts";
 import type { PlayerView } from "../../shared/game/state.ts";
 import { useFormat, useScenarioText, useT } from "../i18n/index.ts";
 import { EventArt } from "./EventArt.tsx";
+import { ref } from "../../shared/i18n/msg.ts";
 
 const BIAS = { REWARD: "event.bias.REWARD", CRISIS: "event.bias.CRISIS", MIXED: "event.bias.MIXED" } as const;
 
@@ -30,7 +31,7 @@ export function EventPanel({ g }: { g: PlayerView }) {
   if (!ev) return null;
   const card = EVENT_BY_ID.get(ev.id);
   // the emergency-brake vote isn't a deck card: its copy is the client's own
-  const words = card ? events[ev.id] : undefined;
+  const words = card ? (events[ev.id] ?? { title: fmt(ref.event(ev.id)), text: fmt(ref.eventText(ev.id)) }) : undefined;
   const info = card
     ? { title: words?.title ?? card.title, text: words?.text ?? card.text, art: card.art, bias: card.bias }
     : { title: t("event.brake.title"), text: t("event.brake.text"), art: "brake_vote" as const, bias: "MIXED" as const };

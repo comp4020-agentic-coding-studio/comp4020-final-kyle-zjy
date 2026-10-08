@@ -2,25 +2,22 @@
 // engine calls advance(), which carries the run forward until it has to wait
 // for somebody: an open window, the active player's turn, or a cinematic.
 //
-//   INTRO → ACT_1 (rounds 1–3) → ACT_2 (4–7) → ACT_3 (8–12) → ENDING → RESULTS
-//   each round: ROUND_START → PLAYER_TURNS → INSPECTOR → ROUND_EVENT → ROUND_END
-import { AP_PER_ROUND, AP_WHEN_LOST, SCENARIO } from "../../shared/game/scenario01/content.ts";
-import type { Job } from "../../shared/game/state.ts";
+//   INTRO → ACT_1 → ACT_2 → ACT_3 → ENDING → RESULTS
+//   each round: ROUND_START → PLAYER_TURNS → (INSPECTOR | WORLD) → ROUND_EVENT → ROUND_END
+// What happens inside a step that differs by scenario comes from its rules
+// (src/server/engine/scenario.ts).
 import { activePlayerId, cue, log, type Ctx } from "./context.ts";
 import { finishRoll } from "./dice.ts";
-import { applyEffects, changeCollapse } from "./effects.ts";
-import { checkEnd, startEnding } from "./ending.ts";
-import { inspectorPhase, runInspectorJob } from "./inspector.ts";
+import { applyEffects } from "./effects.ts";
 import { everyone, hasStatus, removeStatus, statusOf } from "./players.ts";
-import { onRoundStart, scriptedRoundEvent } from "./beats.ts";
-import { continueReveal, drawRoundEvent } from "./round-events.ts";
+import { continueReveal } from "./round-events.ts";
+import { rulesFor } from "./scenario.ts";
 import { processPending } from "./intercept.ts";
 import { checkTasks } from "./event-effects.ts";
 import { processTriggers, roundTriggers, statusesExpiring } from "./resolver.ts";
 import { emptyRoundRecord } from "./create.ts";
 import { expireWindows } from "./windows.ts";
-import { m, ref } from "../../shared/i18n/msg.ts";
-import type { Msg } from "../../shared/i18n/types.ts";
+import { m } from "../../shared/i18n/msg.ts";
 
 const GUARD = 500;
 
@@ -41,11 +38,11 @@ export function advance(ctx: Ctx): void {
       continueReveal(ctx);
       continue;
     }
-    if (s.phase !== "ENDING" && checkEnd(ctx)) continue;
+    if (s.phase !== "ENDING" && rulesFor(s).checkEnd(ctx)) continue;
     if (s.phase !== "ENDING") checkTasks(ctx);
     if (s.phase !== "ENDING" && processTriggers(ctx)) continue;
     if (s.jobs.length) {
-      runJob(ctx, s.jobs.shift()!);
+      rulesFor(s).runJob(ctx, s.jobs.shift()!);
       continue;
     }
     if (s.sequence) {
@@ -81,7 +78,7 @@ function stepOnce(ctx: Ctx): boolean {
     case "PLAYER_TURNS": {
       const id = activePlayerId(s);
       if (!id) {
-        s.step = s.act >= 2 ? "INSPECTOR" : "ROUND_EVENT";
+        s.step = rulesFor(s).afterTurns(s);
         s.turnDeadline = null;
         return true;
       }
@@ -95,13 +92,14 @@ function stepOnce(ctx: Ctx): boolean {
       return false;
     }
     case "INSPECTOR":
-      inspectorPhase(ctx);
+    case "WORLD":
+      rulesFor(s).worldStep(ctx);
       s.step = "ROUND_EVENT";
       return true;
     case "ROUND_EVENT":
       if (!s.flags[`event_${s.round}`]) {
         s.flags[`event_${s.round}`] = 1;
-        if (!scriptedRoundEvent(ctx)) drawRoundEvent(ctx);
+        rulesFor(s).roundEvent(ctx);
         return true;
       }
       s.step = "ROUND_END";
@@ -114,8 +112,9 @@ function stepOnce(ctx: Ctx): boolean {
 
 function beginRound(ctx: Ctx): void {
   const s = ctx.s;
+  const rules = rulesFor(s);
   s.round++;
-  s.escape = { round: null, power: false, identity: false, memory: false, by: {} };
+  rules.roundOpens?.(ctx);
   s.roundRecord = emptyRoundRecord();
   // abilities lent out by Server Rave come home
   if (s.flags.skillsReturnRound && s.round >= s.flags.skillsReturnRound) {
@@ -123,10 +122,10 @@ function beginRound(ctx: Ctx): void {
     s.flags.skillsReturnRound = 0;
     log(ctx, m`Every borrowed ability returns to its owner.`, "SKILL");
   }
-  log(ctx, m`— Round ${s.round} of ${SCENARIO.rounds} —`, "ROUND");
+  log(ctx, rules.roundHeader(s), "ROUND");
   cue(ctx, "ROUND", { round: s.round });
   for (const p of everyone(ctx)) {
-    p.ap = (p.lost ? AP_WHEN_LOST : AP_PER_ROUND) + s.config.bonusAp + (s.act === 3 ? s.config.act3BonusAp : 0);
+    p.ap = rules.apFor(s, p);
     if (hasStatus(p, "CHILL")) {
       p.ap = Math.max(0, p.ap - 1);
       removeStatus(p, "CHILL");
@@ -137,18 +136,14 @@ function beginRound(ctx: Ctx): void {
       removeStatus(p, prepared.id);
       log(ctx, m`${p.nickname}'s prepared shield is up.`, "DEFENCE", p.playerId);
     }
-    if (s.nightRule === "VOID_HOUR") {
-      if (s.round === 1 && p.skill.state === "READY") p.skill.state = "LOCKED";
-      if (s.round === 2 && p.skill.state === "LOCKED") p.skill.state = p.skill.usesLeft > 0 ? "READY" : "BURNED";
-    }
+    rules.playerRoundStart?.(ctx, p);
   }
-  if (s.nightRule === "VOID_HOUR" && s.round === 1) log(ctx, m`Void Hour: every ability is locked this round.`, "RULE");
 
   const due = s.delayed.filter((d) => d.dueRound <= s.round);
   s.delayed = s.delayed.filter((d) => d.dueRound > s.round);
   for (const d of due) applyEffects(ctx, d.effects, { ownerId: d.ownerId, targets: d.targets, label: d.label });
 
-  onRoundStart(ctx);
+  rules.onRoundStart(ctx);
   roundTriggers(ctx, "ROUND_START");
   s.step = "PLAYER_TURNS";
   s.activeIndex = -1;
@@ -177,12 +172,10 @@ export function endTurn(ctx: Ctx): void {
 
 function endRound(ctx: Ctx): void {
   const s = ctx.s;
-  if (s.escape.round === s.round && !s.outcome) {
-    const set = [s.escape.power, s.escape.identity, s.escape.memory].filter(Boolean).length;
-    if (set > 0) log(ctx, m`The escape locks slip back: ${set}/3 is not enough. All three must hold in the same round. The keys stay with whoever carries them.`, "LOCK_RESET");
-  }
+  const rules = rulesFor(s);
+  rules.roundCloses?.(ctx);
   roundTriggers(ctx, "ROUND_END");
-  changeCollapse(ctx, 1, m`the train runs on`);
+  rules.roundCollapse(ctx);
   statusesExpiring(ctx);
   const rr = s.roundRecord;
   for (const p of everyone(ctx)) {
@@ -197,25 +190,8 @@ function endRound(ctx: Ctx): void {
   s.bonds = s.bonds.filter((b) => b.untilRound > s.round);
   for (const sec of Object.values(s.secrets)) sec.tasks = sec.tasks.filter((t) => !t.done && t.untilRound > s.round);
   s.ruleMods = s.ruleMods.filter((m) => m.untilRound > s.round);
-  if (checkEnd(ctx)) return;
-  if (s.round >= SCENARIO.rounds) return startEnding(ctx, "FAILED", "TIME");
-
-  if (s.round === 3) {
-    s.phase = "ACT_2";
-    s.act = 2;
-    s.sequence = { kind: "BLACKOUT", acks: [] };
-    log(ctx, m`The lights die. "Identity registration complete. Anomaly detected."`, "STORY");
-    log(ctx, m`"Passengers on board: ${everyone(ctx).length + 1}."`, "STORY");
-    cue(ctx, "BLACKOUT", {});
-  } else if (s.round === 7) {
-    s.phase = "ACT_3";
-    s.act = 3;
-    for (const c of s.carriages) c.locked = false;
-    s.sequence = { kind: "CAB_OPEN", acks: [] };
-    log(ctx, m`A lock turns somewhere at the front of the train. Driver's cab access restored.`, "STORY");
-    log(ctx, m`FINAL DEPARTURE PROTOCOL: engage the Power, Route and Drive locks in the same round.`, "STORY");
-    cue(ctx, "CAB_OPEN", {});
-  }
+  if (rules.checkEnd(ctx)) return;
+  if (rules.afterRound(ctx)) return;
   s.step = "ROUND_START";
 }
 
@@ -223,10 +199,6 @@ function endSequence(ctx: Ctx): void {
   const seq = ctx.s.sequence;
   ctx.s.sequence = null;
   if (seq) cue(ctx, "SEQUENCE_END", { kind: seq.kind });
-}
-
-function runJob(ctx: Ctx, job: Job): void {
-  runInspectorJob(ctx, job);
 }
 
 /** Timer tick: expire windows, pass timed-out turns, end finished cinematics. */

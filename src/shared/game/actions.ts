@@ -1,4 +1,5 @@
 import type { Msg } from "../i18n/types.ts";
+import type { PartId } from "./scenario02/items.ts";
 // Intents a client may send. Nothing here carries a value the server should
 // decide (dice, fate totals, phase): the server validates every action against
 // the live state, then reduces it (docs/architecture.md §4).
@@ -19,7 +20,7 @@ export type LobbyAction =
   /** Host only, during a run: move a stalled table along one step (nothing has a time limit). */
   | { type: "SKIP_WAITING" };
 
-export type TradeOffer = { items: ItemId[]; fate: number };
+export type TradeOffer = { items: ItemId[]; fate: number; /** Scenario 02: boat parts. */ parts?: PartId[]; /** Scenario 02: evacuation passes. */ passes?: number };
 
 export type GameAction =
   | { type: "MOVE"; toCarriage: number }
@@ -33,6 +34,13 @@ export type GameAction =
   | { type: "USE_SKILL"; targets?: PlayerId[] }
   | { type: "USE_ITEM"; item: ItemId; targetId?: PlayerId }
   | { type: "END_TURN" }
+  // scenario 02
+  | { type: "RESCUE"; npcId?: string; targetId?: PlayerId }
+  | { type: "OPERATE" }
+  | { type: "SALVAGE" }
+  | { type: "SHARE_INTEL"; intelId: string }
+  | { type: "INSTALL"; part: PartId | "BATTERIES" }
+  | { type: "REGISTER" }
   | { type: "RESPOND"; windowId: string; optionId: string }
   | { type: "ACK_SEQUENCE" };
 

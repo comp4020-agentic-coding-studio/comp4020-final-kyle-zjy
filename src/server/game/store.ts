@@ -2,7 +2,8 @@
 // action_log and the resulting snapshot replaces state_json, so the stored
 // state and its history can never disagree.
 import { randomBytes } from "node:crypto";
-import type { GameState } from "../../shared/game/state.ts";
+import type { GameState, ScenarioId } from "../../shared/game/state.ts";
+import { DEFAULT_SCENARIO } from "../../shared/game/scenarios.ts";
 import type { Db } from "../db/db.ts";
 import { createGame, type Seat } from "../engine/create.ts";
 import { newSeed } from "../engine/rng.ts";
@@ -16,9 +17,9 @@ export class GameStore {
   }
 
   /** Creates the session and points the room at it. Call inside the room's transaction. */
-  create(roomCode: string, seats: Seat[], now: number, seed = newSeed()): GameState {
+  create(roomCode: string, seats: Seat[], now: number, seed = newSeed(), scenarioId: ScenarioId = DEFAULT_SCENARIO): GameState {
     const id = "g_" + randomBytes(9).toString("base64url");
-    const state = createGame(id, seats, seed, now);
+    const state = createGame(id, seats, seed, now, scenarioId);
     const json = JSON.stringify(state);
     this.db
       .prepare(

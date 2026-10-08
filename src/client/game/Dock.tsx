@@ -6,17 +6,23 @@ import { useState } from "react";
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import type { ActionAvailability, GameAction, GameActionType } from "../../shared/game/actions.ts";
 import { isKeyItem, ITEMS, MAX_SANITY } from "../../shared/game/scenario01/content.ts";
-import type { ItemId, PlayerView, PublicPlayerState } from "../../shared/game/state.ts";
+import type { ItemId, PlayerView, PublicPlayerState, S01ItemId } from "../../shared/game/state.ts";
+import { ITEMS02, PART_IDS, type PartId, type S02ItemId } from "../../shared/game/scenario02/items.ts";
+import { ZONES } from "../../shared/game/scenario02/map.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { sendGame } from "../store.ts";
-import { useCharacterText, useFormat, useScenarioText, useT, type TFunction } from "../i18n/index.ts";
+import { useCharacterText, useFormat, useItemText, useScenario02Text, useScenarioText, useT, type TFunction } from "../i18n/index.ts";
 import { Icon } from "./Icon.tsx";
 import { statusName } from "./status.ts";
-import { characterSkill } from "../../shared/game/scenario01/skills.ts";
+import { characterSkill } from "../../shared/game/skills.ts";
 
 const GRID: GameActionType[] = ["MOVE", "INVESTIGATE", "SEARCH", "REPAIR", "HELP", "TRADE", "STABILIZE", "CONFRONT"];
+/** Scenario 02: the city's actions (abilities, items and ending the turn have their own row). */
+const GRID02: GameActionType[] = ["MOVE", "SEARCH", "INVESTIGATE", "REPAIR", "OPERATE", "RESCUE", "SALVAGE", "HELP", "STABILIZE", "TRADE", "INSTALL", "REGISTER", "SHARE_INTEL"];
+/** Actions that need no choice: pressing them acts. */
+const DIRECT = new Set<GameActionType>(["INVESTIGATE", "SEARCH", "REPAIR", "END_TURN", "OPERATE", "SALVAGE", "REGISTER"]);
 
-export type Mode = null | "MOVE" | "HELP" | "TRADE" | "CONFRONT" | "USE_SKILL" | "USE_ITEM" | "STABILIZE";
+export type Mode = null | "MOVE" | "HELP" | "TRADE" | "CONFRONT" | "USE_SKILL" | "USE_ITEM" | "STABILIZE" | "RESCUE" | "INSTALL" | "SHARE_INTEL";
 
 export function Dock({ g, mode, setMode }: { g: PlayerView; mode: Mode; setMode: (m: Mode) => void }) {
   const me = g.players[g.viewerId];
@@ -34,7 +40,7 @@ export function Dock({ g, mode, setMode }: { g: PlayerView; mode: Mode; setMode:
       return;
     }
     setWhy(null);
-    if (a.type === "INVESTIGATE" || a.type === "SEARCH" || a.type === "REPAIR" || a.type === "END_TURN") {
+    if (DIRECT.has(a.type)) {
       setMode(null);
       void sendGame({ type: a.type } as GameAction);
       return;
@@ -58,9 +64,9 @@ export function Dock({ g, mode, setMode }: { g: PlayerView; mode: Mode; setMode:
               </motion.div>
             ) : (
               <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {GRID.map((t) => (
-                    <ActionButton key={t} a={action(t)} onPress={press} />
+                <div className={`grid grid-cols-4 gap-1.5 ${g.city ? "lg:grid-cols-7" : ""}`}>
+                  {(g.city ? GRID02 : GRID).map((t) => (
+                    <ActionButton key={t} a={action(t)} onPress={press} compact={!!g.city} />
                   ))}
                 </div>
                 <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-1.5">
@@ -86,7 +92,7 @@ export function Dock({ g, mode, setMode }: { g: PlayerView; mode: Mode; setMode:
   );
 }
 
-function ActionButton({ a, onPress, wide = false, label }: { a: ActionAvailability; onPress: (a: ActionAvailability) => void; wide?: boolean; label?: string }) {
+function ActionButton({ a, onPress, wide = false, compact = false, label }: { a: ActionAvailability; onPress: (a: ActionAvailability) => void; wide?: boolean; compact?: boolean; label?: string }) {
   const t = useT();
   const fmt = useFormat();
   return (
@@ -95,7 +101,7 @@ function ActionButton({ a, onPress, wide = false, label }: { a: ActionAvailabili
       data-action={a.type}
       aria-disabled={!a.enabled}
       title={fmt(a.enabled ? a.hint : a.reason) || undefined}
-      className={`group relative flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 text-center transition ${
+      className={`group relative flex ${compact ? "min-h-[52px]" : "min-h-[58px]"} min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 text-center transition ${
         a.enabled ? "border-gold/40 bg-[#121a3a]/80 text-moon hover:border-gold-bright hover:bg-[#1d2657]" : "border-[#1d2657] bg-[#0a0f22]/60 text-ash"
       } ${wide ? "flex-row gap-2 px-2" : ""}`}
     >
@@ -186,10 +192,62 @@ function Picker({ g, me, mode, availability, close }: { g: PlayerView; me: Publi
   // `t` is a target below, so the translator is `tr` here
   const tr = useT();
   const text = useScenarioText();
+  const fmt = useFormat();
+  const city = useScenario02Text();
+  const zoneName = (i: number) => city.zones[ZONES[i].id].name;
+  const npcName = (id: string) => city.npcs[id]?.name ?? id;
+  const partName = (id: string) => city.parts[id]?.name ?? id;
   let title = "";
   let body: React.ReactNode = null;
 
-  if (mode === "MOVE") {
+  if (mode === "MOVE" && g.city) {
+    title = tr("s2.pick.move");
+    body = (
+      <div className="flex flex-wrap gap-2">
+        {(availability.targets ?? []).map((t) => (
+          <button key={t} className="btn btn-ghost text-sm" onClick={() => send({ type: "MOVE", toCarriage: Number(t) })}>
+            {zoneName(Number(t))}
+            {g.city!.zones[Number(t)].status === "FLOODED" ? tr("s2.pick.wade") : ""}
+          </button>
+        ))}
+      </div>
+    );
+  } else if (mode === "RESCUE") {
+    title = tr("s2.pick.rescue");
+    const npcs = (availability.targets ?? []).map(String).filter((id) => !g.players[id]);
+    body = (
+      <div className="flex flex-wrap gap-2">
+        {npcs.map((id) => (
+          <button key={id} className="btn btn-ghost text-sm" onClick={() => send({ type: "RESCUE", npcId: id })}>
+            {npcName(id)}
+          </button>
+        ))}
+        <PeopleRow people={people(availability.targets ?? [])} onPick={(id) => send({ type: "RESCUE", targetId: id })} />
+      </div>
+    );
+  } else if (mode === "INSTALL") {
+    title = tr("s2.pick.install");
+    body = (
+      <div className="flex flex-wrap gap-2">
+        {(availability.targets ?? []).map(String).map((part) => (
+          <button key={part} className="btn btn-ghost text-sm" onClick={() => send({ type: "INSTALL", part: part as PartId | "BATTERIES" })}>
+            {part === "BATTERIES" ? tr("s2.pick.batteries") : partName(part)}
+          </button>
+        ))}
+      </div>
+    );
+  } else if (mode === "SHARE_INTEL") {
+    title = tr("s2.pick.intel");
+    body = (
+      <div className="grid grid-cols-1 gap-1.5">
+        {(availability.targets ?? []).map(String).map((id) => (
+          <button key={id} className="btn btn-ghost min-h-12 justify-start text-left text-sm" onClick={() => send({ type: "SHARE_INTEL", intelId: id })}>
+            {fmt(g.mySecrets?.peeks.find((p) => p.id === id)?.text)}
+          </button>
+        ))}
+      </div>
+    );
+  } else if (mode === "MOVE") {
     title = tr("dock.pick.move");
     body = (
       <div className="flex gap-2">
@@ -286,8 +344,8 @@ function PeopleRow({ people, onPick, selected = [] }: { people: PublicPlayerStat
 }
 
 function ItemButton({ item, count, g, me, onUse }: { item: ItemId; count: number; g: PlayerView; me: PublicPlayerState; onUse: (targetId?: string) => void }) {
-  const words = useScenarioText().items[item];
-  const info = { ...ITEMS[item], name: words.name, text: words.text };
+  const words = useItemText()(item);
+  const info = { ...(ITEMS[item as S01ItemId] ?? ITEMS02[item as S02ItemId]), name: words.name, text: words.text };
   const [choosing, setChoosing] = useState(false);
   const t = useT();
   const mates = Object.values(g.players).filter((p) => p.carriageIndex === me.carriageIndex && !p.away);
@@ -318,7 +376,7 @@ function ItemButton({ item, count, g, me, onUse }: { item: ItemId; count: number
 }
 
 function SkillPicker({ g, me, onUse }: { g: PlayerView; me: PublicPlayerState; onUse: (targets: string[]) => void }) {
-  const skill = characterSkill(me.skill.borrowed ?? me.characterId);
+  const skill = characterSkill(me.skill.borrowed ?? me.characterId, g.scenarioId);
   const words = useCharacterText()(me.skill.borrowed ?? me.characterId);
   const t = useT();
   const [picked, setPicked] = useState<string[]>([]);
@@ -354,10 +412,18 @@ function TradeBuilder({ g, me, partners, onSend }: { g: PlayerView; me: PublicPl
   const [want, setWant] = useState<number[]>([]);
   const [giveFate, setGiveFate] = useState(0);
   const [wantFate, setWantFate] = useState(0);
+  const [giveParts, setGiveParts] = useState<PartId[]>([]);
+  const [wantParts, setWantParts] = useState<PartId[]>([]);
+  const [givePasses, setGivePasses] = useState(0);
+  const [wantPasses, setWantPasses] = useState(0);
+  const city = g.city;
+  const myParts = city?.holdings[me.playerId]?.parts ?? [];
+  const myPasses = city?.holdings[me.playerId]?.passes ?? 0;
+  const togglePart = (list: PartId[], set: (v: PartId[]) => void, p: PartId) => set(list.includes(p) ? list.filter((x) => x !== p) : [...list, p]);
   const them = partner ? g.players[partner] : null;
   const t = useT();
   const toggle = (list: number[], set: (v: number[]) => void, i: number) => set(list.includes(i) ? list.filter((x) => x !== i) : [...list, i]);
-  const empty = !give.length && !want.length && !giveFate && !wantFate;
+  const empty = !give.length && !want.length && !giveFate && !wantFate && !giveParts.length && !wantParts.length && !givePasses && !wantPasses;
   return (
     <div className="space-y-2">
       <PeopleRow people={partners} selected={partner ? [partner] : []} onPick={(id) => { setPartner(id); setWant([]); setWantFate(0); }} />
@@ -367,10 +433,24 @@ function TradeBuilder({ g, me, partners, onSend }: { g: PlayerView; me: PublicPl
           <TradeSide title={t("dock.theyGive", { name: them.nickname })} items={them.items} picked={want} onToggle={(i) => toggle(want, setWant, i)} fate={wantFate} maxFate={them.fate} setFate={setWantFate} />
         </div>
       )}
+      {them && city && (
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <CitySide parts={myParts} picked={giveParts} onToggle={(p) => togglePart(giveParts, setGiveParts, p)} passes={givePasses} maxPasses={myPasses} setPasses={setGivePasses} />
+          <CitySide parts={PART_IDS} picked={wantParts} onToggle={(p) => togglePart(wantParts, setWantParts, p)} passes={wantPasses} maxPasses={9} setPasses={setWantPasses} hint={t("s2.trade.theyMayNot")} />
+        </div>
+      )}
       <button
         className="btn btn-gold w-full"
         disabled={!them || empty}
-        onClick={() => them && onSend({ type: "TRADE", targetId: them.playerId, give: { items: give.map((i) => me.items[i]), fate: giveFate }, want: { items: want.map((i) => them.items[i]), fate: wantFate } })}
+        onClick={() =>
+          them &&
+          onSend({
+            type: "TRADE",
+            targetId: them.playerId,
+            give: { items: give.map((i) => me.items[i]), fate: giveFate, ...(city ? { parts: giveParts, passes: givePasses } : {}) },
+            want: { items: want.map((i) => them.items[i]), fate: wantFate, ...(city ? { parts: wantParts, passes: wantPasses } : {}) },
+          })
+        }
       >
         {t("dock.offerTrade")}
       </button>
@@ -378,9 +458,38 @@ function TradeBuilder({ g, me, partners, onSend }: { g: PlayerView; me: PublicPl
   );
 }
 
+/** Scenario 02: boat parts and passes on one side of an offer. What the other side carries is hidden: you can ask, they may not have it. */
+function CitySide({ parts, picked, onToggle, passes, maxPasses, setPasses, hint }: { parts: PartId[]; picked: PartId[]; onToggle: (p: PartId) => void; passes: number; maxPasses: number; setPasses: (n: number) => void; hint?: string }) {
+  const t = useT();
+  const text = useScenario02Text();
+  return (
+    <div className="min-w-0 rounded-lg border border-indigo p-2">
+      <p className="label mb-1 truncate text-[10px]">{t("s2.trade.parts")}</p>
+      <div className="flex flex-wrap gap-1">
+        {parts.length ? (
+          parts.map((p) => (
+            <button key={p} onClick={() => onToggle(p)} aria-pressed={picked.includes(p)} className={`min-h-12 rounded-full border px-2 py-1 text-xs ${picked.includes(p) ? "border-signal text-signal" : "border-gold/30 text-mist"}`}>
+              {text.parts[p].name}
+            </button>
+          ))
+        ) : (
+          <span className="text-xs text-ash">{t("s2.secrets.none")}</span>
+        )}
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <span className="text-xs text-mist">{t("s2.trade.passes")}</span>
+        <button className="h-12 w-12 rounded-full border border-gold/30" onClick={() => setPasses(Math.max(0, passes - 1))} aria-label={t("s2.trade.lessPasses")}>−</button>
+        <span className="font-mono">{passes}</span>
+        <button className="h-12 w-12 rounded-full border border-gold/30" onClick={() => setPasses(Math.min(maxPasses, passes + 1))} aria-label={t("s2.trade.morePasses")}>+</button>
+      </div>
+      {hint && <p className="mt-1 text-[10px] text-ash">{hint}</p>}
+    </div>
+  );
+}
+
 function TradeSide({ title, items, picked, onToggle, fate, maxFate, setFate }: { title: string; items: ItemId[]; picked: number[]; onToggle: (i: number) => void; fate: number; maxFate: number; setFate: (n: number) => void }) {
   const t = useT();
-  const names = useScenarioText().items;
+  const names = useItemText();
   return (
     <div className="min-w-0 rounded-lg border border-indigo p-2">
       <p className="label mb-1 truncate text-[10px]">{title}</p>
@@ -388,7 +497,7 @@ function TradeSide({ title, items, picked, onToggle, fate, maxFate, setFate }: {
         {items.length ? (
           items.map((item, i) => (
             <button key={i} onClick={() => onToggle(i)} aria-pressed={picked.includes(i)} className={`rounded-full border px-2 py-1 text-xs ${picked.includes(i) ? "border-signal text-signal" : "border-gold/30 text-mist"}`}>
-              {names[item].name}
+              {names(item).name}
             </button>
           ))
         ) : (

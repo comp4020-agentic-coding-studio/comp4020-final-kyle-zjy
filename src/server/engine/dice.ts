@@ -40,7 +40,16 @@ type ReactionHooks = {
 let reactions: ReactionHooks = { woken: () => [], options: () => [], use: () => {}, passive: () => false };
 export const setRollReactions = (hooks: ReactionHooks) => (reactions = hooks);
 
-const BONUS_STATUS: Partial<Record<RollPurpose, string>> = { INVESTIGATE: "INVESTIGATE_BONUS", REPAIR: "REPAIR_BONUS" };
+const BONUS_STATUS: Partial<Record<RollPurpose, string>> = {
+  INVESTIGATE: "INVESTIGATE_BONUS",
+  REPAIR: "REPAIR_BONUS",
+  S2_SEARCH: "INVESTIGATE_BONUS",
+  S2_INVESTIGATE: "INVESTIGATE_BONUS",
+  S2_WORK: "REPAIR_BONUS",
+  S2_WADE: "ROPE_BONUS",
+  S2_RESCUE: "ROPE_BONUS",
+  S2_RISK: "RISK_BONUS",
+};
 
 export type RollOptions = {
   /** Fate, help and reactions apply (false for group/event auto-rolls). */
@@ -68,7 +77,9 @@ export function startRoll(ctx: Ctx, p: PlayerGameState, purpose: RollPurpose, la
   }
   const bonusKind = BONUS_STATUS[purpose];
   if (modifiable && bonusKind && hasStatus(p, bonusKind)) {
-    modifiers.push({ source: ref.item(purpose === "REPAIR" ? "OLD_KEY" : "FLASHLIGHT"), delta: consumeStatus(ctx, p, bonusKind) });
+    // scenario 01 names the item the bonus came from; elsewhere the status names itself
+    const source = purpose === "REPAIR" ? ref.item("OLD_KEY") : purpose === "INVESTIGATE" ? ref.item("FLASHLIGHT") : ref.status(bonusKind);
+    modifiers.push({ source, delta: consumeStatus(ctx, p, bonusKind) });
   }
   if (modifiable && ruleOn(ctx, "ROLL_BONUS")) modifiers.push({ source: m`Rewritten rules`, delta: 1 });
   const staticStatus = statusOf(p, "STATIC");
@@ -244,7 +255,7 @@ export function quickRoll(ctx: Ctx, p: PlayerGameState): { value: number; tier: 
   return { value, tier: tierOf(value) };
 }
 
-const KIND_BIT: Partial<Record<RollPurpose, number>> = { INVESTIGATE: 1, SEARCH: 2, REPAIR: 4, CONFRONT: 8 };
+const KIND_BIT: Partial<Record<RollPurpose, number>> = { INVESTIGATE: 1, SEARCH: 2, REPAIR: 4, CONFRONT: 8, S2_INVESTIGATE: 1, S2_SEARCH: 2, S2_WORK: 4, S2_RESCUE: 8, S2_RISK: 8 };
 
 /** What a finished ordinary roll means for round records, streaks and bonds. */
 function recordRoll(ctx: Ctx, p: PlayerGameState, roll: Roll): void {

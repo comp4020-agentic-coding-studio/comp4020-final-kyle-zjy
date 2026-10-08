@@ -6,7 +6,7 @@ import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import type { ActionAvailability, GameAction, GameActionType, RejectCode, TradeOffer } from "../../shared/game/actions.ts";
 import { AP_COST } from "../../shared/game/actions.ts";
 import { CARRIAGES, isKeyItem, ITEMS, KEY_FOR_LOCK, MAX_HELP_BONUS, MAX_SANITY } from "../../shared/game/scenario01/content.ts";
-import type { GameState, PlayerGameState, PlayerId } from "../../shared/game/state.ts";
+import type { GameState, PlayerGameState, PlayerId, S01ItemId } from "../../shared/game/state.ts";
 import { neighboursOf } from "./beats.ts";
 import { activePlayerId, cue, log, RuleError, type Ctx } from "./context.ts";
 import { startRoll } from "./dice.ts";
@@ -20,10 +20,11 @@ import { canUseSkill } from "./skills.ts";
 import { answerWindow, onResume, openWindow } from "./windows.ts";
 import { list, m, ref } from "../../shared/i18n/msg.ts";
 import type { Msg } from "../../shared/i18n/types.ts";
-import { characterSkill } from "../../shared/game/scenario01/skills.ts";
+import { characterSkill } from "../../shared/game/skills.ts";
+import { rulesFor, type ActionSet } from "./scenario.ts";
 
-type Fail = { code: RejectCode; reason: Msg };
-const fail = (code: RejectCode, reason: Msg): Fail => ({ code, reason });
+export type Fail = { code: RejectCode; reason: Msg };
+export const fail = (code: RejectCode, reason: Msg): Fail => ({ code, reason });
 
 const IN_RUN = new Set(["ACT_1", "ACT_2", "ACT_3"]);
 
@@ -47,7 +48,7 @@ function adjacent(s: GameState, p: PlayerGameState): number[] {
   return [p.carriageIndex - 1, p.carriageIndex + 1].filter((i) => i >= 0 && i < s.carriages.length && !s.carriages[i].locked);
 }
 
-type Spec<A extends GameAction = GameAction> = {
+export type Spec<A extends GameAction = GameAction> = {
   check: (s: GameState, p: PlayerGameState, a?: A) => Fail | null;
   apply: (ctx: Ctx, p: PlayerGameState, a: A) => void;
   targets?: (s: GameState, p: PlayerGameState) => (string | number)[];
@@ -220,7 +221,7 @@ onResume("TRADE", (ctx, w, answers) => {
   cue(ctx, "TRADE", { from: from.playerId, to: to.playerId });
 });
 
-const STABILIZE: Spec<Extract<GameAction, { type: "STABILIZE" }>> = {
+export const STABILIZE: Spec<Extract<GameAction, { type: "STABILIZE" }>> = {
   check: (s, p, a) => {
     const canSanity = p.sanity < MAX_SANITY || p.lost;
     const negatives = p.statuses.filter((st) => st.polarity === "NEGATIVE" && st.ordinary);
@@ -262,10 +263,10 @@ const CONFRONT: Spec<Extract<GameAction, { type: "CONFRONT" }>> = {
   },
 };
 
-const USE_SKILL: Spec<Extract<GameAction, { type: "USE_SKILL" }>> = {
+export const USE_SKILL: Spec<Extract<GameAction, { type: "USE_SKILL" }>> = {
   targets: (s, p) => others(s, p).map((o) => o.playerId).concat(p.playerId),
   check: (s, p, a) => {
-    const skill = characterSkill(p.skill.borrowed ?? p.characterId);
+    const skill = characterSkill(p.skill.borrowed ?? p.characterId, s.scenarioId);
     if (skill.type !== "ACTIVE") {
       if (p.skill.usesLeft <= 0) return fail("SKILL_ALREADY_USED", m`Your ability is already burned.`);
       return fail("NOT_YOUR_WINDOW", skill.type === "REACTION" ? m`This ability answers something that happens. You'll be asked when it can fire.` : m`This ability is offered automatically when its condition comes true.`);
@@ -275,16 +276,16 @@ const USE_SKILL: Spec<Extract<GameAction, { type: "USE_SKILL" }>> = {
     if (a && (!Array.isArray(targets) || targets.some((t) => typeof t !== "string"))) return fail("INVALID", m`Invalid targets.`);
     const check = canUseSkill(s, p.playerId, a ? targets : defaultTargets(s, p));
     if (!check.ok) return fail(check.code, check.reason);
-    if (a && !activeRequirementHolds(ctxOf(s), p.playerId, targets)) return fail("ILLEGAL_TARGET", m`${ref.skill(p.skill.borrowed ?? p.characterId)} has nothing to act on right now.`);
+    if (a && !activeRequirementHolds(ctxOf(s), p.playerId, targets)) return fail("ILLEGAL_TARGET", m`${ref.skill(p.skill.borrowed ?? p.characterId, s.scenarioId)} has nothing to act on right now.`);
     return null;
   },
-  hint: (_s, p) => ref.skillDescription(p.skill.borrowed ?? p.characterId),
+  hint: (s, p) => ref.skillDescription(p.skill.borrowed ?? p.characterId, s.scenarioId),
   apply: (ctx, p, a) => useSkill(ctx, p.playerId, a.targets ?? []),
 };
 
 /** For availability only: a legal target set, if one exists, so "can I use it?" is answerable. */
 function defaultTargets(s: GameState, p: PlayerGameState): PlayerId[] {
-  const rule = characterSkill(p.skill.borrowed ?? p.characterId).target;
+  const rule = characterSkill(p.skill.borrowed ?? p.characterId, s.scenarioId).target;
   const pool = others(s, p);
   if (rule === "ANY_PLAYER" || rule === "OTHER_PLAYER") return pool.slice(0, 1).map((o) => o.playerId);
   if (rule === "SAME_CARRIAGE") return sameCarriage(s, p).slice(0, 1).map((o) => o.playerId);
@@ -301,7 +302,7 @@ const USE_ITEM: Spec<Extract<GameAction, { type: "USE_ITEM" }>> = {
     if (!(a.item in ITEMS) || !p.items.includes(a.item)) return fail("ILLEGAL_TARGET", m`You don't have that item.`);
     if (isKeyItem(a.item)) return fail("ILLEGAL_TARGET", m`A key isn't used up: carry it to its escape lock and Repair there.`);
     if (a.item === "POCKET_WATCH" && s.collapse === 0) return fail("ILLEGAL_TARGET", m`Collapse is already at 0.`);
-    if (ITEMS[a.item].needsTarget && a.targetId && a.targetId !== p.playerId) {
+    if (ITEMS[a.item as S01ItemId].needsTarget && a.targetId && a.targetId !== p.playerId) {
       const t = s.players[a.targetId];
       if (!t || t.away || t.carriageIndex !== p.carriageIndex) return fail("ILLEGAL_TARGET", m`They need to be in your carriage.`);
     }
@@ -313,11 +314,11 @@ const USE_ITEM: Spec<Extract<GameAction, { type: "USE_ITEM" }>> = {
     const target = a.targetId ?? p.playerId;
     log(ctx, m`${p.nickname} uses the ${ref.item(a.item)}.`, "ITEM", p.playerId);
     cue(ctx, "ITEM_USED", { playerId: p.playerId, item: a.item, targetId: target });
-    applyEffects(ctx, ITEMS[a.item].effects, { ownerId: p.playerId, targets: [target], label: ref.item(a.item) });
+    applyEffects(ctx, ITEMS[a.item as S01ItemId].effects, { ownerId: p.playerId, targets: [target], label: ref.item(a.item) });
   },
 };
 
-const END_TURN: Spec = {
+export const END_TURN: Spec = {
   check: () => null,
   apply: (ctx, p) => {
     log(ctx, m`${p.nickname} ends their turn.`, "TURN", p.playerId);
@@ -325,7 +326,7 @@ const END_TURN: Spec = {
   },
 };
 
-const SPECS: Partial<Record<GameActionType, Spec<never>>> = {
+const SPECS01: Partial<Record<GameActionType, Spec<never>>> = {
   MOVE,
   INVESTIGATE: rollAction("INVESTIGATE", m`investigation`),
   SEARCH: rollAction("SEARCH", m`search`),
@@ -339,7 +340,11 @@ const SPECS: Partial<Record<GameActionType, Spec<never>>> = {
   END_TURN,
 };
 
-export const TURN_ACTIONS: GameActionType[] = ["MOVE", "INVESTIGATE", "SEARCH", "REPAIR", "HELP", "TRADE", "STABILIZE", "CONFRONT", "USE_SKILL", "USE_ITEM", "END_TURN"];
+export const S01_ACTIONS: ActionSet = {
+  specs: SPECS01,
+  turnActions: ["MOVE", "INVESTIGATE", "SEARCH", "REPAIR", "HELP", "TRADE", "STABILIZE", "CONFRONT", "USE_SKILL", "USE_ITEM", "END_TURN"],
+  apCost: AP_COST,
+};
 
 /** Validates and applies one player action. Throws RuleError on rejection. */
 export function applyAction(ctx: Ctx, actorId: PlayerId, action: GameAction): void {
@@ -356,9 +361,10 @@ export function applyAction(ctx: Ctx, actorId: PlayerId, action: GameAction): vo
     if (s.sequence && !s.sequence.acks.includes(actorId)) s.sequence.acks.push(actorId);
     return;
   }
-  const spec = SPECS[action.type] as Spec<GameAction> | undefined;
+  const set = rulesFor(s).actions;
+  const spec = set.specs[action.type] as Spec<GameAction> | undefined;
   if (!spec) throw new RuleError("INVALID", m`Unknown action.`);
-  const cost = AP_COST[action.type] ?? 0;
+  const cost = set.apCost[action.type] ?? 0;
   const gate = turnGate(s, actorId, cost) ?? spec.check(s, p, action);
   if (gate) throw new RuleError(gate.code, gate.reason);
   p.ap -= cost;
@@ -369,9 +375,10 @@ export function applyAction(ctx: Ctx, actorId: PlayerId, action: GameAction): vo
 export function availableActions(s: GameState, viewerId: PlayerId): ActionAvailability[] {
   const p = s.players[viewerId];
   if (!p) return [];
-  return TURN_ACTIONS.map((type) => {
-    const spec = SPECS[type] as Spec<GameAction>;
-    const apCost = AP_COST[type] ?? 0;
+  const set = rulesFor(s).actions;
+  return set.turnActions.map((type) => {
+    const spec = set.specs[type] as Spec<GameAction>;
+    const apCost = set.apCost[type] ?? 0;
     const gate = turnGate(s, viewerId, apCost) ?? spec.check(s, p);
     return {
       type,
@@ -386,7 +393,7 @@ export function availableActions(s: GameState, viewerId: PlayerId): ActionAvaila
 
 
 /** What a help means beyond the bonus: round record, mutual-help bonds, grudges, abilities. */
-function helped(ctx: Ctx, helperId: PlayerId, helpedId: PlayerId): void {
+export function helped(ctx: Ctx, helperId: PlayerId, helpedId: PlayerId): void {
   const s = ctx.s;
   s.roundRecord.helps.push([helperId, helpedId]);
   const helper = s.players[helperId];

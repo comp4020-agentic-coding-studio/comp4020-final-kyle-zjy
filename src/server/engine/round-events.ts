@@ -6,7 +6,8 @@
 // (cancel it, redraw it, soften it, step out, decide it, vote on it), then it
 // resolves with whatever they changed. Extra events from abilities use the
 // same resolution for their own participants, without touching the deck.
-import { EVENT_BY_ID, EVENT_IDS, EVENTS, type EventCard } from "../../shared/game/scenario01/events.ts";
+import type { EventCard } from "../../shared/game/scenario01/events.ts";
+import { EVENT_BY_ID, eventsFor } from "../../shared/game/events.ts";
 import type { Effect } from "../../shared/game/effects.ts";
 import type { PlayerId } from "../../shared/game/state.ts";
 import { cue, log, type Ctx } from "./context.ts";
@@ -31,7 +32,7 @@ export function nextCard(ctx: Ctx): EventCard {
   for (let pass = 0; pass < 2; pass++) {
     const i = s.eventDeck.findIndex((id) => forAct(ctx, id));
     if (i >= 0) return EVENT_BY_ID.get(s.eventDeck.splice(i, 1)[0])!;
-    s.eventDeck = shuffle(s, EVENT_IDS);
+    s.eventDeck = shuffle(s, eventsFor(s.scenarioId).map((c) => c.id));
     log(ctx, m`The event deck reshuffles.`, "EVENT");
   }
   throw new Error(`no event card for act ${s.act}`);
@@ -51,8 +52,9 @@ export function putOnTop(ctx: Ctx, id: string): void {
 export function extraCard(ctx: Ctx, size: "SMALL" | "STANDARD" | "MULTI" | "MINIGAME" | "REWARD", not: string[] = []): EventCard {
   const fits = (c: EventCard) =>
     size === "SMALL" ? c.kind === "INSTANT" || c.kind === "GROUP_ROLL" : size === "MINIGAME" ? c.kind === "GROUP_ROLL" : size === "REWARD" ? c.bias === "REWARD" : true;
-  const pool = EVENTS.filter((c) => c.acts.includes(ctx.s.act) && fits(c) && !not.includes(c.id));
-  return pick(ctx.s, pool.length ? pool : EVENTS.filter((c) => fits(c)));
+  const deck = eventsFor(ctx.s.scenarioId);
+  const pool = deck.filter((c) => c.acts.includes(ctx.s.act) && fits(c) && !not.includes(c.id));
+  return pick(ctx.s, pool.length ? pool : deck.filter((c) => fits(c)));
 }
 
 // ---- the round's event -------------------------------------------------------

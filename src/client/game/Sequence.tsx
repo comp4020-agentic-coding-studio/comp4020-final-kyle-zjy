@@ -2,7 +2,7 @@
 // connected passenger has pressed Continue (or the host skips): no clock.
 import { motion } from "motion/react";
 import type { CarriageIdentity, PlayerView } from "../../shared/game/state.ts";
-import { useT } from "../i18n/index.ts";
+import { useT, type MessageKey } from "../i18n/index.ts";
 import { sendGame } from "../store.ts";
 import { notYet } from "./waiting.ts";
 
@@ -11,6 +11,9 @@ const SCENES = {
   BLACKOUT: { tint: "#000000" },
   FOLD: { tint: "#1a0f3a" },
   CAB_OPEN: { tint: "#2a1a05" },
+  // scenario 02
+  FLOOD: { tint: "#04203a" },
+  CAPACITY: { tint: "#0d2a33" },
 } as const;
 
 export function SequenceOverlay({ g }: { g: PlayerView }) {
@@ -18,8 +21,12 @@ export function SequenceOverlay({ g }: { g: PlayerView }) {
   const seq = g.sequence;
   if (!seq || !(seq.kind in SCENES)) return null;
   const kind = seq.kind as keyof typeof SCENES;
-  const scene = { ...SCENES[kind], kicker: t(`scene.${kind}.kicker`), title: t(`scene.${kind}.title`) };
-  const base = [t(`scene.${kind}.line1`), t(`scene.${kind}.line2`), t(`scene.${kind}.line3`)];
+  // scenario 02's scenes: one per flooded act, and the boat's seats
+  const s2 = kind === "FLOOD" ? (`s2.scene.FLOOD${seq.stage ?? 2}` as const) : kind === "CAPACITY" ? "s2.scene.CAPACITY" : null;
+  const words = { n: g.city?.boat.capacity ?? "?", total: g.turnOrder.length };
+  const key = (part: string) => (s2 ? (`${s2}.${part}` as MessageKey) : (`scene.${kind}.${part}` as MessageKey));
+  const scene = { ...SCENES[kind], kicker: t(key("kicker"), words), title: t(key("title"), words) };
+  const base = [t(key("line1"), words), t(key("line2"), words), t(key("line3"), words)];
   const acked = seq.acks.includes(g.viewerId);
   const bonus = g.config.act3BonusAp;
   const lines: readonly string[] =

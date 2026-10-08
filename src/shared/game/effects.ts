@@ -26,6 +26,7 @@ export type StatusPolarity = "POSITIVE" | "NEGATIVE";
 export type RollKind = "ORDINARY" | "RISK" | "SMALL" | "CONTEST";
 
 export const EFFECT_KINDS = [
+  "CITY_EVENT",
   "GAIN_FATE",
   "LOSE_FATE",
   "TRANSFER_FATE",
@@ -195,7 +196,9 @@ export type Effect =
   | { kind: "INSPECTOR_STEP"; steps: number }
   | { kind: "REPAIR_ANCHOR"; which: "WEAKEST"; amount: number }
   /** Apply `then` only when the named condition holds at resolution time. */
-  | { kind: "CONDITIONAL"; condition: string; then: Effect[]; otherwise?: Effect[] };
+  | { kind: "CONDITIONAL"; condition: string; then: Effect[]; otherwise?: Effect[] }
+  /** Scenario 02: an event that changes the city itself (scenario02/events.ts). */
+  | { kind: "CITY_EVENT"; what: "AFTERSHOCK" | "STORM" | "BROADCAST" | "DISTRESS" | "LOW_TIDE" | "SALVAGE" | "BREACH" | "NAME" | "HOLD" };
 
 // Compile-time guard: EFFECT_KINDS and the Effect union list the same kinds.
 type _Missing = Exclude<Effect["kind"], EffectKind> | Exclude<EffectKind, Effect["kind"]>;

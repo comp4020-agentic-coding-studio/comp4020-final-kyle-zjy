@@ -16,16 +16,23 @@ import { Lobby } from "./Lobby.tsx";
 const named = <K extends string>(load: () => Promise<Record<K, ComponentType>>, key: K) => lazy(() => load().then((m) => ({ default: m[key] })));
 const Intro = named(() => import("./Intro.tsx"), "Intro");
 const Game = named(() => import("./Game.tsx"), "Game");
+const CityGame = named(() => import("./CityGame.tsx"), "CityGame");
 const Ending = named(() => import("./Ending.tsx"), "Ending");
 const Results = named(() => import("./Results.tsx"), "Results");
+
+/** A run's screen: the train or the city, by the run's scenario. */
+function Run() {
+  const scenario = useStore((s) => s.snapshot?.game?.scenarioId);
+  return scenario === "S02_SUNKEN_CITY" ? <CityGame /> : <Game />;
+}
 
 // One screen per phase.
 const SCREENS: Record<GamePhase, ComponentType> = {
   LOBBY: Lobby,
   INTRO: Intro,
-  ACT_1: Game,
-  ACT_2: Game,
-  ACT_3: Game,
+  ACT_1: Run,
+  ACT_2: Run,
+  ACT_3: Run,
   ENDING: Ending,
   RESULTS: Results,
 };

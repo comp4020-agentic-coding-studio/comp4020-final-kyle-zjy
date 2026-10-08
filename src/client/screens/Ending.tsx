@@ -6,12 +6,14 @@ import { HostSkip } from "../game/HostSkip.tsx";
 import { useScenarioText, useT } from "../i18n/index.ts";
 import { notYet } from "../game/waiting.ts";
 import { sendGame, useGame } from "../store.ts";
+import { CityEnding } from "./CityScreens.tsx";
 
 export function Ending() {
   const g = useGame();
   const t = useT();
   const endings = useScenarioText().endings;
   if (!g?.outcome) return null;
+  if (g.city) return <CityEnding g={g} />;
   const text = { ...endings[endingKey(g.outcome, g.failReason)], won: endingWon(g.outcome) };
   const acked = g.sequence?.acks.includes(g.viewerId) ?? false;
   const tint = text.won ? (g.outcome === "NORMAL" ? "#1b2a4a" : "#2a1f05") : "#2a0707";

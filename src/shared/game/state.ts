@@ -2,6 +2,7 @@
 // ever receive a PlayerView built by project(state, viewerId), which strips
 // every secret that isn't the viewer's (see docs/game-state.md §12).
 import type { CharacterId, MBTI, RollTier, TriggerKind, Zodiac } from "../characters/types.ts";
+import type { PartId, S02ItemId } from "./scenario02/items.ts";
 import type { ActionAvailability } from "./actions.ts";
 import type { Effect, StatusPolarity } from "./effects.ts";
 import type { Msg } from "../i18n/types.ts";
@@ -15,7 +16,7 @@ export type GamePhase = (typeof GAME_PHASES)[number];
 /** Per-member progress through character selection inside LOBBY. */
 export type MemberStage = "JOINED" | "ZODIAC_CHOSEN" | "REVEALED" | "READY";
 
-export type RoundStep = "ROUND_START" | "PLAYER_TURNS" | "INSPECTOR" | "ROUND_EVENT" | "ROUND_END";
+export type RoundStep = "ROUND_START" | "PLAYER_TURNS" | "INSPECTOR" | "WORLD" | "ROUND_EVENT" | "ROUND_END";
 
 export type Member = {
   playerId: PlayerId;
@@ -36,7 +37,7 @@ export type RoomState = {
   version: number;
 };
 
-export type ScenarioId = "S01_LAST_TRAIN";
+export type ScenarioId = "S01_LAST_TRAIN" | "S02_SUNKEN_CITY";
 
 // ---- scenario 01 -----------------------------------------------------------
 
@@ -61,7 +62,10 @@ export type Anchor = {
 
 export type FragmentType = "ROUTE" | "DRIVER" | "MANIFEST" | "WITNESS" | "TICKET" | "SIGNAL";
 
-export type ItemId =
+/** Every item of every scenario (each scenario's pools only draw its own). */
+export type ItemId = S01ItemId | S02ItemId;
+
+export type S01ItemId =
   | "OLD_KEY"
   | "FLASHLIGHT"
   | "MEDKIT"
@@ -171,7 +175,7 @@ export type PlayerStats = {
   timesLost: number;
 };
 
-export type RollPurpose = "INVESTIGATE" | "SEARCH" | "REPAIR" | "CONFRONT" | "TICKET_CHECK" | "EVENT" | "SKILL";
+export type RollPurpose = "INVESTIGATE" | "SEARCH" | "REPAIR" | "CONFRONT" | "TICKET_CHECK" | "EVENT" | "SKILL" | "S2_WADE" | "S2_SEARCH" | "S2_INVESTIGATE" | "S2_WORK" | "S2_RESCUE" | "S2_RISK";
 
 export type Roll = {
   id: string;
@@ -289,9 +293,11 @@ export type Inspector = {
   targetId: PlayerId | null;
 };
 
-export type Outcome = "NORMAL" | "TRUE_DELETE" | "TRUE_TICKET" | "FAILED";
+/** S02_EVACUATED: the boat left the sunken city (who was aboard is in each result). */
+export type Outcome = "NORMAL" | "TRUE_DELETE" | "TRUE_TICKET" | "FAILED" | "S02_EVACUATED";
 
-export type FailReason = "COLLAPSE" | "TIME" | "ALL_LOST";
+/** BOAT_LOST: a part the boat needs went under before anyone found it. */
+export type FailReason = "COLLAPSE" | "TIME" | "ALL_LOST" | "BOAT_LOST";
 
 export type LogLine = {
   seq: number;
@@ -313,7 +319,7 @@ export type PlayerTask = { id: string; text: Msg; untilRound: number; done: bool
 
 /** Owner-only data. Never leaves the server except to its owner. */
 export type PlayerSecrets = {
-  obsession: ObsessionId;
+  obsession: ObsessionId | null;
   messages: { id: string; text: Msg; round: number }[];
   allies: PlayerId[];
   dreamCards: { id: string; text: Msg }[];
@@ -344,7 +350,9 @@ export type Bond = {
 /** A short cinematic everyone sees at once (intro, blackout, fold, ending). */
 /** A scene everyone sees at once; it ends when every connected passenger has pressed Continue (or the host skips). */
 export type Sequence = {
-  kind: "INTRO" | "BLACKOUT" | "FOLD" | "CAB_OPEN" | "ENDING";
+  kind: "INTRO" | "BLACKOUT" | "FOLD" | "CAB_OPEN" | "ENDING" | "FLOOD" | "CAPACITY";
+  /** FLOOD: the act the city has just entered. */
+  stage?: number;
   acks: PlayerId[];
   /** FOLD: the carriage order before and after, by node index (so a reload replays the same fold). */
   fold?: { before: CarriageIdentity[]; after: CarriageIdentity[] };
@@ -390,12 +398,16 @@ export type QueuedTrigger = {
 /** Per-player summary on the results screen (secrets are revealed once the run is over). */
 export type PlayerResult = {
   playerId: PlayerId;
-  obsession: ObsessionId;
+  obsession: ObsessionId | null;
   obsessionMet: boolean;
   title: Msg;
   highlights: Msg[];
   messages: { text: Msg }[];
+  /** Scenario 02: how this player's run ended. */
+  escape?: EscapeFate;
 };
+
+export type EscapeFate = "ESCAPED" | "GATEKEEPER" | "LEFT_BEHIND" | "DROWNED";
 
 export type TuningTier = "SMALL" | "STANDARD" | "LARGE";
 
@@ -446,7 +458,8 @@ export type GameState = {
   entities: Entity[];
   seatNeighbours: PlayerId[][];
   escape: { round: number | null; power: boolean; identity: boolean; memory: boolean; by: Partial<Record<EscapeLockId, PlayerId>> };
-  nightRule: NightRuleId;
+  /** Scenario 01's rule for the night; null in a scenario without night rules. */
+  nightRule: NightRuleId | null;
   eventDeck: string[];
   currentEvent: ActiveEvent | null;
   delayed: DelayedEffect[];
@@ -465,6 +478,8 @@ export type GameState = {
   roundRecord: RoundRecord;
   jobs: Job[];
   sequence: Sequence | null;
+  /** Scenario 02's city; null in scenario 01. A player's node there is their `carriageIndex` (a zone index). */
+  city: CityState | null;
   flags: Record<string, number>;
 
   outcome: Outcome | null;
@@ -478,8 +493,9 @@ export type GameState = {
 /** What one client receives. Server-only fields are gone; secrets are the viewer's own. */
 export type PlayerView = Omit<
   GameState,
-  "secrets" | "seed" | "rng" | "rngCalls" | "eventDeck" | "players" | "pending" | "rollContext" | "pendingEffect" | "delayed" | "bonds" | "jobs" | "triggerQueue" | "roundRecord"
+  "secrets" | "seed" | "rng" | "rngCalls" | "eventDeck" | "players" | "pending" | "rollContext" | "pendingEffect" | "delayed" | "bonds" | "jobs" | "triggerQueue" | "roundRecord" | "city"
 > & {
+  city: PublicCity | null;
   viewerId: PlayerId;
   mySecrets: ViewerSecrets | null;
   players: Record<PlayerId, PublicPlayerState>;
@@ -500,4 +516,94 @@ export type PublicPlayerState = Omit<PlayerGameState, "statuses" | "storedResult
 export type PublicWindow = Omit<PendingWindow, "resume" | "answers"> & {
   answeredBy: PlayerId[];
   myAnswer: string | null;
+};
+
+// ---- scenario 02: the sinking city ----------------------------------------
+
+export type Elevation = "LOW" | "MEDIUM" | "HIGH";
+/** BLOCKED: closed by debris (events), whatever the water. */
+export type ZoneStatus = "NORMAL" | "FLOODED" | "SUBMERGED" | "BLOCKED";
+
+export type CityZone = {
+  status: ZoneStatus;
+  searched: boolean;
+  powered: boolean;
+  /** Server only: the Collapse at which this zone floods / goes under (seeded per run). */
+  floodAt: number;
+  sinkAt: number;
+  /** Server only: what a search here turns up (seeded per run). */
+  caches: string[];
+};
+
+export type CityEdge = {
+  a: number;
+  b: number;
+  kind: "ROAD" | "TUNNEL" | "LOW_BRIDGE";
+  /** Server only: the Collapse at which a tunnel or low bridge gives way. */
+  breakAt: number | null;
+  broken: boolean;
+};
+
+/** A big job (the power station, the pumps): several people, several rounds. */
+export type Facility = { required: number; progress: number; done: boolean; workedThisRound: PlayerId[]; contributors: Record<PlayerId, number> };
+
+export type CityNpc = { id: string; zone: number; state: "WAITING" | "RESCUED" | "LOST" };
+
+/** Key items, apart from the ordinary item list so nothing random can touch them. */
+export type Holding = { parts: PartId[]; /** Evacuation passes: the right to compete for a seat, not a seat. */ passes: number };
+
+/**
+ * The evacuation boat at the pier. Ready once its three parts are installed,
+ * the pier has power and the pier gate is repaired. Capacity is drawn per run
+ * and kept from players until someone sees the boat (or the city is half gone).
+ */
+export type Boat = {
+  capacity: number;
+  revealed: boolean;
+  installed: PartId[];
+  /** Power by two emergency batteries (the alternative to the power station). */
+  batteryPower: boolean;
+  /** The auto-control chip is fitted: the gate runs from the boat, nobody stays. */
+  autoGate: boolean;
+  /** The round the boat was first found ready; departure comes the round after. */
+  readyRound: number | null;
+  aboard: PlayerId[];
+  gatekeeper: PlayerId | null;
+  launched: boolean;
+  /** Voted to leave while a pass-holder was still outside with a seat free. */
+  betrayers: PlayerId[];
+};
+
+export type CityState = {
+  zones: CityZone[];
+  edges: CityEdge[];
+  startZone: number;
+  /** Rises the next round-end Collapse step skips (pumps, good events). */
+  hold: number;
+  /** Extra rises the next round-end step adds (storms). */
+  surge: number;
+  facilities: Record<"POWER_STATION" | "PUMP_STATION" | "HARBOUR_GATE", Facility>;
+  boat: Boat;
+  /** Server only: which pass sources are live this run (more passes than seats, never all of them). */
+  passSources: string[];
+  rescues: Record<PlayerId, number>;
+  /** The round the pumps were last run (once a round). */
+  pumpedRound: number;
+  holdings: Record<PlayerId, Holding>;
+  npcs: CityNpc[];
+  /** Public work done (repairs, rescues, pumping): titles, and passes later. */
+  contrib: Record<PlayerId, number>;
+};
+
+/** What every player sees of a zone: its state now, and whether it goes under at the next rise. */
+export type PublicZone = Omit<CityZone, "floodAt" | "sinkAt" | "caches"> & { warning: boolean };
+export type PublicEdge = Omit<CityEdge, "breakAt">;
+/** Others see how many parts someone carries, not which. */
+export type PublicHolding = { parts: PartId[] | null; partCount: number; /** Only the holder sees their own passes. */ passes: number | null };
+export type PublicCity = Omit<CityState, "zones" | "edges" | "holdings" | "passSources" | "boat"> & {
+  zones: PublicZone[];
+  edges: PublicEdge[];
+  holdings: Record<PlayerId, PublicHolding>;
+  /** Capacity is null until revealed. */
+  boat: Omit<Boat, "capacity"> & { capacity: number | null };
 };

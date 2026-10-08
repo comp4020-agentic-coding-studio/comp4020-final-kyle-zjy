@@ -73,3 +73,23 @@ One translation per concept, everywhere: UI, skills, events, log.
 Chinese text uses full-width punctuation (，。：？！「」), and numbers stay
 Arabic digits. Translations must describe exactly the same mechanic as the
 English: timing, targets, amounts, and "once per run" carry over word for word.
+
+## Scenario 02 terms (zh-CN)
+
+| English | 中文 | Notes |
+| --- | --- | --- |
+| Sunken City: The Last High Ground | 沉没都市：最后的高地 | |
+| Act I · The Water Came / II · Not Everyone Fits / III · The Last High Ground | 第一幕 · 水来了 / 第二幕 · 船坐不下所有人 / 第三幕 · 最后的高地 | |
+| zone | 区域 | |
+| flooded / under water / blocked / dry | 积水 / 沉没 / 被封堵 / 干燥 | zone states |
+| low / mid / high ground | 低地 / 中地 / 高地 | |
+| wade | 涉水 | |
+| evacuation boat / pier / pier gate | 逃生船 / 码头 / 码头闸门 | |
+| evacuation pass / seat / capacity | 撤离资格 / 船位 / 容量 | "a pass is not a seat": 撤离资格不等于船位 |
+| boat part (Engine Block, Fuel Drums, Navigation Module, Auto-Control Chip) | 船只部件（发动机、燃料桶、导航模块、自动控制芯片） | |
+| power station / pump station | 发电站 / 抽水泵站 | |
+| rescue / operate / salvage / install / register / share intel | 救援 / 操作 / 抢救物资 / 安装 / 登记 / 分享情报 | actions |
+| intel | 情报 | |
+| aboard / despair (lost) | 已登船 / 绝望 | |
+| escaped / held the gate / left behind / drowned | 已逃离 / 守住闸门 / 被留下 / 溺亡 | per-player endings |
+| The Last Gatekeeper, The Betrayer, The Last Survivor, The Unsung Hero, The Rescuer, Companion in the Deep, Fate's Gambler, The Hoarder | 最后守门人、背叛者、最后幸存者、无名英雄、救援者、绝境同行者、命运赌徒、囤积者 | titles |

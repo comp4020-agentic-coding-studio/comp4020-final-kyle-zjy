@@ -10,6 +10,7 @@ import { endingKey, endingWon } from "../game/ending.ts";
 import { useCharacterText, useFormat, useScenarioText, useT } from "../i18n/index.ts";
 import { navigate } from "../router.ts";
 import { sendLobby, useGame, useMe } from "../store.ts";
+import { CityResults } from "./CityScreens.tsx";
 
 export function Results() {
   const g = useGame();
@@ -17,6 +18,7 @@ export function Results() {
   const t = useT();
   const endings = useScenarioText().endings;
   if (!g?.outcome || !g.results) return null;
+  if (g.city) return <CityResults g={g} />;
   const text = { ...endings[endingKey(g.outcome, g.failReason)], won: endingWon(g.outcome) };
   const mine = g.results.find((r) => r.playerId === g.viewerId);
   const others = g.results.filter((r) => r.playerId !== g.viewerId);
@@ -88,7 +90,8 @@ function PlayerCard({ g, r, highlight = false }: { g: PlayerView; r: PlayerResul
   const ch = getCharacterById(p.characterId);
   const t = useT();
   const fmt = useFormat();
-  const obsession = useScenarioText().obsessions[r.obsession];
+  const obsessions = useScenarioText().obsessions;
+  const obsession = r.obsession ? obsessions[r.obsession] : null;
   const title = fmt(r.title);
   const charTitle = useCharacterText()(ch.id).title;
   return (
@@ -106,11 +109,13 @@ function PlayerCard({ g, r, highlight = false }: { g: PlayerView; r: PlayerResul
         </div>
       </div>
 
-      <div className={`mt-4 rounded-xl border p-3 ${r.obsessionMet ? "border-moss/50" : "border-ash/40"}`}>
-        <p className={`label text-[10px] ${r.obsessionMet ? "text-moss" : "text-ash"}`}>{t(r.obsessionMet ? "results.obsessionMet" : "results.obsessionUnmet")}</p>
-        <p className="mt-1 text-sm text-moon">{obsession.name}</p>
-        <p className="text-xs text-mist">{obsession.text}</p>
-      </div>
+      {obsession && (
+        <div className={`mt-4 rounded-xl border p-3 ${r.obsessionMet ? "border-moss/50" : "border-ash/40"}`}>
+          <p className={`label text-[10px] ${r.obsessionMet ? "text-moss" : "text-ash"}`}>{t(r.obsessionMet ? "results.obsessionMet" : "results.obsessionUnmet")}</p>
+          <p className="mt-1 text-sm text-moon">{obsession.name}</p>
+          <p className="text-xs text-mist">{obsession.text}</p>
+        </div>
+      )}
 
       <ul className="mt-3 space-y-1 text-sm text-mist">
         {/* the obsession has its own box above */}

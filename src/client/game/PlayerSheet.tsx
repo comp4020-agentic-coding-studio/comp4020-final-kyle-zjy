@@ -4,7 +4,7 @@ import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import { MAX_SANITY } from "../../shared/game/scenario01/content.ts";
 import type { PlayerView, PublicPlayerState } from "../../shared/game/state.ts";
 import { CharacterCard } from "../components/CharacterCard.tsx";
-import { useCharacterText, useScenarioText, useT } from "../i18n/index.ts";
+import { useCharacterText, useItemText, useScenarioText, useT } from "../i18n/index.ts";
 import { rich } from "../i18n/rich.ts";
 import { statusName } from "./status.ts";
 import { Drawer } from "./Drawer.tsx";
@@ -15,6 +15,7 @@ export function PlayerSheet({ g, p, onClose }: { g: PlayerView; p: PublicPlayerS
   const identity = g.carriages[live.carriageIndex]?.identity ?? "START";
   const t = useT();
   const text = useScenarioText();
+  const itemName = useItemText();
   const charText = useCharacterText();
   const sep = t("common.listSep");
   return (
@@ -37,7 +38,7 @@ export function PlayerSheet({ g, p, onClose }: { g: PlayerView; p: PublicPlayerS
         </p>
         <div>
           <p className="label">{t("sheet.items")}</p>
-          <p className="mt-1 text-sm text-mist">{live.items.length ? live.items.map((i) => text.items[i].name).join(sep) : t("common.none")}</p>
+          <p className="mt-1 text-sm text-mist">{live.items.length ? live.items.map((i) => itemName(i).name).join(sep) : t("common.none")}</p>
         </div>
         <div>
           <p className="label">{t("sheet.statuses")}</p>

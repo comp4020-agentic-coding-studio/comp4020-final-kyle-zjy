@@ -19,7 +19,9 @@ export type EventCard = {
   /** Acts in which this card can be drawn. */
   acts: (1 | 2 | 3)[];
   /** Art key for the event card illustration. */
-  art: "bell" | "lights" | "speaker" | "umbrella" | "static" | "suitcase" | "clock" | "seat" | "window" | "draft" | "whistle" | "music" | "moon" | "bolt" | "ticket" | "count" | "footsteps" | "brake" | "voice" | "platform";
+  art: "bell" | "lights" | "speaker" | "umbrella" | "static" | "suitcase" | "clock" | "seat" | "window" | "draft" | "whistle" | "music" | "moon" | "bolt" | "ticket" | "count" | "footsteps" | "brake" | "voice" | "platform"
+    // scenario 02
+    | "quake" | "storm" | "radio" | "siren" | "figure" | "tide" | "crate" | "wall" | "school";
   options?: EventOption[];
   /** GROUP_ROLL: every present player rolls; effects by tier apply to that player (SELF). */
   onTier?: Partial<Record<RollTier, Effect[]>>;

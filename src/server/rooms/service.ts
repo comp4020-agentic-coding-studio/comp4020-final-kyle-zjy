@@ -4,6 +4,7 @@
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { MBTIS, ZODIACS, type MBTI, type Zodiac } from "../../shared/characters/types.ts";
 import type { LobbyAction, RejectCode } from "../../shared/game/actions.ts";
+import { isScenarioId, SCENARIOS } from "../../shared/game/scenarios.ts";
 import type { GamePhase, Member, MemberStage, PlayerId, RoomCode, RoomState, ScenarioId } from "../../shared/game/state.ts";
 import {
   MAX_PLAYERS,
@@ -260,7 +261,7 @@ export class RoomService {
         case "SELECT_SCENARIO": {
           requireLobby();
           requireHost();
-          if (action.scenarioId !== "S01_LAST_TRAIN") throw new RoomError("INVALID", m`That scenario isn't open yet.`);
+          if (!isScenarioId(action.scenarioId) || !SCENARIOS[action.scenarioId].open) throw new RoomError("INVALID", m`That scenario isn't open yet.`);
           this.db.prepare("UPDATE rooms SET scenario_id = ? WHERE code = ?").run(action.scenarioId, code);
           break;
         }
@@ -277,6 +278,8 @@ export class RoomService {
             code,
             members.map((m) => ({ playerId: m.player_id, nickname: m.nickname, seat: m.seat, zodiac: m.zodiac!, mbti: m.mbti! })),
             Date.now(),
+            undefined,
+            room.scenario_id,
           );
           outcome = { started: true };
           break;

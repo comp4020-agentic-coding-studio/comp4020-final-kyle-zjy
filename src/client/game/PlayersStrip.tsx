@@ -40,7 +40,8 @@ export function PlayersStrip({ g, onOpen }: { g: PlayerView; onOpen: (p: PublicP
                   <span className={p.sanity <= 1 ? "text-ember" : "text-signal"}>✦{p.sanity}</span>
                   <span className={p.skill.state === "READY" ? "text-moss" : "text-ash"}>{t(`skill.state.${p.skill.state}`)}</span>
                   {p.away && <span className="text-ember">{t("players.away")}</span>}
-                  {p.lost && <span className="text-ember">{t("players.lost")}</span>}
+                  {p.lost && <span className="text-ember">{t(g.city ? "s2.players.despair" : "players.lost")}</span>}
+                  {g.city?.boat.aboard.includes(id) && <span className="text-signal">{t("s2.players.aboard")}</span>}
                 </span>
               </span>
             </button>

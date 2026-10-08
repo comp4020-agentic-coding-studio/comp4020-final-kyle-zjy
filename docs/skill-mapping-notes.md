@@ -129,3 +129,25 @@ passives, 22 qualify: their gain is the same whenever it fires, or the
 description fixes the moment ("your first failure", "your first success").
 taurus-infp **Can't Let Go** does not (extending a strong buff is worth more
 than a weak one), so it is a REACTION: its holder is asked each time.
+
+## Scenario 02 (the sinking city)
+
+The same 192 core abilities run in the city. Scenario 01's wording carries
+over, except where it names the train. Those six read differently here
+(`src/shared/game/scenario02/skill-adapters.ts`):
+
+| Character | Scenario 01 | Scenario 02 | Why |
+| --- | --- | --- | --- |
+| aries-istj | "first passenger to succeed" | "first player to succeed" | passengers are a train word |
+| aries-isfp | "The train offers two random instant boons" | "The city offers…" | same boons, no train |
+| taurus-istp | "a player in your carriage" | "a player in your zone" | the city has zones; "same carriage" checks the same node in both |
+| leo-entj | "move one carriage toward you" | "move one zone toward you" | one walkable step along standing roads toward the user (`movePlayer` hook) |
+| capricorn-istp | Fixed Anchor | Hold the Line | the name only; anchors belong to the train |
+| pisces-entp | Fake Result: "your next ticket check passes" (a scenario-01 behaviour) | Brave Face: "Gain a shield that blocks the next negative effect on you." | there is no ticket check in the city; it runs its plain core (a one-hit shield) |
+
+Generic words mean in the city:
+
+- **Event** (preview, redraw, change, skip): the city's own deck (`scenario02/events.ts`).
+- **Task goals**: "find a boat part or a pass" stands for scenario 01's fragment goal, and "reach a zone you haven't been to" for its new-carriage goal.
+- **Items**: an item granted by an ability comes from the city's items.
+- **"Three kinds of roll"**: counts the city's rolls. Search, investigate, repair and rescue or salvage stand for scenario 01's investigate, search, repair and confront.

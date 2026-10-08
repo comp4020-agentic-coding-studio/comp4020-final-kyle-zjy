@@ -10,7 +10,7 @@ import type { GameEvent } from "../../shared/protocol.ts";
 import { transaction, type Db } from "../db/db.ts";
 import { activePlayerId, RuleError } from "../engine/context.ts";
 import { m } from "../../shared/i18n/msg.ts";
-import { TURN_ACTIONS } from "../engine/actions.ts";
+import { rulesFor } from "../engine/scenario.ts";
 import { applyGameAction, hostSkip, setAway, startGame, tickGame, type Step } from "../engine/engine.ts";
 import { nextDeadline } from "../engine/flow.ts";
 import { log } from "../log.ts";
@@ -59,7 +59,7 @@ export class GameRunner {
     }
     // a turn action pressed before this turn began (a double tap, a slow link) mustn't spend the new turn
     // (only for the active player: anyone else is simply told it isn't their turn)
-    if (action && TURN_ACTIONS.includes(action.type) && activePlayerId(state) === actorId && !(typeof stateVersion === "number" && stateVersion >= state.turnVersion)) {
+    if (action && rulesFor(state).actions.turnActions.includes(action.type) && activePlayerId(state) === actorId && !(typeof stateVersion === "number" && stateVersion >= state.turnVersion)) {
       throw new RuleError("STALE_VERSION", m`That was pressed before this turn began. Take a look and try again.`);
     }
     const now = this.clock();

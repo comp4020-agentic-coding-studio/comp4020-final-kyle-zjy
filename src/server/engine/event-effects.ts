@@ -3,7 +3,8 @@
 // Anything that needs a decision opens a window whose continuation rebuilds
 // the ability's scope from its payload (owner, targets, label).
 import type { Effect } from "../../shared/game/effects.ts";
-import { EVENT_BY_ID, type EventCard } from "../../shared/game/scenario01/events.ts";
+import type { EventCard } from "../../shared/game/scenario01/events.ts";
+import { EVENT_BY_ID, eventsFor } from "../../shared/game/events.ts";
 import type { PlayerId, TaskGoal, WindowOption } from "../../shared/game/state.ts";
 import { cue, log, newId, type Ctx } from "./context.ts";
 import { isSuccess, quickRoll, resolveAs, TIER_LABEL, tierOf } from "./dice.ts";
@@ -157,7 +158,7 @@ registerHandler("REROLL_EVENT", (ctx, e, scope) => {
   log(ctx, m`${scope.label}: ${ref.event(old.id)} flickers and becomes ${ref.event(fresh.id)}. ${ref.eventText(fresh.id)}`, "EVENT");
   cue(ctx, "EVENT", { id: fresh.id });
 });
-const cardsFor = (ctx: Ctx, keep: (c: EventCard) => boolean) => [...EVENT_BY_ID.values()].filter((c) => c.acts.includes(ctx.s.act) && keep(c));
+const cardsFor = (ctx: Ctx, keep: (c: EventCard) => boolean) => eventsFor(ctx.s.scenarioId).filter((c) => c.acts.includes(ctx.s.act) && keep(c));
 
 registerHandler("MODIFY_EVENT", (ctx, e, scope) => {
   const s = ctx.s;
@@ -401,7 +402,8 @@ const GOALS = Object.keys(TASK_GOALS) as TaskGoal[];
 
 export function taskProgress(ctx: Ctx, id: PlayerId, goal: TaskGoal): number {
   const st = ctx.s.players[id].stats;
-  return { REPAIR: st.repairs, FRAGMENT: st.fragmentsFound, HELP: st.helpsGiven, NEW_CARRIAGE: st.carriagesVisited.length }[goal];
+  const places = ctx.s.city ? (ctx.s.players[id].counters.zonesVisited ?? 1) : st.carriagesVisited.length;
+  return { REPAIR: st.repairs, FRAGMENT: st.fragmentsFound, HELP: st.helpsGiven, NEW_CARRIAGE: places }[goal];
 }
 
 registerHandler("SET_TASK", (ctx, e, scope) => {
@@ -409,8 +411,8 @@ registerHandler("SET_TASK", (ctx, e, scope) => {
   if (!setBy) return;
   for (const id of subjects(ctx, scope, e.who)) {
     const goal = pick(ctx.s, GOALS);
-    ctx.s.secrets[id].tasks.push({ id: newId(ctx, "task"), text: ref.goal(goal), untilRound: ctx.s.round + e.rounds, done: false, goal, baseline: taskProgress(ctx, id, goal), reward: e.reward, setBy });
-    log(ctx, e.secret ? m`${nick(ctx, id)} draws a secret goal.` : m`${scope.label}: by the end of round ${ctx.s.round + e.rounds}, ${nick(ctx, id)} must: ${ref.goal(goal)}.`, "SKILL", id);
+    ctx.s.secrets[id].tasks.push({ id: newId(ctx, "task"), text: ctx.s.city ? ref.goal02(goal) : ref.goal(goal), untilRound: ctx.s.round + e.rounds, done: false, goal, baseline: taskProgress(ctx, id, goal), reward: e.reward, setBy });
+    log(ctx, e.secret ? m`${nick(ctx, id)} draws a secret goal.` : m`${scope.label}: by the end of round ${ctx.s.round + e.rounds}, ${nick(ctx, id)} must: ${ctx.s.city ? ref.goal02(goal) : ref.goal(goal)}.`, "SKILL", id);
   }
 });
 

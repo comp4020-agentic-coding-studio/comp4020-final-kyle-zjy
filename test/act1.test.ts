@@ -275,7 +275,7 @@ describe("a run's setup", () => {
     const s = createGame("g", seatsFor(10), SEED, T0);
     const dealt = Object.values(s.secrets).map((x) => x.obsession);
     expect(new Set(dealt).size).toBe(10);
-    expect(dealt.every((o) => OBSESSION_IDS.includes(o))).toBe(true);
+    expect(dealt.every((o) => o && OBSESSION_IDS.includes(o))).toBe(true);
   });
 
   it.each([2, 3, 4, 6, 7, 10])("tunes the scenario for %i players", (n) => {

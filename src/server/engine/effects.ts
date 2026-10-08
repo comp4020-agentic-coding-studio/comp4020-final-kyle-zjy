@@ -1,11 +1,12 @@
 // Effect handlers: one per Effect kind, shared by abilities, items and events.
 // A skill, an item or an event card is just a list of effects; this module is
 // the only place their meaning lives.
-import { FRAGMENTS, isKeyItem, ITEM_IDS, KEY_FOR_ANCHOR, LOCK_FOR_KEY, MAX_SANITY } from "../../shared/game/scenario01/content.ts";
+import { FRAGMENTS, isKeyItem, KEY_FOR_ANCHOR, LOCK_FOR_KEY, MAX_SANITY } from "../../shared/game/scenario01/content.ts";
 import type { Effect, EffectKind, EffectSubject } from "../../shared/game/effects.ts";
 import { statusLong as statusName } from "../../shared/game/scenario01/statuses.ts";
 import type { Anchor, FragmentType, ItemId, PlayerId } from "../../shared/game/state.ts";
 import { cue, log, newId, type Ctx } from "./context.ts";
+import { rulesFor } from "./scenario.ts";
 import type { TriggerEvent } from "./skills.ts";
 import { clampDie, setRollValue, tierOf } from "./dice.ts";
 import { int, pick, shuffle } from "./rng.ts";
@@ -118,10 +119,9 @@ function negativeSubjects(ctx: Ctx, e: Effect, scope: Scope, who: EffectSubject,
   return parked ? ids.filter((id) => id !== parked) : ids;
 }
 
-const BUFF_ITEMS: ItemId[] = ["FLASHLIGHT", "OLD_KEY", "RED_UMBRELLA", "BLANK_TICKET", "PASSENGER_PASS"];
-
 export function grantItem(ctx: Ctx, playerId: PlayerId, pool: "ANY" | "CONSUMABLE" | "BUFF", why: Msg): ItemId {
-  const item = pick(ctx.s, pool === "BUFF" ? BUFF_ITEMS : ITEM_IDS);
+  const pools = rulesFor(ctx.s).itemPools;
+  const item = pick(ctx.s, pool === "BUFF" ? pools.buff : pools.any);
   const p = ctx.s.players[playerId];
   p.items.push(item);
   log(ctx, m`${p.nickname} gains an item (${why}).`, "ITEM", playerId);
@@ -298,6 +298,11 @@ const H: Registry = {
     if (weakest.progress >= weakest.required) restoreAnchor(ctx, weakest, scope.self ?? (scope.ownerId === "SYSTEM" ? undefined : scope.ownerId));
   },
   MOVE_PLAYER: (ctx, e, scope) => {
+    const place = rulesFor(ctx.s).movePlayer;
+    if (place) {
+      for (const id of subjects(ctx, scope, e.who)) place(ctx, id, e.to, scope.ownerId === "SYSTEM" ? null : scope.ownerId, scope.label);
+      return;
+    }
     for (const id of subjects(ctx, scope, e.who)) {
       const p = ctx.s.players[id];
       const options = [p.carriageIndex - 1, p.carriageIndex + 1].filter((i) => i >= 0 && i < ctx.s.carriages.length && !ctx.s.carriages[i].locked);
@@ -424,6 +429,7 @@ export function changeCollapse(ctx: Ctx, delta: number, why: Msg): void {
   if (ctx.s.collapse === before) return;
   log(ctx, delta > 0 ? m`Collapse rises to ${ctx.s.collapse} / ${ctx.s.collapseMax} (${why}).` : m`Collapse falls to ${ctx.s.collapse} / ${ctx.s.collapseMax} (${why}).`, delta > 0 ? "COLLAPSE_UP" : "COLLAPSE_DOWN");
   cue(ctx, "COLLAPSE", { from: before, to: ctx.s.collapse });
+  rulesFor(ctx.s).collapseChanged?.(ctx, before);
 }
 
 /** The value at the next tier boundary in the favourable direction. */

@@ -6,6 +6,7 @@
 import { endingText, OBSESSIONS, TRUE_ENDING_CORE_MEMORIES } from "../../shared/game/scenario01/content.ts";
 import type { FailReason, GameState, Outcome, PlayerGameState, PlayerResult } from "../../shared/game/state.ts";
 import { cue, log, type Ctx } from "./context.ts";
+import { rulesFor } from "./scenario.ts";
 import { tally } from "./beats.ts";
 import { everyone, present } from "./players.ts";
 import { onResume, openWindow } from "./windows.ts";
@@ -94,9 +95,13 @@ export function startEnding(ctx: Ctx, outcome: Outcome, reason?: FailReason): vo
   s.rollContext = null;
   s.turnDeadline = null;
   s.sequence = { kind: "ENDING", acks: [] };
-  s.results = computeResults(ctx);
-  const text = endingText(outcome, s.failReason);
-  log(ctx, ref.ending(outcome === "FAILED" ? `FAILED_${s.failReason ?? "TIME"}` : outcome), text.won ? "ENDING_WIN" : "ENDING_FAIL");
+  const rules = rulesFor(s);
+  s.results = rules.results ? rules.results(ctx) : computeResults(ctx);
+  if (rules.announceEnding) rules.announceEnding(ctx);
+  else {
+    const text = endingText(outcome, s.failReason);
+    log(ctx, ref.ending(outcome === "FAILED" ? `FAILED_${s.failReason ?? "TIME"}` : outcome), text.won ? "ENDING_WIN" : "ENDING_FAIL");
+  }
   cue(ctx, "ENDING", { outcome, reason: reason ?? null });
 }
 
@@ -123,6 +128,8 @@ function obsessionMet(ctx: Ctx, p: PlayerGameState): boolean {
       return st.soloKeyTasks >= 1;
     case "LAST_TRAIN":
       return st.finalTaskRound !== null && st.finalTaskRound >= 10;
+    case null:
+      return false;
   }
 }
 

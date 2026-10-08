@@ -329,3 +329,56 @@ names); each variant is now a whole template. No rule, RNG or replay changed
   `pnpm sim --runs 40`, no abilities: 2 players 30%, 6 players 50%, 10
   players 25% (was 45–57%). Most losses are Collapse; at 2 players some runs
   end with everyone lost to ticket checks. Not retuned in this change.
+
+## Scenario 02, PHASE S2-5: events, abilities, simulation
+
+- **Event deck:** 12 cards; most change the city through the new `CITY_EVENT` primitive:
+  - aftershock (a road breaks)
+  - storm (a bigger next rise; Sanity for anyone standing in water)
+  - emergency broadcast (names the next zones to go)
+  - distress signal (a new person to rescue)
+  - low tide (a drowned zone back until the next rise)
+  - supplies washing up
+  - flood wall breach
+  - still water (holds a rise)
+  - the strange ones: a figure under the water, your name on the radio, the school's lights, a voice you know
+  - Each run draws only its own scenario's deck (`src/shared/game/events.ts`).
+- **Abilities:** six re-worded for the city (see docs/skill-mapping-notes.md). `ref.skill` and `ref.skillDescription` carry the scenario, so the log names abilities as the run's scenario words them. MOVE_PLAYER moves along city roads through a scenario hook. All 192 fire in a city run (test).
+- **Simulation:** `test/bot02.ts` and `node scripts/sim.ts --scenario 02`. Balance changes and results are in docs/simulation-report.md. Four kept city runs replay exactly in `test/simulations.test.ts`.
+
+## Scenario 02, PHASE S2-6: the city on screen
+
+- **Lobby:** tiles 01 and 02 are real choices for the host. The scenario card shows the room's choice. Scenario 02 is now open.
+- **Run screen** (`CityGame`):
+  - top bar: act, round, a water gauge with Collapse in numbers, the boat (parts / power / gate / seats) and your passes;
+  - an objective line per act;
+  - the hex map (`HexCityMap`): heights, flooded and drowned zones, a red pulse one rise before a zone goes under, standing roads (tunnels and low bridges dashed), facilities, people waiting, players, move targets. It scrolls in its own frame on phones; tapping a zone selects it;
+  - a zone panel;
+  - the shared dock with the city's actions and pickers (move, rescue, install, share intel), and trades with parts and passes.
+- **Scenes:** the flood scenes for acts 2 and 3, and the capacity reveal.
+- **Ending and results:** each player's own fate first, then everyone's, with titles.
+- **Hidden information:** the other player's side of a trade is checked when they accept, so a refused offer can't reveal what someone carries.
+- **Browser:** `node scripts/ui-play02.ts` plays a two-browser city run to the results. Clean at 390 px and 320 px (layout check, no page errors). The departure decisions use the shared decision card; the bot-driven browser run never readies the boat, so they are covered by unit tests, not by this walkthrough.
+
+## Scenario 02, PHASE S2-7: Chinese, and the milestone check
+
+- **Chinese for all of scenario 02:**
+  - content (`zh-CN/scenario02.ts`): 31 zones, items, parts, people, statuses, 12 events, goals, title;
+  - 227 engine templates (in `zh-CN/messages.ts`);
+  - the UI copy (`client/i18n/s2-zh-CN.ts`);
+  - the six city-worded abilities (`zh-CN/skills02.ts`).
+  The terms are in docs/localization.md, following the user's spec (撤离资格, 最后的高地, 绝望, 背叛者…).
+- **No "Chinese pending" allowance is left in `test/localization.test.ts`.** Scenario 02 must have:
+  - matching UI keys and placeholders;
+  - every content id in Chinese;
+  - the same numbers in its abilities;
+  - kept city runs that render in Chinese with no English left.
+- **Fixes along the way:**
+  - The zone's screen-reader label ran the warning into the status, in English too. It now has its own key.
+  - The city intro said "boarded the train" (已登车), and the lobby's depart button read 发车. Both now have city wording.
+  - The lobby's "INVITE" button was 40 px wide in Chinese at 320 px. It now has a 48 px minimum.
+- **Milestone check:**
+  - `pnpm check`: 939 tests passed.
+  - `node scripts/ui-play02.ts`: the city at 390 and 320 px, to the results and back to the lobby.
+  - `node scripts/ui-play.ts --until end --phone 320`: the train to its end.
+  - A Chinese pass over the city: lobby, intro, city at 320 and 1280 px, the move picker, the log. No English left, nothing clipped, no small targets.

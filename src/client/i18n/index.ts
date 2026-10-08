@@ -5,12 +5,16 @@
 import { useCallback } from "react";
 import { create } from "zustand";
 import type { CharacterId } from "../../shared/characters/types.ts";
-import { characterText, scenarioText } from "../../shared/i18n/content.ts";
+import { characterText, itemText, scenarioText } from "../../shared/i18n/content.ts";
+import { scenario02Text } from "../../shared/i18n/scenario02.ts";
+import type { ItemId } from "../../shared/game/state.ts";
 import { format } from "../../shared/i18n/format.ts";
 import { DEFAULT_LOCALE, isLocale, type Locale, type Msg } from "../../shared/i18n/types.ts";
 import { useStore } from "../store.ts";
 import { en } from "./en.ts";
-import type { Catalog, MessageKey, Params } from "./types.ts";
+import type { Catalog, MessageKey, Params, S2Key } from "./types.ts";
+import { s2en } from "./s2-en.ts";
+import { s2zhCN } from "./s2-zh-CN.ts";
 import { zhCN } from "./zh-CN.ts";
 
 export type { Locale } from "../../shared/i18n/types.ts";
@@ -18,7 +22,7 @@ export type { MessageKey, Params } from "./types.ts";
 
 export const STORAGE_KEY = "fate:locale";
 
-export const CATALOGS: Record<Locale, Catalog> = { en, "zh-CN": zhCN };
+export const CATALOGS: Record<Locale, Catalog & Record<S2Key, string>> = { en: { ...en, ...s2en }, "zh-CN": { ...zhCN, ...s2zhCN } };
 
 /** Fills {name} placeholders; unknown placeholders are left as written. */
 export function interpolate(template: string, params?: Params): string {
@@ -28,7 +32,7 @@ export function interpolate(template: string, params?: Params): string {
 
 /** The text for a key in a locale (English if a locale somehow lacks it). */
 export function t(locale: Locale, key: MessageKey, params?: Params): string {
-  return interpolate(CATALOGS[locale]?.[key] ?? en[key] ?? key, params);
+  return interpolate(CATALOGS[locale]?.[key] ?? CATALOGS.en[key] ?? key, params);
 }
 
 /** The stored locale, or English when nothing valid is stored or storage is blocked. */
@@ -118,8 +122,19 @@ export function useFormat(): (msg: Msg | string | undefined | null) => string {
 /** Scenario text (carriages, items, events, endings…) in the current locale. */
 export const useScenarioText = () => scenarioText(useLocale());
 
+/** An item's name and text, whichever scenario it belongs to. */
+export function useItemText(): (id: ItemId) => { name: string; text: string } {
+  const locale = useLocale();
+  return useCallback((id: ItemId) => itemText(locale, id), [locale]);
+}
+
 /** A character's title and ability text in the current locale. */
+/** A character's title and ability text, as the room's (or run's) scenario words the ability. */
 export function useCharacterText(): (id: CharacterId) => ReturnType<typeof characterText> {
   const locale = useLocale();
-  return useCallback((id: CharacterId) => characterText(locale, id), [locale]);
+  const scenario = useStore((s) => s.snapshot?.game?.scenarioId ?? s.snapshot?.room.scenarioId);
+  return useCallback((id: CharacterId) => characterText(locale, id, scenario), [locale, scenario]);
 }
+
+/** Scenario 02's content text (zones, items, people, events) in the current locale. */
+export const useScenario02Text = () => scenario02Text(useLocale());

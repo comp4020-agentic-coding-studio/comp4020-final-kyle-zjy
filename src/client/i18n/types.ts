@@ -1,7 +1,10 @@
 // The catalog type is derived from the English catalog, so every other locale
 // must define exactly the same keys (a missing or extra key is a type error).
 import type { en } from "./en.ts";
+import type { s2en } from "./s2-en.ts";
 
-export type MessageKey = keyof typeof en;
-export type Catalog = Record<MessageKey, string>;
+/** Scenario 02's keys (s2-en.ts / s2-zh-CN.ts). */
+export type S2Key = keyof typeof s2en;
+export type MessageKey = keyof typeof en | S2Key;
+export type Catalog = Record<keyof typeof en, string>;
 export type Params = Record<string, string | number>;

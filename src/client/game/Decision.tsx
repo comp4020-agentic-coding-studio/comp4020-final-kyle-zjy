@@ -4,7 +4,7 @@
 // else sees who the table is waiting for.
 import { AnimatePresence, motion } from "motion/react";
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
-import { EVENT_BY_ID } from "../../shared/game/scenario01/events.ts";
+import { EVENT_BY_ID } from "../../shared/game/events.ts";
 import type { PlayerView, PublicWindow } from "../../shared/game/state.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { useCharacterText, useFormat, useT } from "../i18n/index.ts";
@@ -19,7 +19,8 @@ export function DecisionLayer({ g }: { g: PlayerView }) {
 }
 
 function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
-  const isEvent = (w.kind === "VOTE" || w.kind === "EVENT_CHOICE") && g.currentEvent;
+  // an event's vote happens while it is open; a later vote (the boat's departure) is its own decision
+  const isEvent = (w.kind === "VOTE" || w.kind === "EVENT_CHOICE") && g.currentEvent && !g.currentEvent.resolved;
   const card = isEvent ? EVENT_BY_ID.get(g.currentEvent!.id) : null;
   const owner = w.ownerId ? g.players[w.ownerId] : null;
   const ownerChar = owner ? getCharacterById(owner.characterId) : null;

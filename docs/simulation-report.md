@@ -60,3 +60,28 @@ Keeping the counters as they are is a design choice: they describe a real
 mechanism of this scenario, it is just uncommon. Making them common would
 mean re-aiming them at the train's own threats (the Inspector, echoes), which
 changes what they say; that is left to the user.
+
+## Scenario 02 (the sinking city)
+
+`node scripts/sim.ts --scenario 02 --runs 40` uses the team in `test/bot02.ts`.
+The bot reads the full state, so it is a measuring stick, not a fair player.
+
+| Players | Boat leaves | Escaped when it leaves | Lost to the water / a lost part |
+| --- | --- | --- | --- |
+| 2 | 52% | 50% of the table (all seats: 1 of 2) | 43% / 5% |
+| 4 | 75% | 42% | 13% / 13% |
+| 6 | 88% | 60% | 10% / 3% |
+| 10 | 90% | 51% | 5% / 5% |
+
+What changed because of it:
+
+- The round-end rise was 1 most rounds, about 1.0 a round on average. It now holds a third of the time, about 0.8 a round.
+- A botched repair raised Collapse at every facility. Now only a blast at the power station does: repairs were the second-largest source of Collapse.
+- Boat parts must stay above water until Collapse 6, not 5. Too many runs lost a part.
+- Half the live pass sources, rounded up, are now on the main work: finishing a job or fitting a part. At small tables the passes were often all off the beaten path.
+- The power station and pier gate need fewer repairs (1 + n/2 and n/3, rounded up).
+
+Still open:
+
+- Two-player tables lose to the water about half the time.
+- When the boat leaves, 40–60% of the table escapes, under the 60–80% aim. The bot finds fewer passes than there are seats, and it never trades them. People hunting passes on purpose should do better; this needs a real playtest.
