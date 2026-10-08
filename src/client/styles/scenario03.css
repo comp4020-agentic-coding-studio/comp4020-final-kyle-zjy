@@ -22,7 +22,7 @@
   .s3-story-index { display: inline-flex; width: 27px; height: 27px; align-items: center; justify-content: center; border: 1px solid var(--c-gold); border-radius: 50%; background: var(--c-deep); color: var(--c-gold-bright); font-family: var(--f-mono); font-size: 10px; }
   .s3-story-latest .s3-story-index { border-color: var(--c-signal); color: var(--c-signal); }
 
-  .s3-timeline-switch { min-width: 0; padding: 10px; border: 1px solid color-mix(in srgb, var(--c-gold) 25%, transparent); border-radius: var(--r-md); background: var(--c-night); }
+  .s3-timeline-switch { min-width: 0; padding: 6px; border: 1px solid color-mix(in srgb, var(--c-gold) 25%, transparent); border-radius: var(--r-md); background: var(--c-night); }
   .s3-timeline-caption { display: flex; justify-content: space-between; gap: 10px; color: var(--c-mist); font-family: var(--f-mono); font-size: 11px; }
   .s3-timeline-caption span:last-child { text-align: right; }
   .s3-timeline-axis { display: flex; justify-content: space-between; margin: 8px 5px 11px; height: 1px; background: linear-gradient(90deg, var(--c-gold), var(--c-signal)); }
@@ -118,11 +118,12 @@
   .s3-room-current { border-color: var(--c-signal); box-shadow: 0 0 0 1px var(--c-signal), 0 0 20px color-mix(in srgb, var(--c-signal) 25%, transparent); }
   .s3-room-target { border-color: var(--c-gold-bright); background: color-mix(in srgb, var(--c-gold) 16%, var(--c-deep)); }
   .s3-room-locked { opacity: .65; border-style: dashed; }
+  .s3-room-selected { border-color: var(--c-gold-bright); box-shadow: 0 0 0 1px var(--c-gold-bright); }
   .s3-room-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 5px; }
   .s3-room-title { font-family: var(--f-display); font-size: 16px; line-height: 1.1; font-weight: 700; overflow-wrap: anywhere; }
   .s3-room-here { color: var(--c-signal); font-family: var(--f-mono); font-size: 10px; line-height: 1.1; }
   .s3-room-subtitle { color: var(--c-mist); font-size: 11px; line-height: 1.2; overflow-wrap: anywhere; }
-  .s3-room-players { display: flex; gap: 3px; margin-top: auto; min-height: 18px; }
+  .s3-room-players { display: flex; gap: 3px; margin-top: auto; min-height: 22px; }
   .s3-player-dot { display: inline-flex; width: 18px; height: 18px; align-items: center; justify-content: center; border-radius: 50%; background: var(--c-indigo); color: var(--c-moon); font-size: 10px; }
   .s3-player-me { background: var(--c-signal); color: var(--c-void); }
   .s3-player-extra { color: var(--c-mist); font-size: 11px; }
@@ -142,7 +143,7 @@
   }
 
   @media (min-width: 768px) {
-    .s3-map-grid { width: 720px; height: 360px; margin: 0 auto; }
+    .s3-map-grid { width: 720px; height: 300px; margin: 0 auto; }
     .s3-map-lines-mobile { display: none; }
     .s3-map-lines-desktop { display: block; }
     .s3-room-node { top: var(--s3-y); left: var(--s3-x); width: 130px; min-height: 64px; transform: none; }

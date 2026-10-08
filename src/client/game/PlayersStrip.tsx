@@ -1,11 +1,13 @@
 // Layer three: everyone else at a glance. Compact chips (portrait, Fate,
-// Sanity, ability state); tap one for the full card.
+// Sanity, ability state, and a scenario's own tag such as the year a player
+// is in); tap one for the full card.
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
+import type { ReactNode } from "react";
 import type { PlayerView, PublicPlayerState } from "../../shared/game/state.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { useT } from "../i18n/index.ts";
 
-export function PlayersStrip({ g, onOpen }: { g: PlayerView; onOpen: (p: PublicPlayerState) => void }) {
+export function PlayersStrip({ g, onOpen, tag }: { g: PlayerView; onOpen: (p: PublicPlayerState) => void; tag?: (id: string) => ReactNode }) {
   const t = useT();
   const active = g.step === "PLAYER_TURNS" ? g.turnOrder[g.activeIndex] : null;
   return (
@@ -42,6 +44,7 @@ export function PlayersStrip({ g, onOpen }: { g: PlayerView; onOpen: (p: PublicP
                   {p.away && <span className="text-ember">{t("players.away")}</span>}
                   {p.lost && <span className="text-ember">{t(g.city ? "s2.players.despair" : "players.lost")}</span>}
                   {g.city?.boat.aboard.includes(id) && <span className="text-signal">{t("s2.players.aboard")}</span>}
+                  {tag?.(id)}
                 </span>
               </span>
             </button>

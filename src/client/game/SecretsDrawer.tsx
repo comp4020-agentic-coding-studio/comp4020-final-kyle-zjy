@@ -1,12 +1,14 @@
 // What only you know: your obsession, dream cards, the round-5 message and
 // anything your ability let you peek at. Sent to you and nobody else.
+import type { ReactNode } from "react";
 import type { PlayerView } from "../../shared/game/state.ts";
 import { useFormat, useScenario02Text, useScenarioText, useT } from "../i18n/index.ts";
 import { ZONES } from "../../shared/game/scenario02/map.ts";
 import { NPCS } from "../../shared/game/scenario02/npcs.ts";
 import { Drawer } from "./Drawer.tsx";
 
-export function SecretsDrawer({ g, onClose }: { g: PlayerView; onClose: () => void }) {
+/** `sections`: a scenario's own contents (scenario 03), in place of scenario 01's and 02's. */
+export function SecretsDrawer({ g, onClose, sections }: { g: PlayerView; onClose: () => void; sections?: ReactNode }) {
   const s = g.mySecrets;
   const t = useT();
   const fmt = useFormat();
@@ -24,7 +26,9 @@ export function SecretsDrawer({ g, onClose }: { g: PlayerView; onClose: () => vo
               <p className="mt-1 text-xs text-ash">{t("secrets.obsessionNote")}</p>
             </section>
           )}
-          {g.city ? (
+          {sections ? (
+            sections
+          ) : g.city ? (
             <>
               <section className="tarot p-3">
                 <p className="label text-gold">{t("s2.secrets.passes")}</p>
@@ -81,7 +85,7 @@ export function SecretsDrawer({ g, onClose }: { g: PlayerView; onClose: () => vo
   );
 }
 
-function Section({ title, empty, items }: { title: string; empty: string; items: { id: string; text: string; meta?: string }[] }) {
+export function Section({ title, empty, items }: { title: string; empty: string; items: { id: string; text: string; meta?: string }[] }) {
   return (
     <section>
       <p className="label">{title}</p>

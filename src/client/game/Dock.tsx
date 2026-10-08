@@ -11,7 +11,7 @@ import { ITEMS02, PART_IDS, type PartId, type S02ItemId } from "../../shared/gam
 import { ZONES } from "../../shared/game/scenario02/map.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { sendGame } from "../store.ts";
-import { useCharacterText, useFormat, useItemText, useScenario02Text, useScenarioText, useT, type TFunction } from "../i18n/index.ts";
+import { useCharacterText, useFormat, useItemText, useScenario02Text, useScenarioText, useT, type MessageKey, type TFunction } from "../i18n/index.ts";
 import { Icon } from "./Icon.tsx";
 import { statusName } from "./status.ts";
 import { characterSkill } from "../../shared/game/skills.ts";
@@ -22,9 +22,24 @@ const GRID02: GameActionType[] = ["MOVE", "SEARCH", "INVESTIGATE", "REPAIR", "OP
 /** Actions that need no choice: pressing them acts. */
 const DIRECT = new Set<GameActionType>(["INVESTIGATE", "SEARCH", "REPAIR", "END_TURN", "OPERATE", "SALVAGE", "REGISTER", "RESTART_GENERATOR"]);
 
-export type Mode = null | "MOVE" | "HELP" | "TRADE" | "CONFRONT" | "USE_SKILL" | "USE_ITEM" | "STABILIZE" | "RESCUE" | "INSTALL" | "SHARE_INTEL";
+/** The action being chosen for (its picker is open), or null for the grid. */
+export type Mode = null | GameActionType;
 
-export function Dock({ g, mode, setMode }: { g: PlayerView; mode: Mode; setMode: (m: Mode) => void }) {
+/**
+ * A scenario's own dock (scenario 03): its action grid, the actions that act
+ * on a single press, and the second step (title and choices) for its own
+ * targeted actions. Without one, the dock is scenario 01's or 02's.
+ */
+export type DockExtension = {
+  grid: GameActionType[];
+  direct: Set<GameActionType>;
+  /** Tailwind classes for the grid's wide-screen columns. */
+  columns: string;
+  /** The picker's title (a catalog key) and choices for one of its actions, or null for the shared picker. */
+  picker: (p: { g: PlayerView; me: PublicPlayerState; mode: GameActionType; availability: ActionAvailability; send: (a: GameAction) => void }) => { title: MessageKey; body: React.ReactNode } | null;
+};
+
+export function Dock({ g, mode, setMode, extension }: { g: PlayerView; mode: Mode; setMode: (m: Mode) => void; extension?: DockExtension }) {
   const me = g.players[g.viewerId];
   const [why, setWhy] = useState<string | null>(null);
   const t = useT();
@@ -40,7 +55,7 @@ export function Dock({ g, mode, setMode }: { g: PlayerView; mode: Mode; setMode:
       return;
     }
     setWhy(null);
-    if (DIRECT.has(a.type)) {
+    if ((extension?.direct ?? DIRECT).has(a.type)) {
       setMode(null);
       void sendGame({ type: a.type } as GameAction);
       return;
@@ -60,13 +75,13 @@ export function Dock({ g, mode, setMode }: { g: PlayerView; mode: Mode; setMode:
           <AnimatePresence mode="wait">
             {mode ? (
               <motion.div key={mode} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>
-                <Picker g={g} me={me} mode={mode} availability={action(mode === "STABILIZE" ? "STABILIZE" : mode)} close={() => setMode(null)} />
+                <Picker g={g} me={me} mode={mode} availability={action(mode === "STABILIZE" ? "STABILIZE" : mode)} close={() => setMode(null)} extension={extension} />
               </motion.div>
             ) : (
               <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <div className={`grid grid-cols-4 gap-1.5 ${g.city ? "lg:grid-cols-7" : ""}`}>
-                  {(g.city ? GRID02 : GRID).map((t) => (
-                    <ActionButton key={t} a={action(t)} onPress={press} compact={!!g.city} />
+                <div className={`grid grid-cols-4 gap-1.5 ${extension ? extension.columns : g.city ? "lg:grid-cols-7" : ""}`}>
+                  {(extension?.grid ?? (g.city ? GRID02 : GRID)).map((t) => (
+                    <ActionButton key={t} a={action(t)} onPress={press} compact={!!g.city || !!extension} />
                   ))}
                 </div>
                 <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-1.5">
@@ -183,7 +198,7 @@ function Stat({ label, value, children }: { label: string; value: string; childr
 }
 
 /** The second step of a targeted action: choose who / where / what. */
-function Picker({ g, me, mode, availability, close }: { g: PlayerView; me: PublicPlayerState; mode: Exclude<Mode, null>; availability: ActionAvailability; close: () => void }) {
+function Picker({ g, me, mode, availability, close, extension }: { g: PlayerView; me: PublicPlayerState; mode: Exclude<Mode, null>; availability: ActionAvailability; close: () => void; extension?: DockExtension }) {
   const send = (action: GameAction) => {
     close();
     void sendGame(action);
@@ -199,8 +214,12 @@ function Picker({ g, me, mode, availability, close }: { g: PlayerView; me: Publi
   const partName = (id: string) => city.parts[id]?.name ?? id;
   let title = "";
   let body: React.ReactNode = null;
+  const own = extension?.picker({ g, me, mode, availability, send });
 
-  if (mode === "MOVE" && g.city) {
+  if (own) {
+    title = tr(own.title);
+    body = own.body;
+  } else if (mode === "MOVE" && g.city) {
     title = tr("s2.pick.move");
     body = (
       <div className="flex flex-wrap gap-2">
@@ -324,7 +343,7 @@ const carriageName = (g: PlayerView, i: number, t: TFunction) => {
   return c ? t(`dock.carriage.${c.identity}`) : "?";
 };
 
-function PeopleRow({ people, onPick, selected = [] }: { people: PublicPlayerState[]; onPick: (id: string) => void; selected?: string[] }) {
+export function PeopleRow({ people, onPick, selected = [] }: { people: PublicPlayerState[]; onPick: (id: string) => void; selected?: string[] }) {
   const t = useT();
   if (!people.length) return <p className="text-sm text-ash">{t("dock.nobody")}</p>;
   return (

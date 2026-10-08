@@ -591,3 +591,15 @@ names); each variant is now a whole template. No rule, RNG or replay changed
 - Extended the browser scripts to run both three and four isolated players at 320, 390 and 1280 px, with Chinese on the 320 px client and English on the others. The full path covers the first jump, a 1996 decision rewriting 2026, the eight-room tree, the round-6 identity scene, the Act III prototype shutdown, the round-9 third-route scene, an ending and Results. The relic path covers 2026 pickup, 1996 source placement, later pickup, consensual transfer and reload. All four paths passed with layout checks for clipping and sub-48 px targets, and screenshots were inspected.
 - After the complete paths passed, opened Scenario 03 in the shared lobby registry and added its localized lobby card and start label. Browser scripts now select the 03 tile through the real lobby rather than modifying the test database. The public three/four-player full and relic paths passed again. Scenario 01 and 02 phase transitions remain on their existing three-act rules.
 - Character cards and the reveal now request skill type and use count from the selected scenario's adapter, matching their already localized skill name and description. The public lobby's Pisces ENTP reveal, in-game ability and scan path passed. Final `pnpm check` passed (1009 tests); the Scenario 01 walkthrough and Scenario 02 departure/results walkthrough passed after this shared UI adjustment.
+
+## Scenario 03: UI aligned with scenario 02 (no rule changes)
+
+- **Layout:** scenario 03's run now uses scenario 02's layout: top bar, turn banner, objective, map, room panel, players strip and the shared dock, with the log and "Only you know" drawers.
+- **Shared extractions from scenario 02:** `RunTopBar`, `ObjectiveLine` and `PlacePanel` (`src/client/game/RunTopBar.tsx`). Optional props: `Dock.extension`, `PlayersStrip.tag`, `SecretsDrawer.sections`, `LogDrawer.title`. Scenario 01 and 02 markup was checked byte-identical before and after (static render of the shared components from fixed states).
+- **Scenario 03's own pieces:** `src/client/game/scenario03/`:
+  - `Map03`: the tree map; tapping selects a room, Move mode lights the targets;
+  - `Panels03`: the top bar, objective and room panel;
+  - `dock03`: its action grid and pickers;
+  - `Private03`: the drawer's private and public sections.
+- **Kept scenario-03 visuals:** the 1996 / 2026 switch, the tree map, the causal ripple, the incident record and causal history styles, and the identity and third-route scenes.
+- **Browser check:** `scripts/ui-play03.ts`. The old `scripts/ui-play03-phase*.ts` assert the previous screen's buttons and no longer match it.

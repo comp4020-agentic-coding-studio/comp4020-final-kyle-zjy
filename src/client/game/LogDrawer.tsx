@@ -22,11 +22,11 @@ const TONE: Record<string, string> = {
   ENDING_FAIL: "text-ember",
 };
 
-export function LogDrawer({ g, onClose }: { g: PlayerView; onClose: () => void }) {
+export function LogDrawer({ g, onClose, title }: { g: PlayerView; onClose: () => void; title?: string }) {
   const t = useT();
   const fmt = useFormat();
   return (
-    <Drawer title={g.city ? t("s2.top.log") : t("game.log")} onClose={onClose}>
+    <Drawer title={title ?? (g.city ? t("s2.top.log") : t("game.log"))} onClose={onClose}>
       <ol className="space-y-2">
         {[...g.log].reverse().map((line) => {
           const p = line.actorId ? g.players[line.actorId] : null;
