@@ -97,7 +97,7 @@ describe("Scenario 03 action dice", () => {
     const { state, id } = start();
     const next = act(state, id, { type: "SCAN", protocol: "FIELD" }, die);
     expect(next.players[id].statuses.filter((status) => status.kind === "FIELD_FOCUS")).toHaveLength(focused ? 1 : 0);
-    if (focused) expect(next.players[id].statuses.find((status) => status.kind === "FIELD_FOCUS")).toMatchObject({ value: 2, expiresAtRound: 1 });
+    if (focused) expect(next.players[id].statuses.find((status) => status.kind === "FIELD_FOCUS")).toMatchObject({ value: 2, expiresAtRound: null });
   });
 
   it.each([
@@ -120,14 +120,20 @@ describe("Scenario 03 action dice", () => {
     expect(next.players[id].statuses.some((status) => status.kind === "FIELD_FOCUS")).toBe(false);
   });
 
-  it("Field Focus survives non-rolled movement but expires unused after this cycle", () => {
+  it("Field Focus is kept through non-rolled actions, turn ends and cycle changes until a rolled field action uses it", () => {
     const { state, id } = start();
     let next = act(state, id, { type: "SCAN", protocol: "FIELD" }, 4);
     next = applyGameAction(next, id, { type: "MOVE", toCarriage: placeKey03("ARCHIVES", "Y2026") }, T0 + 30).state;
-    expect(next.players[id].statuses.some((status) => status.kind === "FIELD_FOCUS")).toBe(true);
-    for (let turn = 0; turn < 3; turn++) next = endTurn03(next, T0 + 40 + turn);
-    expect(next.round).toBe(2);
-    expect(next.players[id].statuses.some((status) => status.kind === "FIELD_FOCUS")).toBe(false);
+    const focus = (s: GameState) => s.players[id].statuses.filter((status) => status.kind === "FIELD_FOCUS");
+    expect(focus(next)).toHaveLength(1);
+    // two full cycle changes, and into the holder's turn in the third cycle
+    for (let turn = 0; turn < 40 && (next.round < 3 || next.turnOrder[next.activeIndex] !== id); turn++) next = endTurn03(next, T0 + 40 + turn);
+    expect(next.round).toBe(3);
+    expect(focus(next)).toEqual([expect.objectContaining({ value: 2, expiresAtRound: null })]);
+    place(next, id, "ARCHIVES", "Y2026");
+    const used = act(next, id, { type: "INVESTIGATE" }, 2);
+    expect(used.roll).toMatchObject({ raw: 2, final: 4, modifiers: [{ delta: 2 }] });
+    expect(focus(used)).toHaveLength(0);
   });
 
   it.each([[1, false], [2, false], [4, true], [6, true]])("Stabilization Scan die %i grants alignment only on success", (die, aligned) => {

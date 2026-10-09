@@ -102,9 +102,10 @@ for (const purpose of ["S3_SCAN_ARCHIVE", "S3_SCAN_FIELD", "S3_SCAN_STABILIZE"] 
       };
       cue(ctx, "S3_ARCHIVE_LEAD", { playerId: p.playerId });
     } else if (purpose === "S3_SCAN_FIELD") {
+      // kept until a rolled field action uses it (dice.ts BONUS_STATUS), never expired by a turn or cycle ending
       if (!statusOf(p, "FIELD_FOCUS")) addStatus(ctx, p, {
         kind: "FIELD_FOCUS", polarity: "POSITIVE", sourceId: "SYSTEM",
-        expiresAtRound: ctx.s.round, hidden: false, ordinary: false, value: 2,
+        expiresAtRound: null, hidden: false, ordinary: false, value: 2,
       });
       cue(ctx, "S3_SCAN_PROTOCOL", { playerId: p.playerId, protocol: "FIELD" });
     } else {

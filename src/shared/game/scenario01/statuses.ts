@@ -14,7 +14,7 @@ export const STATUSES: Record<string, { short: string; long: string }> = {
   SHIELD_NEXT_ROUND: { short: "Shield next round", long: "Prepared Shield" },
   CHILL: { short: "Chill −1 AP", long: "Chill (−1 action point next round)" },
   TEMPORAL_LAG: { short: "Temporal lag −1 AP", long: "Temporal lag (−1 action point next cycle, minimum 1)" },
-  FIELD_FOCUS: { short: "Field focus +2", long: "Field focus (+2 to the next rolled non-scan action this cycle)" },
+  FIELD_FOCUS: { short: "Field focus +2", long: "Field focus (+2 to your next rolled non-scan action; kept until used)" },
   TEMPORAL_ALIGNMENT: { short: "Temporal Alignment · Next Time Jump costs 1 AP", long: "Temporal Alignment (next Time Jump costs 1 AP)" },
   TAUNT: { short: "Taunt", long: "Taunt (hostile effects aim here first)" },
   MARKED: { short: "Marked", long: "Marked" },
