@@ -8,7 +8,7 @@ import { list, m, ref } from "../../../shared/i18n/msg.ts";
 import { END_TURN, USE_SKILL, fail, helped, type Spec } from "../actions.ts";
 import { cue, log, type Ctx } from "../context.ts";
 import { applyEffects, changeCollapse, grantItem } from "../effects.ts";
-import { addStatus, gainFate, loseFate, loseSanity, spendFate, statusOf } from "../players.ts";
+import { addStatus, gainFate, loseSanity, removeStatus, spendFate, statusOf } from "../players.ts";
 import { isSuccess, onRollOutcome, startRoll } from "../dice.ts";
 import type { ActionSet } from "../scenario.ts";
 import { onResume, openWindow } from "../windows.ts";
@@ -81,7 +81,7 @@ const SCAN03: Spec<Extract<GameAction, { type: "SCAN" }>> = {
     if (action && !["ARCHIVE", "FIELD", "STABILIZE"].includes(action.protocol)) return fail("INVALID", m`Choose a valid scan protocol.`);
     return null;
   },
-  hint: () => m`Run one temporal scan this cycle. Success gains Fate; failure risks Fate or Sanity.`,
+  hint: () => m`Run one temporal scan this cycle. Disaster costs 1 Sanity; Perfect gains 1 Fate.`,
   apply: (ctx, p, action) => {
     p.counters.s3ScannedRound = ctx.s.round;
     const purpose = `S3_SCAN_${action.protocol}` as const;
@@ -91,10 +91,29 @@ const SCAN03: Spec<Extract<GameAction, { type: "SCAN" }>> = {
 
 for (const purpose of ["S3_SCAN_ARCHIVE", "S3_SCAN_FIELD", "S3_SCAN_STABILIZE"] as const) {
   onRollOutcome(purpose, (ctx, p, roll) => {
-    if (roll.tier === "PERFECT") gainFate(ctx, p, 2, m`a precise temporal scan`);
-    else if (roll.tier === "SUCCESS") gainFate(ctx, p, 1, m`a temporal scan`);
+    if (roll.tier === "PERFECT") gainFate(ctx, p, 1, m`a precise temporal scan`);
     else if (roll.tier === "DISASTER") loseSanity(ctx, p, 1, m`temporal feedback`);
-    else loseFate(ctx, p, 1, m`a failed temporal scan`);
+    if (!isSuccess(roll.tier)) return;
+    if (purpose === "S3_SCAN_ARCHIVE") {
+      const lead = archiveLead03(ctx.s, p);
+      ctx.s.secrets[p.playerId].archiveLead03 = {
+        round: ctx.s.round, roomId: lead?.roomId ?? null, year: lead?.year ?? null,
+        evidenceId: roll.tier === "PERFECT" ? (lead?.evidenceId ?? null) : null,
+      };
+      cue(ctx, "S3_ARCHIVE_LEAD", { playerId: p.playerId });
+    } else if (purpose === "S3_SCAN_FIELD") {
+      if (!statusOf(p, "FIELD_FOCUS")) addStatus(ctx, p, {
+        kind: "FIELD_FOCUS", polarity: "POSITIVE", sourceId: "SYSTEM",
+        expiresAtRound: ctx.s.round, hidden: false, ordinary: false, value: 2,
+      });
+      cue(ctx, "S3_SCAN_PROTOCOL", { playerId: p.playerId, protocol: "FIELD" });
+    } else {
+      if (!statusOf(p, "TEMPORAL_ALIGNMENT")) addStatus(ctx, p, {
+        kind: "TEMPORAL_ALIGNMENT", polarity: "POSITIVE", sourceId: "SYSTEM",
+        expiresAtRound: null, hidden: false, ordinary: false,
+      });
+      cue(ctx, "S3_SCAN_PROTOCOL", { playerId: p.playerId, protocol: "STABILIZE" });
+    }
   });
 }
 
@@ -125,7 +144,9 @@ const TIME_JUMP: Spec<Extract<GameAction, { type: "TIME_JUMP" }>> = {
     if (!canEnter03(s, here.roomId, here.year === "Y1996" ? "Y2026" : "Y1996")) return fail("ILLEGAL_TARGET", m`This room cannot receive a time jump.`);
     return null;
   },
-  hint: () => m`Jump to the other year in this same room. Costs 2 action points.`,
+  hint: (_s, p) => statusOf(p, "TEMPORAL_ALIGNMENT")
+    ? m`Jump to the other year in this same room. Temporal Alignment reduces the cost to 1 action point.`
+    : m`Jump to the other year in this same room. Costs 2 action points.`,
   apply: (ctx, p) => {
     const here = ctx.s.temporal!.locations[p.playerId];
     const year = here.year === "Y1996" ? "Y2026" : "Y1996";
@@ -134,6 +155,7 @@ const TIME_JUMP: Spec<Extract<GameAction, { type: "TIME_JUMP" }>> = {
       item.status = year === "Y1996" ? "HELD_1996" : "HELD_2026";
     }
     arrive03(ctx, p, here.roomId, year);
+    removeStatus(p, "TEMPORAL_ALIGNMENT");
     log(ctx, year === "Y1996" ? m`${p.nickname} jumps to 1996 without changing rooms.` : m`${p.nickname} jumps to 2026 without changing rooms.`, "MOVE", p.playerId);
     cue(ctx, "TIME_JUMP", { playerId: p.playerId, roomId: here.roomId, year });
     if (year === "Y1996") {
@@ -336,25 +358,41 @@ onResume("S3_TRADE", (ctx, window, answers) => {
   log(ctx, m`${from.nickname} transfers ${describeOffer03(ctx.s, give)} to ${to.nickname}.`, "TRADE", from.playerId);
 });
 
-function investigation03(s: GameState, p: PlayerGameState): string | null {
-  const here = s.temporal!.locations[p.playerId];
+function investigation03(s: GameState, p: PlayerGameState, here = s.temporal!.locations[p.playerId], act = s.act): string | null {
   const evidence = s.temporal!.evidence[p.playerId];
   const has = (id: string) => evidence.includes(id);
   if (here.year === "Y2026" && here.roomId === "ARCHIVES") {
     if (!evidence.some((id) => id.startsWith("CASE_FILE_"))) return `CASE_FILE_${s.temporal!.present.caseFile}`;
-    return s.act >= 3 && !has("FOUNDING_CHARTER") ? "FOUNDING_CHARTER" : null;
+    return act >= 3 && !has("FOUNDING_CHARTER") ? "FOUNDING_CHARTER" : null;
   }
-  if (s.act >= 2 && here.year === "Y2026" && here.roomId === "DIRECTOR_OFFICE") {
+  if (act >= 2 && here.year === "Y2026" && here.roomId === "DIRECTOR_OFFICE") {
     if (!has("SURVEILLANCE_TAPE")) return "SURVEILLANCE_TAPE";
-    return s.act >= 3 && !has("FOUNDER_DISCREPANCY") ? "FOUNDER_DISCREPANCY" : null;
+    return act >= 3 && !has("FOUNDER_DISCREPANCY") ? "FOUNDER_DISCREPANCY" : null;
   }
-  if (s.act >= 2 && here.year === "Y1996" && here.roomId === "DIRECTOR_OFFICE") {
+  if (act >= 2 && here.year === "Y1996" && here.roomId === "DIRECTOR_OFFICE") {
     if (!has("ACCESS_LEDGER")) return "ACCESS_LEDGER";
-    return s.act >= 3 && !has("JI_MARGIN_NOTE") ? "JI_MARGIN_NOTE" : null;
+    return act >= 3 && !has("JI_MARGIN_NOTE") ? "JI_MARGIN_NOTE" : null;
   }
-  if (s.act >= 2 && here.year === "Y1996" && here.roomId === "MAIN_LAB") return has("PROTOTYPE_LOG") ? null : "PROTOTYPE_LOG";
-  if (s.act >= 3 && here.year === "Y2026" && here.roomId === "MAIN_LAB") return has("STAFF_DISCREPANCY") ? null : "STAFF_DISCREPANCY";
-  if (s.act >= 3 && here.year === "Y2026" && here.roomId === "PROTOTYPE_ROOM") return has("PROTOTYPE_DISCREPANCY") ? null : "PROTOTYPE_DISCREPANCY";
+  if (act >= 2 && here.year === "Y1996" && here.roomId === "MAIN_LAB") return has("PROTOTYPE_LOG") ? null : "PROTOTYPE_LOG";
+  if (act >= 3 && here.year === "Y2026" && here.roomId === "MAIN_LAB") return has("STAFF_DISCREPANCY") ? null : "STAFF_DISCREPANCY";
+  if (act >= 3 && here.year === "Y2026" && here.roomId === "PROTOTYPE_ROOM") return has("PROTOTYPE_DISCREPANCY") ? null : "PROTOTYPE_DISCREPANCY";
+  return null;
+}
+
+const ARCHIVE_DIRECTIONS03: { roomId: RoomId03; year: Year03 }[] = [
+  { roomId: "ARCHIVES", year: "Y2026" },
+  { roomId: "DIRECTOR_OFFICE", year: "Y2026" },
+  { roomId: "DIRECTOR_OFFICE", year: "Y1996" },
+  { roomId: "MAIN_LAB", year: "Y1996" },
+  { roomId: "MAIN_LAB", year: "Y2026" },
+  { roomId: "PROTOTYPE_ROOM", year: "Y2026" },
+];
+
+function archiveLead03(s: GameState, p: PlayerGameState): { roomId: RoomId03; year: Year03; evidenceId: string } | null {
+  for (const place of ARCHIVE_DIRECTIONS03) {
+    const evidenceId = investigation03(s, p, place, 4);
+    if (evidenceId) return { ...place, evidenceId };
+  }
   return null;
 }
 
@@ -518,5 +556,6 @@ export function s03Actions(): ActionSet {
     specs: { MOVE: MOVE03, TIME_JUMP, SCAN: SCAN03, HELP: HELP03, USE_SKILL, SEARCH: SEARCH03, USE_ITEM: USE_ITEM03, PICK_UP: PICK_UP03, STORE_ITEM: STORE_ITEM03, TRADE: TRADE03, INVESTIGATE: INVESTIGATE03, INTERACT_NPC: INTERACT_NPC03, INTERVENE: INTERVENE03, RESOLVE_HISTORY: RESOLVE_HISTORY03, END_TURN },
     turnActions: ["MOVE", "TIME_JUMP", "SCAN", "HELP", "USE_SKILL", "SEARCH", "PICK_UP", "STORE_ITEM", "TRADE", "USE_ITEM", "INVESTIGATE", "INTERACT_NPC", "INTERVENE", "RESOLVE_HISTORY", "END_TURN"],
     apCost: { MOVE: 1, TIME_JUMP: 2, SCAN: 1, HELP: 1, USE_SKILL: 0, SEARCH: 1, PICK_UP: 1, STORE_ITEM: 1, TRADE: 0, USE_ITEM: 0, INVESTIGATE: 1, INTERACT_NPC: 1, INTERVENE: 1, RESOLVE_HISTORY: 1, END_TURN: 0 },
+    costFor: (_s, p, type) => type === "TIME_JUMP" && statusOf(p, "TEMPORAL_ALIGNMENT") ? 1 : undefined,
   };
 }

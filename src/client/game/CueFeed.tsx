@@ -11,6 +11,7 @@ import type { ScenarioText } from "../../shared/i18n/content-types.ts";
 import { useCharacterText, useItemText, useScenarioText, useT, type TFunction } from "../i18n/index.ts";
 import { useStore, type Cue } from "../store.ts";
 import { Icon } from "./Icon.tsx";
+import { archiveLeadText03 } from "./scenario03/archiveLead03.ts";
 
 const SHOW_MS = 4200;
 
@@ -94,6 +95,10 @@ function describe(c: Cue, g: PlayerView, t: TFunction, text: ScenarioText, skill
       return { icon: "CONFRONT", text: t("s2.cue.road"), tone: "text-ember border-ember/50" };
     case "SHIELD":
       return { icon: "ANCHOR", text: t("cue.shield", { name: who(p.playerId) }), tone: "text-signal border-signal/50" };
+    case "S3_ARCHIVE_LEAD":
+      return p.playerId === g.viewerId ? { icon: "SECRET", text: archiveLeadText03(t, g.mySecrets?.archiveLead03), tone: "text-signal border-signal/50" } : null;
+    case "S3_SCAN_PROTOCOL":
+      return p.playerId === g.viewerId ? { icon: "SCAN", text: t(p.protocol === "FIELD" ? "s3.scan.effect.FIELD" : "s3.scan.effect.STABILIZE"), tone: "text-signal border-signal/50" } : null;
     case "S3_ACTION_RESOLVED": {
       const action = String(p.action) as "S3_INVESTIGATE" | "S3_INTERVENE" | "S3_SPEAK" | "S3_SEARCH" | "S3_TIME_JUMP";
       const tier = String(p.tier) as "DISASTER" | "FAIL" | "SUCCESS" | "PERFECT";

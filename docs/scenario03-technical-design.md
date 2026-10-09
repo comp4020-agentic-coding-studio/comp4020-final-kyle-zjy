@@ -477,7 +477,21 @@ queue and server projection.
 
 ## Scenario 03 action dice resolution
 
-Temporal Scan retains its separate Fate economy. Investigate, the 1996 causal
+Temporal Scan uses the same baseline as other action dice: Disaster loses 1
+Sanity, Failure and Success have no baseline resource effect, and Perfect
+grants 1 Fate. Its protocol-specific effect applies on Success or Perfect:
+Archive gives the scanning player an unresolved investigation direction,
+Field grants a one-use +2 shared roll bonus to the next non-Scan dice action
+this cycle, and Stabilization reduces the next Time Jump from 2 AP to 1 AP.
+Archive's direction lives in the scanning player's secrets and its cue carries
+only the player ID; Success reveals room and year, Perfect also names the
+investigation, and no eligible investigation produces an explicit empty lead.
+Field Focus is consumed by the shared roll modifier pipeline for Investigate,
+Intervene, Speak, Search, or unstable Time Jump, and expires unused after the
+current cycle. Temporal Alignment survives cycles and save/reconnect until a
+safe or unstable Time Jump consumes it. Neither status stacks. The action set's
+dynamic AP-cost hook drives both validation and available-action display.
+Investigate, the 1996 causal
 interventions, formal NPC conversations and the 2026 Research Wing supply
 search now enter the shared server d6 pipeline after spending their existing
 AP. Help applies to the next shared roll in the same way it already did for a

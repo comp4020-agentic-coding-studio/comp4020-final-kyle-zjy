@@ -169,14 +169,16 @@ and 02 adapter tables are untouched.
 | gemini-entj | Chosen quick roll resolves as Investigate | Chosen result resolves as a temporal scan |
 | taurus-istp | Same carriage or zone | Same physical room and year, validated by the shared presence key |
 | leo-entj | Move one carriage or zone | Move one open room in the target's year; the `movePlayer` hook follows the eight-room graph |
-| capricorn-estj | Two free Investigate rolls | Two free temporal scans; successful rollers receive the same Fate bonus |
+| capricorn-estj | Two free Investigate rolls | Two free temporal scans; the successful roller receives the skill's extra Fate |
 | pisces-entp | Ticket pass in Scenario 01; core shield in Scenario 02 | Core one-hit shield, since no ticket check exists |
 | sagittarius-istj | Three different ordinary roll kinds | Three temporal scan protocols, tracked by the same success-kind bits |
 
 The **ordinary roll** is a once-per-cycle temporal scan. Archive, field and
 stabilization protocols use the same server die, Fate spending and reaction
-pipeline. A Success grants 1 Fate, Perfect grants 2, Failure loses 1 Fate,
-and Disaster loses 1 Sanity. Shared forced Investigate effects resolve as a
+pipeline. Disaster loses 1 Sanity, Failure and Success have no baseline
+resource effect, and Perfect grants 1 Fate. Success and Perfect also grant
+the chosen protocol's effect: an Archive investigation lead, Field Focus, or
+Temporal Alignment. Shared forced Investigate effects resolve as a
 free field scan here. Help is a co-located, year-aware +1 to a later scan.
 
 The **public event** is an Incident Zero anomaly, drawn from its own seeded

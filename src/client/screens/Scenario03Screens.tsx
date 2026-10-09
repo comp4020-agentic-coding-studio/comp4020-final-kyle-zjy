@@ -2,7 +2,7 @@
 // (src/client/game/scenario03/ holds its map, panels, dock actions and private
 // drawer), the identity and third-route scenes, the ending and the results.
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { RoomId03, Year03 } from "../../shared/game/scenario03/map.ts";
 import type { PlayerView, PublicPlayerState } from "../../shared/game/state.ts";
 import { Banner } from "../game/Banner.tsx";
@@ -21,7 +21,7 @@ import { Map03 } from "../game/scenario03/Map03.tsx";
 import { Objective03, RoomPanel03, TopBar03 } from "../game/scenario03/Panels03.tsx";
 import { Private03 } from "../game/scenario03/Private03.tsx";
 import { useFormat, useT } from "../i18n/index.ts";
-import { sendGame, sendLobby, useGame, useMe } from "../store.ts";
+import { sendGame, sendLobby, useGame, useMe, useStore } from "../store.ts";
 import "../styles/scenario03.css";
 
 function Frame({ children }: { children: React.ReactNode }) {
@@ -63,6 +63,10 @@ export function Scenario03Game() {
   const [looking, setLooking] = useState<RoomId03 | null>(null);
   const [viewYear, setViewYear] = useState<Year03>("Y2026");
   const [ripple, setRipple] = useState(false);
+  const [jumpFlash, setJumpFlash] = useState<{ key: string; year: Year03 } | null>(null);
+  const jumpCue = useStore((s) => s.cues.findLast((c) => c.kind === "TIME_JUMP" && c.payload.playerId === s.playerId));
+  const seenJump = useRef<string | null>(null);
+  const reduceMotion = useReducedMotion();
   const priorRevision = useRef<number | null>(null);
   const current = g?.temporal?.locations[g.viewerId];
   useEffect(() => {
@@ -81,6 +85,16 @@ export function Scenario03Game() {
     }
     priorRevision.current = revision;
   }, [g?.temporal?.causalRevision]);
+  useEffect(() => {
+    if (!jumpCue || seenJump.current === jumpCue.key) return;
+    seenJump.current = jumpCue.key;
+    if (Date.now() - jumpCue.at > 1500) return;
+    const year = jumpCue.payload.year;
+    if (year !== "Y1996" && year !== "Y2026") return;
+    setJumpFlash({ key: jumpCue.key, year });
+    const timer = setTimeout(() => setJumpFlash(null), 650);
+    return () => clearTimeout(timer);
+  }, [jumpCue]);
   if (!g?.temporal || !current) return null;
 
   const move = g.myActions.find((a) => a.type === "MOVE");
@@ -149,6 +163,18 @@ export function Scenario03Game() {
       <Dock g={g} mode={mode} setMode={setMode} extension={DOCK03} />
 
       <CueFeed g={g} />
+      <AnimatePresence>
+        {jumpFlash && <motion.div
+          key={jumpFlash.key}
+          className={`s3-jump-veil ${jumpFlash.year === "Y1996" ? "s3-jump-past" : "s3-jump-present"}`}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.12 }}
+          role="status" aria-live="polite"
+        >
+          <motion.div className="s3-jump-clock" initial={reduceMotion ? false : { scale: 0.75, rotate: -25 }} animate={reduceMotion ? {} : { scale: 1.08, rotate: 20 }} transition={{ duration: 0.52, ease: "easeOut" }} aria-hidden="true" />
+          <p className="s3-jump-label">{t("s3.jump.arrival", { year: t(`s3.year.short.${jumpFlash.year}`) })}</p>
+        </motion.div>}
+      </AnimatePresence>
       <DiceOverlay g={g} />
       <DecisionLayer g={g} />
       <HostSkip g={g} />

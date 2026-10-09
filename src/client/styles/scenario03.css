@@ -137,6 +137,60 @@
     animation: s3-causal-flash 1.2s ease-out forwards;
   }
 
+  .s3-jump-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    pointer-events: none;
+    background: radial-gradient(circle, color-mix(in srgb, var(--c-signal) 23%, var(--c-void)) 0, color-mix(in srgb, var(--c-void) 84%, transparent) 65%);
+    backdrop-filter: blur(2px);
+  }
+  .s3-jump-past { color: var(--c-gold-bright); }
+  .s3-jump-present { color: var(--c-signal); }
+  .s3-jump-clock {
+    position: relative;
+    width: 116px;
+    height: 116px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    background: repeating-conic-gradient(from 0deg, currentColor 0deg 2deg, transparent 2deg 30deg);
+    box-shadow: 0 0 0 12px color-mix(in srgb, currentColor 10%, transparent), 0 0 65px currentColor;
+  }
+  .s3-jump-clock::before {
+    content: "";
+    position: absolute;
+    inset: 13px;
+    border-radius: 50%;
+    background: var(--c-night);
+  }
+  .s3-jump-clock::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 20px;
+    width: 2px;
+    height: 39px;
+    background: currentColor;
+    transform-origin: bottom center;
+    transform: rotate(35deg);
+  }
+  .s3-jump-label {
+    max-width: calc(100vw - 32px);
+    color: currentColor;
+    font-family: var(--f-mono);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-align: center;
+    text-transform: uppercase;
+    text-shadow: 0 0 20px currentColor;
+  }
+
   @keyframes s3-causal-flash {
     from { opacity: 1; box-shadow: inset 0 0 90px color-mix(in srgb, var(--c-signal) 35%, transparent); }
     to { opacity: 0; box-shadow: inset 0 0 0 transparent; }
@@ -151,5 +205,6 @@
 
   @media (prefers-reduced-motion: reduce) {
     .s3-map-rewritten::after { animation: none; opacity: 0; }
+    .s3-jump-veil { backdrop-filter: none; }
   }
 }

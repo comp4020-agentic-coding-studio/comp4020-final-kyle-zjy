@@ -13,6 +13,8 @@ export type ActionSet = {
   /** The buttons on the dock, in order. */
   turnActions: GameActionType[];
   apCost: Partial<Record<GameActionType, number>>;
+  /** Optional per-player action cost; scenarios without it keep apCost unchanged. */
+  costFor?(s: GameState, p: PlayerGameState, type: GameActionType): number | undefined;
 };
 
 export type ScenarioRules = {

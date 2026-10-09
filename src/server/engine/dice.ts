@@ -50,6 +50,11 @@ const BONUS_STATUS: Partial<Record<RollPurpose, string>> = {
   S2_WADE: "ROPE_BONUS",
   S2_RESCUE: "ROPE_BONUS",
   S2_RISK: "RISK_BONUS",
+  S3_INVESTIGATE: "FIELD_FOCUS",
+  S3_INTERVENE: "FIELD_FOCUS",
+  S3_SPEAK: "FIELD_FOCUS",
+  S3_SEARCH: "FIELD_FOCUS",
+  S3_TIME_JUMP: "FIELD_FOCUS",
 };
 
 export type RollOptions = {

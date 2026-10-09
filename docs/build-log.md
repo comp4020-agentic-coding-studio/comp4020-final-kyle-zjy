@@ -649,3 +649,28 @@ names); each variant is now a whole template. No rule, RNG or replay changed
 - Checks: `pnpm check` (1045 tests), production build, Scenario 03's
   two-browser five-cycle walkthrough at 320/1280 px, and a focused browser
   save/reconnect check showing lag in the player sheet at 320/1280 px.
+
+## Scenario 03: Temporal Scan protocols and Time Jump cue
+
+- Standardized Scan's base die outcome with the other Scenario 03 actions:
+  Disaster loses 1 Sanity, Failure and Success have no base resource change,
+  and Perfect gains 1 Fate. The three protocols add an effect on Success or
+  Perfect without altering any other action dice.
+- Archive now stores an owner-only unresolved investigation direction: room
+  and year on Success, plus the investigation name on Perfect. It awards no
+  evidence and explicitly reports when no direction remains. Field Focus
+  adds +2 through the shared modifier pipeline to the next eligible rolled
+  non-Scan action in this cycle. Temporal Alignment reduces the next safe or
+  unstable Time Jump to 1 AP. Both statuses are non-stacking and persist or
+  expire according to their rules; Alignment survives save/reconnect.
+- Added a brief, localized Time Jump overlay with a reduced-motion path.
+  The existing map, story, four-act flow, endings and Scenario 02 layout
+  remain unchanged.
+- Checks: production build, `pnpm check` (1066 tests before the final
+  non-stacking regression), targeted protocol tests (58), Scenario 03
+  two-context walkthroughs at 320/1280 and 390/1280 px, and a focused
+  two-player browser capture of the Time Jump animation at 320 px.
+- The existing scripted route probe (`scripts/sim03.ts --runs 4`) won 59/60
+  seeded runs; the one miss was the two-player Deceive History route. This
+  script does not choose Temporal Scan, so it verifies route regressions but
+  does not measure how the new protocol choices change player strategy.

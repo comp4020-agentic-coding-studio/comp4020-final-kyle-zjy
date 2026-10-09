@@ -11,6 +11,7 @@ import { useCharacterText, useFormat, useItemText, useT } from "../../i18n/index
 import type { S3Key } from "../../i18n/types.ts";
 import { Section } from "../SecretsDrawer.tsx";
 import { roomKey03 } from "./Map03.tsx";
+import { archiveLeadText03 } from "./archiveLead03.ts";
 
 const EVIDENCE: Record<string, S3Key> = {
   ARCHIVIST_NOTE: "s3.npc.note",
@@ -42,6 +43,7 @@ export function Private03({ g }: { g: PlayerView }) {
   return (
     <>
       <Section title={t("s3.secrets.evidence")} empty={t("s3.secrets.evidenceEmpty")} items={tp.myEvidence.map((id) => ({ id, text: t(EVIDENCE[id] ?? "s3.causal.evidenceA") }))} />
+      {s?.archiveLead03 && <Section title={t("s3.scan.archive.title")} empty="" items={[{ id: "archive-lead", text: archiveLeadText03(t, s.archiveLead03), meta: t("secrets.round", { n: s.archiveLead03.round }) }]} />}
       <section className="tarot p-3">
         <p className="label text-gold">{t("s3.items.held")}</p>
         {tp.myItems.length === 0 && <p className="mt-1 text-sm text-mist">{t("s3.items.none")}</p>}

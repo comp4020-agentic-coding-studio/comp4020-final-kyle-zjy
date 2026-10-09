@@ -420,6 +420,8 @@ export type PlayerSecrets = {
   allies: PlayerId[];
   dreamCards: { id: string; text: Msg }[];
   peeks: { id: string; text: Msg; round: number }[];
+  /** Latest owner-only Archive Scan direction; null IDs mean no unresolved lead. */
+  archiveLead03?: { round: number; roomId: RoomId03 | null; year: Year03 | null; evidenceId: string | null };
   tasks: PlayerTask[];
 };
 

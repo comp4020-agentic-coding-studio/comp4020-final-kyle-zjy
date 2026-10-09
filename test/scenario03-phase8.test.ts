@@ -112,7 +112,7 @@ describe("Scenario 03 ability mechanisms", () => {
     s = applyGameAction(s, actor, { type: "SCAN", protocol: "ARCHIVE" }, T0 + 2).state;
     expect(s.roll?.purpose).toBe("S3_SCAN_ARCHIVE");
     expect(s.roll?.done).toBe(true);
-    expect(s.players[actor].fate).toBe(fate + 2);
+    expect(s.players[actor].fate).toBe(fate + 1);
     expect(() => applyGameAction(s, actor, { type: "SCAN", protocol: "FIELD" }, T0 + 3)).toThrow(/already run a temporal scan/);
     s = applyGameAction(s, actor, { type: "HELP", targetId: teammate }, T0 + 4).state;
     expect(s.players[teammate].helpBonus).toBe(1);

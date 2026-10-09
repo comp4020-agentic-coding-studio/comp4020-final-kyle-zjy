@@ -41,8 +41,8 @@ function act(state: GameState, id: string, action: GameAction, die: number, fate
 
 describe("Scenario 03 action dice", () => {
   it.each([
-    [1, -1, 0], [2, 0, -1], [4, 0, 1], [6, 0, 2],
-  ])("keeps scan's own Fate economy at die %i", (die, sanityDelta, fateDelta) => {
+    [1, -1, 0], [2, 0, 0], [3, 0, 0], [4, 0, 0], [5, 0, 0], [6, 0, 1],
+  ])("uses the common dice baseline for Scan at die %i", (die, sanityDelta, fateDelta) => {
     const { state, id } = start();
     state.players[id].fate = 1;
     const sanity = state.players[id].sanity;
@@ -52,11 +52,129 @@ describe("Scenario 03 action dice", () => {
     expect(next.players[id].fate).toBe(fate + fateDelta);
   });
 
-  it.each(["ARCHIVE", "FIELD", "STABILIZE"] as const)("keeps the %s scan protocol on the original reward rule", (protocol) => {
+  it.each(["ARCHIVE", "FIELD", "STABILIZE"] as const)("adds the %s protocol effect after a successful baseline roll", (protocol) => {
     const { state, id } = start();
     const next = act(state, id, { type: "SCAN", protocol }, 4);
     expect(next.roll?.purpose).toBe(`S3_SCAN_${protocol}`);
+    expect(next.players[id].fate).toBe(0);
+  });
+
+  it("Archive Scan gives only a private room and year on Success, including a future direction", () => {
+    const { state, id } = start();
+    const caseId = `CASE_FILE_${state.temporal!.present.caseFile}`;
+    state.temporal!.evidence[id].push(caseId);
+    const before = JSON.stringify(state.temporal);
+    const next = act(state, id, { type: "SCAN", protocol: "ARCHIVE" }, 4);
+    expect(next.secrets[id].archiveLead03).toEqual({ round: 1, roomId: "ARCHIVES", year: "Y2026", evidenceId: null });
+    expect(JSON.stringify(next.temporal)).toBe(before);
+    expect(next.temporal!.story.revealed).not.toContain("FOUNDING_PARADOX");
+    const other = next.turnOrder.find((playerId) => playerId !== id)!;
+    expect(project(next, other).mySecrets?.archiveLead03).toBeUndefined();
+    expect(project(next, other).temporal?.myEvidence).toEqual([]);
+  });
+
+  it("Archive Scan Perfect names the unresolved investigation without collecting evidence", () => {
+    const { state, id } = start();
+    const before = JSON.stringify(state.temporal);
+    const next = act(state, id, { type: "SCAN", protocol: "ARCHIVE" }, 6);
+    expect(next.secrets[id].archiveLead03).toEqual({ round: 1, roomId: "ARCHIVES", year: "Y2026", evidenceId: `CASE_FILE_${state.temporal!.present.caseFile}` });
     expect(next.players[id].fate).toBe(1);
+    expect(JSON.stringify(next.temporal)).toBe(before);
+  });
+
+  it("Archive Scan reports no lead when every available investigation is resolved", () => {
+    const { state, id } = start();
+    state.temporal!.evidence[id] = [
+      `CASE_FILE_${state.temporal!.present.caseFile}`, "FOUNDING_CHARTER", "SURVEILLANCE_TAPE",
+      "FOUNDER_DISCREPANCY", "ACCESS_LEDGER", "JI_MARGIN_NOTE", "PROTOTYPE_LOG",
+      "STAFF_DISCREPANCY", "PROTOTYPE_DISCREPANCY",
+    ];
+    const next = act(state, id, { type: "SCAN", protocol: "ARCHIVE" }, 4);
+    expect(next.secrets[id].archiveLead03).toEqual({ round: 1, roomId: null, year: null, evidenceId: null });
+  });
+
+  it.each([[1, false], [2, false], [4, true], [6, true]])("Field Scan die %i grants only one +2 focus on success", (die, focused) => {
+    const { state, id } = start();
+    const next = act(state, id, { type: "SCAN", protocol: "FIELD" }, die);
+    expect(next.players[id].statuses.filter((status) => status.kind === "FIELD_FOCUS")).toHaveLength(focused ? 1 : 0);
+    if (focused) expect(next.players[id].statuses.find((status) => status.kind === "FIELD_FOCUS")).toMatchObject({ value: 2, expiresAtRound: 1 });
+  });
+
+  it.each([
+    ["INVESTIGATE", "ARCHIVES", "Y2026"],
+    ["INTERVENE", "ARCHIVES", "Y1996"],
+    ["INTERACT_NPC", "ARCHIVES", "Y2026"],
+    ["SEARCH", "RESEARCH_WING", "Y2026"],
+    ["TIME_JUMP", "CENTRAL_HALL", "Y2026"],
+  ] as const)("Field Focus enters the shared modifier pipeline for %s and is consumed", (type, room, year) => {
+    const { state, id } = start();
+    if (type === "TIME_JUMP") { state.act = 3; state.phase = "ACT_3"; state.collapse = 6; }
+    const focused = act(state, id, { type: "SCAN", protocol: "FIELD" }, 4);
+    place(focused, id, room, year);
+    focused.players[id].ap = 2;
+    const action: GameAction = type === "INTERVENE" ? { type, nodeId: "ARCHIVE_GATE", choiceId: "OPEN" }
+      : type === "INTERACT_NPC" ? { type, npcId: "ARCHIVIST_00" }
+        : { type } as GameAction;
+    const next = act(focused, id, action, 2);
+    expect(next.roll).toMatchObject({ raw: 2, final: 4, modifiers: [{ delta: 2 }] });
+    expect(next.players[id].statuses.some((status) => status.kind === "FIELD_FOCUS")).toBe(false);
+  });
+
+  it("Field Focus survives non-rolled movement but expires unused after this cycle", () => {
+    const { state, id } = start();
+    let next = act(state, id, { type: "SCAN", protocol: "FIELD" }, 4);
+    next = applyGameAction(next, id, { type: "MOVE", toCarriage: placeKey03("ARCHIVES", "Y2026") }, T0 + 30).state;
+    expect(next.players[id].statuses.some((status) => status.kind === "FIELD_FOCUS")).toBe(true);
+    for (let turn = 0; turn < 3; turn++) next = endTurn03(next, T0 + 40 + turn);
+    expect(next.round).toBe(2);
+    expect(next.players[id].statuses.some((status) => status.kind === "FIELD_FOCUS")).toBe(false);
+  });
+
+  it.each([[1, false], [2, false], [4, true], [6, true]])("Stabilization Scan die %i grants alignment only on success", (die, aligned) => {
+    const { state, id } = start();
+    const next = act(state, id, { type: "SCAN", protocol: "STABILIZE" }, die);
+    expect(next.players[id].statuses.filter((status) => status.kind === "TEMPORAL_ALIGNMENT")).toHaveLength(aligned ? 1 : 0);
+    expect(next.players[id].fate).toBe(die === 6 ? 1 : 0);
+  });
+
+  it("Alignment persists through reconnect, makes a safe jump cost 1 AP, and is consumed", () => {
+    const { state, id } = start();
+    const aligned = act(state, id, { type: "SCAN", protocol: "STABILIZE" }, 4);
+    const restored = JSON.parse(JSON.stringify(aligned)) as GameState;
+    const reconnected = setAway(setAway(restored, id, true, T0 + 30).state, id, false, T0 + 31).state;
+    expect(project(reconnected, id).players[id].statuses).toContainEqual(expect.objectContaining({ kind: "TEMPORAL_ALIGNMENT" }));
+    reconnected.players[id].ap = 1;
+    expect(project(reconnected, id).myActions.find((action) => action.type === "TIME_JUMP")).toMatchObject({ enabled: true, apCost: 1 });
+    const jumped = applyGameAction(reconnected, id, { type: "TIME_JUMP" }, T0 + 32).state;
+    expect(jumped.players[id].ap).toBe(0);
+    expect(jumped.players[id].statuses.some((status) => status.kind === "TEMPORAL_ALIGNMENT")).toBe(false);
+    expect(jumped.temporal!.locations[id].year).toBe("Y1996");
+    expect(jumped.roll?.purpose).not.toBe("S3_TIME_JUMP");
+  });
+
+  it("Alignment survives a cycle boundary and never stacks", () => {
+    const { state, id } = start();
+    let next = act(state, id, { type: "SCAN", protocol: "STABILIZE" }, 4);
+    for (let turn = 0; turn < 3; turn++) next = endTurn03(next, T0 + 40 + turn);
+    expect(next.round).toBe(2);
+    expect(next.players[id].statuses.filter((status) => status.kind === "TEMPORAL_ALIGNMENT")).toHaveLength(1);
+    next = act(next, id, { type: "SCAN", protocol: "STABILIZE" }, 4);
+    expect(next.players[id].statuses.filter((status) => status.kind === "TEMPORAL_ALIGNMENT")).toHaveLength(1);
+  });
+
+  it("Alignment changes only AP cost on an unstable jump, leaving backlash and lag intact", () => {
+    for (const [die, sanityDelta, lag] of [[1, -1, false], [2, 0, true]] as const) {
+      const { state, id } = start();
+      state.act = 3; state.phase = "ACT_3"; state.collapse = 6;
+      const aligned = act(state, id, { type: "SCAN", protocol: "STABILIZE" }, 4);
+      const sanity = aligned.players[id].sanity;
+      const next = act(aligned, id, { type: "TIME_JUMP" }, die);
+      expect(next.players[id].ap).toBe(1);
+      expect(next.players[id].sanity).toBe(sanity + sanityDelta);
+      expect(next.players[id].statuses.some((status) => status.kind === "TEMPORAL_LAG")).toBe(lag);
+      expect(next.players[id].statuses.some((status) => status.kind === "TEMPORAL_ALIGNMENT")).toBe(false);
+      expect(next.roll?.purpose).toBe("S3_TIME_JUMP");
+    }
   });
 
   it.each([

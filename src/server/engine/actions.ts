@@ -364,7 +364,7 @@ export function applyAction(ctx: Ctx, actorId: PlayerId, action: GameAction): vo
   const set = rulesFor(s).actions;
   const spec = set.specs[action.type] as Spec<GameAction> | undefined;
   if (!spec) throw new RuleError("INVALID", m`Unknown action.`);
-  const cost = set.apCost[action.type] ?? 0;
+  const cost = set.costFor?.(s, p, action.type) ?? set.apCost[action.type] ?? 0;
   const gate = turnGate(s, actorId, cost) ?? spec.check(s, p, action);
   if (gate) throw new RuleError(gate.code, gate.reason);
   p.ap -= cost;
@@ -378,7 +378,7 @@ export function availableActions(s: GameState, viewerId: PlayerId): ActionAvaila
   const set = rulesFor(s).actions;
   return set.turnActions.map((type) => {
     const spec = set.specs[type] as Spec<GameAction>;
-    const apCost = set.apCost[type] ?? 0;
+    const apCost = set.costFor?.(s, p, type) ?? set.apCost[type] ?? 0;
     const gate = turnGate(s, viewerId, apCost) ?? spec.check(s, p);
     return {
       type,
