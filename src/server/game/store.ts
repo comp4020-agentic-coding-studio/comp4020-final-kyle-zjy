@@ -19,14 +19,17 @@ export class GameStore {
   /** Creates the session and points the room at it. Call inside the room's transaction. */
   create(roomCode: string, seats: Seat[], now: number, seed = newSeed(), scenarioId: ScenarioId = DEFAULT_SCENARIO): GameState {
     const id = "g_" + randomBytes(9).toString("base64url");
-    const state = createGame(id, seats, seed, now, scenarioId);
+    // The browser walkthrough fixes only this scenario's seed in test mode.
+    const runSeed = process.env.NODE_ENV === "test" && scenarioId === "S04_UNDERGROUND_AUCTION"
+      ? process.env.SCENARIO04_TEST_SEED ?? seed : seed;
+    const state = createGame(id, seats, runSeed, now, scenarioId);
     const json = JSON.stringify(state);
     this.db
       .prepare(
         `INSERT INTO game_sessions (id, room_code, scenario_id, seed, phase, version, initial_json, state_json, started_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(id, roomCode, state.scenarioId, seed, state.phase, state.version, json, json, now);
+      .run(id, roomCode, state.scenarioId, runSeed, state.phase, state.version, json, json, now);
     this.db.prepare("UPDATE rooms SET current_session = ?, phase = ? WHERE code = ?").run(id, state.phase, roomCode);
     return state;
   }

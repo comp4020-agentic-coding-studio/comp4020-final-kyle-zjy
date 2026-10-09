@@ -350,3 +350,18 @@ that lock; without it the button is disabled and names the missing key.
 The final result (after Fate, abilities and reactions) decides: 6 earns a
 temporary pass, 4–5 passes, 1–3 empties Sanity (the player is lost and
 stays in the run). Shields and other protections still apply.
+
+## Scenario 04 auction state
+
+The ten lots live in `src/shared/game/scenario04/lots.ts`. `auction` records
+fixed seat order, active lot, high bid and bidder, passed seats, each round's
+opening seat, settlement history, player Black Chips, Debt, won lots,
+certified private intel and READ snapshots. Black Chips and intel are private;
+Debt and won lots are public. Fate, Sanity, AP, Lost, and the seeded die use
+the shared player and roll structures. AP refreshes to 2 each round (1 when
+Lost), never on an additional bidding lap.
+
+A winner pays only at settlement. The winner opens next round immediately
+after their seat; an unsold round opens after its previous opening seat.
+Round 10 still uses BID/PASS. The crown can cover two chips of its holder's
+final bid; high Debt changes a winning ending into the debt ending.

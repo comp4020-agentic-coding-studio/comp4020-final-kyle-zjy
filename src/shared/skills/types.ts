@@ -7,7 +7,7 @@ import type { CoreSkill, CoreSkillCategory, CoreSkillId } from "./core/types.ts"
 export const SKILL_VFX = ["DICE", "EYE", "SHIELD", "SWAP", "SPARK", "CHAIN", "STRIKE", "CLOCK"] as const;
 export type SkillVfx = (typeof SKILL_VFX)[number];
 
-export type SkillBehaviour = Partial<Pick<CoreSkill, "effects" | "trigger" | "target" | "requires" | "count">>;
+export type SkillBehaviour = Partial<Pick<CoreSkill, "type" | "effects" | "trigger" | "target" | "requires" | "count">>;
 
 export type SkillAdapter = {
   name: string;

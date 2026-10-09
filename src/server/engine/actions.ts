@@ -355,6 +355,14 @@ export function applyAction(ctx: Ctx, actorId: PlayerId, action: GameAction): vo
   if (action.type === "RESPOND") {
     if (s.phase === "RESULTS") throw new RuleError("GAME_OVER", m`The run is over.`);
     if (typeof action.windowId !== "string" || typeof action.optionId !== "string") throw new RuleError("INVALID", m`Invalid answer.`);
+    if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && s.pending.at(-1)?.id === action.windowId && s.pending.at(-1)?.kind === "S4_DEAL" && action.optionId === "ACCEPT") {
+      const deal = s.auction?.deal;
+      if (deal?.to === actorId) {
+        const recipient = s.auction!.players[actorId];
+        if ((deal.receiveChips ?? 0) > recipient.blackChips) throw new RuleError("ILLEGAL_TARGET", m`A deal cannot spend chips its parties do not hold.`);
+        if (deal.forIntel && !recipient.privateIntel.includes(deal.forIntel)) throw new RuleError("ILLEGAL_TARGET", m`The seller does not know that certified intel.`);
+      }
+    }
     return answerWindow(ctx, actorId, action.windowId, action.optionId);
   }
   if (action.type === "ACK_SEQUENCE") {

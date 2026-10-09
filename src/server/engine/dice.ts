@@ -76,6 +76,17 @@ export function startRoll(ctx: Ctx, p: PlayerGameState, purpose: RollPurpose, la
     raw = Math.max(raw, second);
   }
   const modifiers: Roll["modifiers"] = [...(opts.extra ?? [])];
+  if (purpose.startsWith("S4_") && ctx.s.auction) {
+    const auctionPlayer = ctx.s.auction.players[p.playerId];
+    if (auctionPlayer?.items.includes("LOT_01") && !Object.values(ctx.s.auction.players).some((holder) => holder.usedLotEffects.includes("LOT_01"))) {
+      modifiers.push({ source: m`The Black Die`, delta: 1 });
+      auctionPlayer.usedLotEffects.push("LOT_01");
+    }
+    if (auctionPlayer?.nextRollPenalty) {
+      modifiers.push({ source: m`Auction ability or sabotage`, delta: auctionPlayer.nextRollPenalty });
+      auctionPlayer.nextRollPenalty = 0;
+    }
+  }
   if (modifiable && p.helpBonus > 0) {
     modifiers.push({ source: m`Help`, delta: p.helpBonus });
     p.helpBonus = 0;

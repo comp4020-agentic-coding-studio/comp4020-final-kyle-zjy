@@ -4,7 +4,8 @@ import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import { MAX_SANITY } from "../../shared/game/scenario01/content.ts";
 import type { PlayerView, PublicPlayerState } from "../../shared/game/state.ts";
 import { CharacterCard } from "../components/CharacterCard.tsx";
-import { useCharacterText, useItemText, useScenarioText, useT } from "../i18n/index.ts";
+import { useCharacterText, useItemText, useLocale, useScenarioText, useT } from "../i18n/index.ts";
+import { auctionLotText } from "../../shared/i18n/scenario04.ts";
 import { rich } from "../i18n/rich.ts";
 import { statusName } from "./status.ts";
 import { Drawer } from "./Drawer.tsx";
@@ -17,6 +18,7 @@ export function PlayerSheet({ g, p, onClose }: { g: PlayerView; p: PublicPlayerS
   const text = useScenarioText();
   const itemName = useItemText();
   const charText = useCharacterText();
+  const locale = useLocale();
   const sep = t("common.listSep");
   return (
     <Drawer title={live.nickname} onClose={onClose}>
@@ -31,14 +33,15 @@ export function PlayerSheet({ g, p, onClose }: { g: PlayerView; p: PublicPlayerS
           <Stat k={t("common.sanity")} v={`${live.sanity}/${MAX_SANITY}`} />
           <Stat k={t("sheet.shields")} v={String(live.shields)} />
         </dl>
-        <p className="text-sm text-mist">
+        {g.auction && <dl className="grid grid-cols-2 gap-2 text-center"><Stat k={t("s4.hud.debt")} v={String(g.auction.players[live.playerId]?.debt ?? 0)} />{live.playerId === g.viewerId && <Stat k={t("s4.hud.chips")} v={String(g.auction.players[live.playerId]?.blackChips ?? 0)} />}</dl>}
+        {!g.auction && <p className="text-sm text-mist">
           {rich(t("sheet.inThe"), { carriage: <span className="text-moon">{text.carriages[identity].name}</span> })}
           {live.lost ? t("sheet.lost") : ""}
           {live.away ? t("sheet.away") : ""}
-        </p>
+        </p>}
         <div>
           <p className="label">{t("sheet.items")}</p>
-          <p className="mt-1 text-sm text-mist">{live.items.length ? live.items.map((i) => itemName(i).name).join(sep) : t("common.none")}</p>
+          <p className="mt-1 text-sm text-mist">{g.auction ? (g.auction.players[live.playerId]?.items.map((id) => auctionLotText(locale, id).name).join(sep) || t("common.none")) : (live.items.length ? live.items.map((i) => itemName(i).name).join(sep) : t("common.none"))}</p>
         </div>
         <div>
           <p className="label">{t("sheet.statuses")}</p>

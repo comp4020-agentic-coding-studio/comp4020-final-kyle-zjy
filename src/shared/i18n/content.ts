@@ -10,6 +10,9 @@ import type { ItemId, S01ItemId, ScenarioId } from "../game/state.ts";
 import { S02_SKILL_TEXT } from "../game/scenario02/skill-adapters.ts";
 import { ZH_S02_SKILL_TEXT } from "./zh-CN/skills02.ts";
 import { S03_SKILL_TEXT } from "../game/scenario03/skill-adapters.ts";
+import { AUCTION_SKILL04 } from "../game/scenario04/skills.ts";
+import { CORE_SKILLS } from "../skills/core/index.ts";
+import { ROSTER } from "../characters/roster/index.ts";
 import { ZH_S03_SKILL_TEXT } from "./zh-CN/skills03.ts";
 import type { NameText } from "./content-types.ts";
 import { scenario02Text } from "./scenario02.ts";
@@ -29,6 +32,12 @@ export function characterText(locale: Locale, id: CharacterId, scenarioId: Scena
   const base = (locale === "zh-CN" ? ZH_CHARACTERS[id] : undefined) ?? EN_CHARACTERS[id];
   const s02 = scenarioId === "S02_SUNKEN_CITY" ? ((locale === "zh-CN" ? ZH_S02_SKILL_TEXT[id] : undefined) ?? S02_SKILL_TEXT[id]) : undefined;
   const s03 = scenarioId === "S03_INCIDENT_ZERO" ? ((locale === "zh-CN" ? ZH_S03_SKILL_TEXT[id] ?? ZH_S02_SKILL_TEXT[id] : undefined) ?? S03_SKILL_TEXT[id] ?? S02_SKILL_TEXT[id]) : undefined;
+  if (scenarioId === "S04_UNDERGROUND_AUCTION") {
+    const character = ROSTER.find((entry) => entry.id === id)!;
+    const rule = AUCTION_SKILL04[CORE_SKILLS[character.coreSkillId].category];
+    const prior = (locale === "zh-CN" ? ZH_S03_SKILL_TEXT[id] ?? ZH_S02_SKILL_TEXT[id] : undefined) ?? S03_SKILL_TEXT[id] ?? S02_SKILL_TEXT[id];
+    return { title: base.title, skillName: prior?.name ?? base.skillName, skillDescription: locale === "zh-CN" ? rule.zh : rule.en };
+  }
   const words = s03 ?? s02;
   return words ? { title: base.title, skillName: words.name, skillDescription: words.description } : base;
 }

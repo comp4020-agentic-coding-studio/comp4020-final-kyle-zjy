@@ -71,6 +71,12 @@ export function requirement(ctx: Ctx, id: string, scope: Scope): boolean {
   const rr = s.roundRecord;
   const alive = present(ctx);
   switch (id) {
+    case "S4_HAS_CURRENT_INTEL": return !!s.auction && s.round >= 7 && !!self && s.auction.players[self].privateIntel.some((intel) => intel.startsWith(s.auction!.currentLot) && !s.auction!.publicIntel.includes(intel));
+    case "S4_TARGET_HAS_CURRENT_INTEL": return !!s.auction && !!target && s.auction.players[target].privateIntel.some((intel) => intel.startsWith(s.auction!.currentLot));
+    case "S4_HAS_CHIPS": return !!s.auction && !!self && s.auction.players[self].blackChips > 0;
+    case "S4_HAS_DEBT": return !!s.auction && !!self && s.auction.players[self].debt > 0;
+    case "S4_TARGET_HAS_CHIPS": return !!s.auction && !!target && s.auction.players[target].blackChips > 0;
+    case "S4_TARGET_PENALIZED": return !!s.auction && !!target && s.auction.players[target].nextRollPenalty < 0;
     case "SUBJECT_HAS_LOWEST_FATE":
       return !!subject && s.players[subject].fate === Math.min(...alive.map((p) => p.fate));
     case "TARGETS_HAVE_RESOURCE":

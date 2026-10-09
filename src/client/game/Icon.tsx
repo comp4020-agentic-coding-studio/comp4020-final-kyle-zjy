@@ -38,6 +38,14 @@ const PATHS: Record<string, string> = {
   SHARE_INTEL: "M4 5h16v11H9l-5 4zM8 9h8M8 12h5",
   DICE: "M5 5h14v14H5zM9 9h.01M15 9h.01M12 12h.01M9 15h.01M15 15h.01",
   KEY: "M8 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zM12 12h9M18 12v3M21 12v2",
+  BID: "M4 17h16M6 14l6-9 6 9M9 11h6",
+  PASS: "M5 5l14 14M19 5 5 19",
+  READ: "M4 12s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
+  DEAL: "M3 8h14l-3-3M21 16H7l3 3M8 8v8M16 8v8",
+  CHALLENGE: "M5 4h10l4 4v12H5zM9 9h6M12 6v6M8 16h8",
+  SABOTAGE: "M12 3l2 6 6 1-5 4 1 7-4-3-4 3 1-7-5-4 6-1z",
+  BORROW: "M4 8h16M4 12h16M4 16h16M8 5v14M16 5v14",
+  EXPOSE: "M12 3v11M12 18v3M5 6l3 3M19 6l-3 3M4 15h4M16 15h4",
 };
 
 export function Icon({ name, size = 22, className = "" }: { name: keyof typeof PATHS | string; size?: number; className?: string }) {

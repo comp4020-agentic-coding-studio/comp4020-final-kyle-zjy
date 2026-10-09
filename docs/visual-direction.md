@@ -229,3 +229,11 @@ toggle is always visible in the top bar and remembered per device.
   results are announced as text.
 - Colour never carries meaning alone (see §3).
 - Contrast AA for all text; minimum body size 16px on mobile.
+
+## Scenario 04 table
+
+The auction retains the Scenario 03 screen structure and shared HUD. The
+central panel is a dark, gold-edged table: lot and price in the middle, fixed
+clockwise seats nearby on wide screens, and a simple grid on phones. Turn,
+leading, and passed states have text labels as well as color. On narrow
+screens the lot, table status, PlayersStrip, and Dock stack in that order.

@@ -169,6 +169,8 @@ export function nextTurn(ctx: Ctx): void {
 
 export function endTurn(ctx: Ctx): void {
   const id = activePlayerId(ctx.s);
+  const skip = rulesFor(ctx.s).skipTurn;
+  if (id && skip) return skip(ctx, ctx.s.players[id]);
   if (id) ctx.s.players[id].ap = 0;
   nextTurn(ctx);
 }

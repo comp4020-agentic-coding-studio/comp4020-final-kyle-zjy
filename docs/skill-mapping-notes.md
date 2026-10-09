@@ -190,3 +190,18 @@ causal intervention, new evidence, scan help and a new room/year location.
 Every rewording has matching English and Simplified Chinese text. Skill cues
 use the existing VFX family, with clock imagery for temporal previews,
 event control and movement.
+
+## Scenario 04 (The Underground Auction)
+
+All 192 characters retain their canonical title, unique skill name, and
+`coreSkillId`. The Scenario 04 adapter changes each core family to a short,
+server-verifiable auction effect; the shared resolver still owns use counts,
+target validation, state transitions, and cues. `AUCTION_ABILITY` is the
+scenario primitive. Every adapted skill is an active choice on its holder's
+turn; the core use count still limits it. The 20 family effects cover Black
+Chips, Fate, Sanity, AP, Debt,
+certified intel, READ snapshots, roll modifiers, and other bidders. The
+adapter table provides the exact English and Chinese descriptions. This
+rewording replaces event, location, train, city, and time-travel effects,
+because the auction has no corresponding map or public event deck. S01–03
+adapter tables and mechanics are unchanged.

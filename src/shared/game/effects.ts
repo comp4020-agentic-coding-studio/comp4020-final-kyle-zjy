@@ -27,6 +27,7 @@ export type RollKind = "ORDINARY" | "RISK" | "SMALL" | "CONTEST";
 
 export const EFFECT_KINDS = [
   "CITY_EVENT",
+  "AUCTION_ABILITY",
   "GAIN_FATE",
   "LOSE_FATE",
   "TRANSFER_FATE",
@@ -94,6 +95,7 @@ export const EFFECT_KINDS = [
 export type EffectKind = (typeof EFFECT_KINDS)[number];
 
 export type Effect =
+  | { kind: "AUCTION_ABILITY"; mode: "CHIPS" | "FATE" | "SANITY" | "AP" | "INTEL" | "READ" | "DEBT" | "ROLL" | "DRAIN" | "SABOTAGE" | "SHARE" | "CLEANSE" | "BID" | "WAGER" | "GUARD" | "BOOST" | "EXPOSE" | "COPY_INTEL" | "RESET" | "LUCK" }
   | { kind: "GAIN_FATE"; who: EffectSubject; amount: number }
   | { kind: "LOSE_FATE"; who: EffectSubject; amount: number }
   | { kind: "TRANSFER_FATE"; from: EffectSubject; to: EffectSubject; amount: number }

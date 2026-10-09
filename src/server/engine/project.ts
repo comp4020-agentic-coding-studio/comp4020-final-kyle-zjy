@@ -25,6 +25,7 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
     roundRecord: _roundRecord,
     city: _city,
     temporal: _temporal,
+    auction: _auction,
     ...shared
   } = s;
   const over = s.phase === "RESULTS" || s.phase === "ENDING";
@@ -56,6 +57,30 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
     myActions: availableActions(s, viewerId),
     deckSize: eventDeck.length,
     city: publicCity(s, viewerId),
+    ...(s.auction ? { auction: {
+      seatOrder: [...s.auction.seatOrder],
+      currentLot: s.auction.currentLot,
+      currentBid: s.auction.currentBid,
+      currentBidder: s.auction.currentBidder,
+      turnPlayerId: s.auction.turnPlayerId,
+      roundStartPlayerId: s.auction.roundStartPlayerId,
+      passedPlayers: [...s.auction.passedPlayers],
+      auctionOpen: s.auction.auctionOpen,
+      auctionHistory: [...s.auction.auctionHistory],
+      publicIntel: [...s.auction.publicIntel],
+      connectedPlayerId: s.auction.connectedPlayerId,
+      stats: s.auction.stats,
+      players: Object.fromEntries(Object.entries(s.auction.players).map(([id, p]) => [id, {
+        debt: p.debt,
+        items: [...p.items],
+        passed: s.auction!.passedPlayers.includes(id),
+        blackChips: id === viewerId ? p.blackChips : null,
+        privateIntel: id === viewerId ? [...p.privateIntel] : null,
+        reads: id === viewerId ? [...p.reads] : null,
+      }])),
+      deal: s.auction.deal && [s.auction.deal.from, s.auction.deal.to].includes(viewerId) ? s.auction.deal : null,
+      challenge: s.auction.challenge ? (({ deck: _deck, ...visible }) => visible)(s.auction.challenge) : null,
+    } } : {}),
     ...(s.temporal ? { temporal: {
       story: { revealed: [...s.temporal.story.revealed], availableRoutes: [...s.temporal.story.availableRoutes] },
       finalRoute: s.temporal.finalRoute,

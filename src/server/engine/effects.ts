@@ -2,6 +2,7 @@
 // A skill, an item or an event card is just a list of effects; this module is
 // the only place their meaning lives.
 import { FRAGMENTS, isKeyItem, KEY_FOR_ANCHOR, LOCK_FOR_KEY, MAX_SANITY } from "../../shared/game/scenario01/content.ts";
+import { lotForRound04 } from "../../shared/game/scenario04/lots.ts";
 import type { Effect, EffectKind, EffectSubject } from "../../shared/game/effects.ts";
 import { statusLong as statusName } from "../../shared/game/scenario01/statuses.ts";
 import type { Anchor, FragmentType, ItemId, PlayerId } from "../../shared/game/state.ts";
@@ -142,6 +143,41 @@ type Handler<K extends EffectKind> = (ctx: Ctx, e: Extract<Effect, { kind: K }>,
 type Registry = { [K in EffectKind]?: Handler<K> };
 
 const H: Registry = {
+  AUCTION_ABILITY: (ctx, e, scope) => {
+    const a = ctx.s.auction;
+    const selfId = scope.self ?? scope.ownerId;
+    if (!a || selfId === "SYSTEM") return;
+    const mine = a.players[selfId];
+    const targetId = scope.targets[0];
+    const other = targetId ? a.players[targetId] : undefined;
+    const lot = lotForRound04(ctx.s.round);
+    switch (e.mode) {
+      case "CHIPS": mine.blackChips += 2; break;
+      case "BID": case "WAGER": mine.blackChips++; break;
+      case "FATE": gainFate(ctx, ctx.s.players[selfId], 2, scope.label); break;
+      case "BOOST": mine.blackChips++; gainFate(ctx, ctx.s.players[selfId], 1, scope.label); break;
+      case "SANITY": mine.blackChips++; gainSanity(ctx, ctx.s.players[selfId], 1, scope.label); break;
+      case "AP": ctx.s.players[selfId].ap++; break;
+      case "INTEL": if (!mine.privateIntel.includes(lot.hiddenInfo)) mine.privateIntel.push(lot.hiddenInfo); break;
+      case "EXPOSE": {
+        const id = mine.privateIntel.find((intel) => intel.startsWith(lot.id) && !a.publicIntel.includes(intel));
+        if (id) a.publicIntel.push(id);
+        break;
+      }
+      case "DEBT": mine.debt = Math.max(0, mine.debt - 1); break;
+      case "ROLL": mine.nextRollPenalty += 2; break;
+      case "LUCK": mine.nextRollPenalty++; break;
+      case "GUARD": mine.nextRollPenalty = Math.max(0, mine.nextRollPenalty); gainSanity(ctx, ctx.s.players[selfId], 1, scope.label); break;
+      case "RESET": mine.nextRollPenalty = Math.max(0, mine.nextRollPenalty); gainFate(ctx, ctx.s.players[selfId], 1, scope.label); break;
+      case "CLEANSE": if (other) other.nextRollPenalty = Math.max(0, other.nextRollPenalty); break;
+      case "READ": if (other) mine.reads.push({ targetId, round: ctx.s.round, blackChips: other.blackChips, hasCurrentIntel: other.privateIntel.some((id) => id.startsWith(lot.id)) }); break;
+      case "COPY_INTEL": if (other) for (const id of other.privateIntel.filter((intel) => intel.startsWith(lot.id))) if (!mine.privateIntel.includes(id)) mine.privateIntel.push(id); break;
+      case "SHARE": if (other && mine.blackChips > 0) { mine.blackChips--; other.blackChips++; gainFate(ctx, ctx.s.players[selfId], 1, scope.label); } break;
+      case "DRAIN": if (other && other.blackChips > 0) { other.blackChips--; mine.blackChips++; } break;
+      case "SABOTAGE": if (other) other.nextRollPenalty = Math.min(other.nextRollPenalty, -1); break;
+    }
+    log(ctx, m`An auction ability takes effect.`, "SKILL", selfId);
+  },
   GAIN_FATE: (ctx, e, scope) => {
     for (const id of subjects(ctx, scope, e.who)) gainFate(ctx, ctx.s.players[id], e.amount, scope.label);
   },

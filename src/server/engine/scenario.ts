@@ -34,6 +34,8 @@ export type ScenarioRules = {
   playerRoundStart?(ctx: Ctx, p: PlayerGameState): void;
   /** Whether this player still takes turns (scenario 02: not once aboard the boat). Everyone does if absent. */
   takesTurn?(s: GameState, p: PlayerGameState): boolean;
+  /** How a timed-out or host-skipped turn resolves in a different turn model. */
+  skipTurn?(ctx: Ctx, p: PlayerGameState): void;
   /** After every player's round start: scripted beats. */
   onRoundStart(ctx: Ctx): void;
   /** The step after the last turn. */

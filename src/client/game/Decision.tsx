@@ -5,9 +5,10 @@
 import { AnimatePresence, motion } from "motion/react";
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import { EVENT_BY_ID } from "../../shared/game/events.ts";
+import { auctionIntelText, auctionLotText } from "../../shared/i18n/scenario04.ts";
 import type { PlayerView, PublicWindow } from "../../shared/game/state.ts";
 import { Avatar } from "../components/Avatar.tsx";
-import { useCharacterText, useFormat, useT } from "../i18n/index.ts";
+import { useCharacterText, useFormat, useLocale, useT } from "../i18n/index.ts";
 import { sendGame } from "../store.ts";
 import { EventArt } from "./EventArt.tsx";
 
@@ -25,6 +26,7 @@ function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
   const owner = w.ownerId ? g.players[w.ownerId] : null;
   const ownerChar = owner ? getCharacterById(owner.characterId) : null;
   const t = useT();
+  const locale = useLocale();
   const fmt = useFormat();
   const charText = useCharacterText();
   const ownerSkill = owner ? charText(owner.skill.borrowed ?? owner.characterId) : null;
@@ -64,6 +66,18 @@ function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
             </div>
           )}
           <p className="mt-3 text-sm leading-relaxed text-mist">{fmt(w.prompt)}</p>
+          {w.kind === "S4_DEAL" && g.auction?.deal && (() => {
+            const deal = g.auction.deal;
+            const asset = deal.forPass ? t("s4.decision.pass") : deal.giveIntel ? auctionIntelText(locale, deal.giveIntel) : deal.forIntel ? auctionIntelText(locale, deal.forIntel) : deal.giveItem ? auctionLotText(locale, deal.giveItem).name : deal.forItem ? auctionLotText(locale, deal.forItem).name : "·";
+            return <p className="mt-2 rounded-xl border border-gold/30 p-3 text-sm">{t("s4.decision.deal", { from: g.players[deal.from].nickname, to: g.players[deal.to].nickname, pay: deal.chips, receive: deal.receiveChips ?? 0, asset })}</p>;
+          })()}
+          {w.kind === "S4_BLACKJACK" && g.auction?.challenge && <div className="mt-2 grid gap-1 rounded-xl border border-gold/30 p-3 text-sm">
+            {([g.auction.challenge.target, g.auction.challenge.challenger] as const).map((id) => {
+              const hand = id === g.auction!.challenge!.target ? g.auction!.challenge!.targetHand : g.auction!.challenge!.challengerHand;
+              const score = (cards: number[]) => { let n = cards.reduce((sum, card) => sum + (card === 1 ? 1 : Math.min(card, 10)), 0); for (const card of cards) if (card === 1 && n + 10 <= 21) n += 10; return n; };
+              return <p key={id}>{t("s4.decision.hand", { name: g.players[id].nickname, cards: hand.map((card) => card === 1 ? "A" : card === 11 ? "J" : card === 12 ? "Q" : card === 13 ? "K" : String(card)).join(" "), total: score(hand) })}</p>;
+            })}
+          </div>}
           <div className="mt-4 grid gap-2">
             {w.options.map((o, i) => (
               <button

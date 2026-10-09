@@ -53,7 +53,15 @@ export type GameAction =
   | { type: "REGISTER" }
   | { type: "RESTART_GENERATOR" }
   | { type: "RESPOND"; windowId: string; optionId: string }
-  | { type: "ACK_SEQUENCE" };
+  | { type: "ACK_SEQUENCE" }
+  | { type: "BID"; amount: number }
+  | { type: "PASS" }
+  | { type: "READ"; targetId: PlayerId }
+  | { type: "DEAL"; targetId: PlayerId; chips: number; receiveChips?: number; giveIntel?: string; giveItem?: string; forIntel?: string; forItem?: string; forPass?: boolean }
+  | { type: "CHALLENGE"; targetId: PlayerId; wager: number }
+  | { type: "SABOTAGE"; targetId: PlayerId }
+  | { type: "BORROW" }
+  | { type: "EXPOSE"; intelId: string };
 
 export type GameActionType = GameAction["type"];
 

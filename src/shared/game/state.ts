@@ -7,6 +7,7 @@ import type { RoomId03, Year03 } from "./scenario03/map.ts";
 import type { S03ItemId } from "./scenario03/items.ts";
 import type { FactId03 } from "./scenario03/facts.ts";
 import type { EndingRoute03, StoryBeatId03 } from "./scenario03/story.ts";
+import type { AuctionState04, PublicAuction04 } from "./scenario04/types.ts";
 import type { ActionAvailability } from "./actions.ts";
 import type { Effect, StatusPolarity } from "./effects.ts";
 import type { Msg } from "../i18n/types.ts";
@@ -41,7 +42,7 @@ export type RoomState = {
   version: number;
 };
 
-export type ScenarioId = "S01_LAST_TRAIN" | "S02_SUNKEN_CITY" | "S03_INCIDENT_ZERO";
+export type ScenarioId = "S01_LAST_TRAIN" | "S02_SUNKEN_CITY" | "S03_INCIDENT_ZERO" | "S04_UNDERGROUND_AUCTION";
 
 export type Temporal03 = {
   story: { revealed: StoryBeatId03[]; availableRoutes: EndingRoute03[] };
@@ -269,7 +270,7 @@ export type PlayerStats = {
   timesLost: number;
 };
 
-export type RollPurpose = "INVESTIGATE" | "SEARCH" | "REPAIR" | "CONFRONT" | "TICKET_CHECK" | "EVENT" | "SKILL" | "S2_WADE" | "S2_SEARCH" | "S2_INVESTIGATE" | "S2_WORK" | "S2_RESCUE" | "S2_RISK" | "S2_RESTART" | "S3_SCAN_ARCHIVE" | "S3_SCAN_FIELD" | "S3_SCAN_STABILIZE" | "S3_INVESTIGATE" | "S3_INTERVENE" | "S3_SPEAK" | "S3_SEARCH" | "S3_TIME_JUMP";
+export type RollPurpose = "INVESTIGATE" | "SEARCH" | "REPAIR" | "CONFRONT" | "TICKET_CHECK" | "EVENT" | "SKILL" | "S2_WADE" | "S2_SEARCH" | "S2_INVESTIGATE" | "S2_WORK" | "S2_RESCUE" | "S2_RISK" | "S2_RESTART" | "S3_SCAN_ARCHIVE" | "S3_SCAN_FIELD" | "S3_SCAN_STABILIZE" | "S3_INVESTIGATE" | "S3_INTERVENE" | "S3_SPEAK" | "S3_SEARCH" | "S3_TIME_JUMP" | "S4_INVESTIGATE" | "S4_READ" | "S4_SABOTAGE";
 
 export type Roll = {
   id: string;
@@ -296,6 +297,7 @@ export type RollContext = {
   skillOwner?: PlayerId;
   /** The chosen Scenario 03 action target, persisted until Fate and reactions finish. */
   scenario03?: { evidenceId?: string; nodeId?: TemporalIntervention03["nodeId"]; choiceId?: string; npcId?: string };
+  scenario04?: { targetId?: PlayerId };
   /** Effects keyed by tier, for skill/event rolls. */
   onTier?: Partial<Record<RollTier, Effect[]>>;
   /** Doubles every reward / penalty of this roll (All In, Double Down…). */
@@ -325,7 +327,7 @@ export type RoundRecord = {
 
 export type Job = { kind: "TICKET_CHECK" | "ECHO_STRIKE"; playerId: PlayerId; payload?: Record<string, string | number> };
 
-export type WindowKind = "FATE_SPEND" | "REACTION" | "PASSIVE_CONFIRM" | "TARGET_CHOICE" | "EVENT_CHOICE" | "VOTE" | "TRADE_OFFER" | "ENDING_CHOICE" | "SKILL_CHOICE" | "SUPPLY_CHOICE";
+export type WindowKind = "FATE_SPEND" | "REACTION" | "PASSIVE_CONFIRM" | "TARGET_CHOICE" | "EVENT_CHOICE" | "VOTE" | "TRADE_OFFER" | "ENDING_CHOICE" | "SKILL_CHOICE" | "SUPPLY_CHOICE" | "S4_DEAL" | "S4_CHALLENGE" | "S4_BLACKJACK";
 
 export type WindowOption = { id: string; label: Msg; detail?: Msg };
 
@@ -390,7 +392,7 @@ export type Inspector = {
 };
 
 /** S02_EVACUATED: the boat left the sunken city (who was aboard is in each result). */
-export type Outcome = "NORMAL" | "TRUE_DELETE" | "TRUE_TICKET" | "FAILED" | "S02_EVACUATED" | "S03_OFFICIAL_HISTORY" | "S03_NO_TOMORROW" | "S03_DECEIVE_HISTORY";
+export type Outcome = "NORMAL" | "TRUE_DELETE" | "TRUE_TICKET" | "FAILED" | "S02_EVACUATED" | "S03_OFFICIAL_HISTORY" | "S03_NO_TOMORROW" | "S03_DECEIVE_HISTORY" | "S04_EXIT" | "S04_DEBT" | "S04_UNSOLD";
 
 /** BOAT_LOST: a part the boat needs went under before anyone found it. */
 export type FailReason = "COLLAPSE" | "TIME" | "ALL_LOST" | "BOAT_LOST";
@@ -580,6 +582,7 @@ export type GameState = {
   city: CityState | null;
   /** Scenario 03's two-year position state; absent in older scenario snapshots. */
   temporal?: Temporal03 | null;
+  auction?: AuctionState04 | null;
   flags: Record<string, number>;
 
   outcome: Outcome | null;
@@ -593,10 +596,11 @@ export type GameState = {
 /** What one client receives. Server-only fields are gone; secrets are the viewer's own. */
 export type PlayerView = Omit<
   GameState,
-  "secrets" | "seed" | "rng" | "rngCalls" | "eventDeck" | "players" | "pending" | "rollContext" | "pendingEffect" | "delayed" | "bonds" | "jobs" | "triggerQueue" | "roundRecord" | "city" | "temporal"
+  "secrets" | "seed" | "rng" | "rngCalls" | "eventDeck" | "players" | "pending" | "rollContext" | "pendingEffect" | "delayed" | "bonds" | "jobs" | "triggerQueue" | "roundRecord" | "city" | "temporal" | "auction"
 > & {
   city: PublicCity | null;
   temporal?: PublicTemporal03 | null;
+  auction?: PublicAuction04 | null;
   viewerId: PlayerId;
   mySecrets: ViewerSecrets | null;
   players: Record<PlayerId, PublicPlayerState>;

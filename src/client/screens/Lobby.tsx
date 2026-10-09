@@ -58,7 +58,7 @@ export function Lobby() {
                 aria-describedby="start-reason"
                 onClick={() => sendLobby({ type: "START_GAME" })}
               >
-                {t(room.scenarioId === "S03_INCIDENT_ZERO" ? "s3.lobby.enter" : room.scenarioId === "S02_SUNKEN_CITY" ? "s2.lobby.depart" : "lobby.depart")}
+                {t(room.scenarioId === "S04_UNDERGROUND_AUCTION" ? "s4.lobby.enter" : room.scenarioId === "S03_INCIDENT_ZERO" ? "s3.lobby.enter" : room.scenarioId === "S02_SUNKEN_CITY" ? "s2.lobby.depart" : "lobby.depart")}
               </button>
               <p id="start-reason" className="mt-1 text-center text-xs text-ash sm:text-right">
                 {startBlocker ?? t("lobby.allReadyHost")}
@@ -379,7 +379,9 @@ function ScenarioStrip() {
   const chosen = useStore((st) => st.snapshot?.room.scenarioId) ?? "S01_LAST_TRAIN";
   const s01 = useScenarioText().scenario;
   const s02 = useScenario02Text().scenario;
-  const card = chosen === "S03_INCIDENT_ZERO"
+  const card = chosen === "S04_UNDERGROUND_AUCTION"
+    ? { route: t("s4.lobby.route"), title: t("s4.title"), tagline: t("s4.subtitle"), meta: t("s4.lobby.meta") }
+    : chosen === "S03_INCIDENT_ZERO"
     ? { route: t("s3.lobby.route"), title: t("s3.title"), tagline: t("s3.subtitle"), meta: t("s3.lobby.meta") }
     : chosen === "S02_SUNKEN_CITY"
       ? { route: t("s2.lobby.route"), ...s02, meta: t("s2.lobby.meta") }

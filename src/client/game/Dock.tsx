@@ -35,6 +35,8 @@ export type DockExtension = {
   direct: Set<GameActionType>;
   /** Tailwind classes for the grid's wide-screen columns. */
   columns: string;
+  /** Hide shared skill, item and end-turn controls for a different turn model. */
+  showSharedActions?: boolean;
   /** The picker's title (a catalog key) and choices for one of its actions, or null for the shared picker. */
   picker: (p: { g: PlayerView; me: PublicPlayerState; mode: GameActionType; availability: ActionAvailability; send: (a: GameAction) => void }) => { title: MessageKey; body: React.ReactNode } | null;
 };
@@ -84,7 +86,7 @@ export function Dock({ g, mode, setMode, extension }: { g: PlayerView; mode: Mod
                     <ActionButton key={t} a={action(t)} onPress={press} compact={!!g.city || !!extension} />
                   ))}
                 </div>
-                <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-1.5">
+                {extension?.showSharedActions !== false && <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-1.5">
                   <ActionButton a={action("USE_SKILL")} onPress={press} wide label={charText(me.skill.borrowed ?? me.characterId).skillName} />
                   <ActionButton a={action("USE_ITEM")} onPress={press} wide label={t("dock.items", { n: me.items.length })} />
                   <button
@@ -94,7 +96,7 @@ export function Dock({ g, mode, setMode, extension }: { g: PlayerView; mode: Mod
                   >
                     <Icon name="END_TURN" size={18} /> <span className="min-w-0 truncate">{t("action.END_TURN")}</span>
                   </button>
-                </div>
+                </div>}
               </motion.div>
             )}
           </AnimatePresence>
@@ -157,6 +159,10 @@ function Hud({ g, me }: { g: PlayerView; me: PublicPlayerState }) {
               <span key={i} className={`h-2.5 w-1.5 rounded-sm ${i < me.ap ? "bg-gold-bright" : "bg-indigo"}`} />
             ))}
           </Stat>
+          {g.auction && <>
+            <Stat label={t("s4.hud.chips")} value={String(g.auction.players[g.viewerId]?.blackChips ?? 0)}><span aria-hidden="true">●</span></Stat>
+            <Stat label={t("s4.hud.debt")} value={String(g.auction.players[g.viewerId]?.debt ?? 0)}><span aria-hidden="true">◆</span></Stat>
+          </>}
         </div>
         <div className="mt-1 flex flex-wrap gap-1">
           <span
@@ -418,7 +424,7 @@ function SkillPicker({ g, me, onUse }: { g: PlayerView; me: PublicPlayerState; o
           {need > 1 && picked.length > 1 && <p className="mt-1 text-xs text-mist">{t("dock.order", { names: picked.map((id) => g.players[id]?.nickname).join(t("common.listSep")) })}</p>}
         </>
       )}
-      <button className="btn btn-gold mt-2 w-full" disabled={!ready} onClick={() => onUse(picked)}>
+      <button data-skill-confirm className="btn btn-gold mt-2 w-full" disabled={!ready} onClick={() => onUse(picked)}>
         {t("dock.burn", { skill: words.skillName })}
       </button>
     </div>

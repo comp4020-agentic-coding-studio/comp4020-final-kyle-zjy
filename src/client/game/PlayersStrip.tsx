@@ -11,7 +11,7 @@ export function PlayersStrip({ g, onOpen, tag }: { g: PlayerView; onOpen: (p: Pu
   const t = useT();
   const active = g.step === "PLAYER_TURNS" ? g.turnOrder[g.activeIndex] : null;
   return (
-    <ul className="no-scrollbar mx-auto flex max-w-6xl gap-2 overflow-x-auto px-3 pb-1 sm:px-4" aria-label={t("lobby.passengers")}>
+    <ul className="no-scrollbar mx-auto flex w-full min-w-0 max-w-6xl gap-2 overflow-x-auto px-3 pb-1 sm:px-4" aria-label={t("lobby.passengers")}>
       {g.turnOrder.map((id) => {
         const p = g.players[id];
         const ch = getCharacterById(p.characterId);
