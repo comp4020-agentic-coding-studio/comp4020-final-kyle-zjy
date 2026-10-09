@@ -3,13 +3,13 @@ import { ADJACENT03, OPENS_IN_ACT03, placeFromKey03, placeKey03, type RoomId03, 
 import { ITEMS03, ORDINARY_POOL03, PROTECTED_STORAGE03, RELIC_STORAGE03, type S03ItemId } from "../../../shared/game/scenario03/items.ts";
 import { NODES03, derivePresent03, type CausalNodeId03 } from "../../../shared/game/scenario03/nodes.ts";
 import { NPCS03 } from "../../../shared/game/scenario03/story.ts";
-import type { GameState, PlayerGameState } from "../../../shared/game/state.ts";
+import type { GameState, PlayerGameState, Roll, RollPurpose } from "../../../shared/game/state.ts";
 import { list, m, ref } from "../../../shared/i18n/msg.ts";
 import { END_TURN, USE_SKILL, fail, helped, type Spec } from "../actions.ts";
 import { cue, log, type Ctx } from "../context.ts";
 import { applyEffects, changeCollapse, grantItem } from "../effects.ts";
-import { gainFate, loseFate, loseSanity, spendFate } from "../players.ts";
-import { onRollOutcome, startRoll } from "../dice.ts";
+import { addStatus, gainFate, loseFate, loseSanity, spendFate, statusOf } from "../players.ts";
+import { isSuccess, onRollOutcome, startRoll } from "../dice.ts";
 import type { ActionSet } from "../scenario.ts";
 import { onResume, openWindow } from "../windows.ts";
 import { reveal03 } from "./story.ts";
@@ -34,6 +34,26 @@ export function arrive03(ctx: Ctx, p: PlayerGameState, roomId: RoomId03, year: Y
     p.counters.zonesVisited = (p.counters.zonesVisited ?? 1) + 1;
   }
   cue(ctx, "MOVE", { playerId: p.playerId, from, to: p.carriageIndex });
+}
+
+type ActionRoll03 = Extract<RollPurpose, "S3_INVESTIGATE" | "S3_INTERVENE" | "S3_SPEAK" | "S3_SEARCH" | "S3_TIME_JUMP">;
+
+function resolveActionRoll03(ctx: Ctx, p: PlayerGameState, roll: Roll, action: ActionRoll03): boolean {
+  const success = isSuccess(roll.tier);
+  cue(ctx, "S3_ACTION_RESOLVED", { playerId: p.playerId, action, tier: roll.tier, success });
+  if (roll.tier === "DISASTER") loseSanity(ctx, p, 1, m`temporal action backlash`);
+  if (roll.tier === "PERFECT") gainFate(ctx, p, 1, m`a precise temporal action`);
+  if (!success) {
+    const message = action === "S3_INVESTIGATE" ? m`The investigation yields no evidence. It can be tried again.`
+      : action === "S3_INTERVENE" ? m`The causal change does not take hold. The decision remains open.`
+        : action === "S3_SPEAK" ? m`The contact breaks off before sharing anything. You can try again.`
+          : action === "S3_SEARCH" ? m`Nothing useful is recovered from the research cabinet. You can search again.`
+            : m`The jump reaches the right room and year, but temporal transit is unstable.`;
+    log(ctx, message, `ROLL_${roll.tier}`, p.playerId);
+  } else if (action === "S3_TIME_JUMP") {
+    log(ctx, m`The temporal jump is stable.`, `ROLL_${roll.tier}`, p.playerId);
+  }
+  return success;
 }
 
 const MOVE03: Spec<Extract<GameAction, { type: "MOVE" }>> = {
@@ -86,14 +106,14 @@ const HELP03: Spec<Extract<GameAction, { type: "HELP" }>> = {
     if (action && !targets.includes(action.targetId)) return fail("ILLEGAL_TARGET", m`Help a teammate in the same room and year.`);
     return null;
   },
-  hint: () => m`Give a teammate here +1 on their next temporal scan, up to +2.`,
+  hint: () => m`Give a teammate here +1 on their next roll, up to +2.`,
   apply: (ctx, p, action) => {
     const other = ctx.s.players[action.targetId];
     other.helpBonus = Math.min(2, other.helpBonus + 1);
     other.helpFrom.push(p.playerId);
     p.stats.helpsGiven++;
     other.stats.helpsReceived++;
-    log(ctx, m`${p.nickname} helps ${other.nickname} prepare a temporal scan.`, "HELP", p.playerId);
+    log(ctx, m`${p.nickname} helps ${other.nickname} prepare their next roll.`, "HELP", p.playerId);
     cue(ctx, "HELP", { from: p.playerId, to: other.playerId, bonus: other.helpBonus });
     helped(ctx, p.playerId, other.playerId);
   },
@@ -120,8 +140,20 @@ const TIME_JUMP: Spec<Extract<GameAction, { type: "TIME_JUMP" }>> = {
       recordTrace03(ctx, p, { kind: "ARRIVAL", roomId: here.roomId });
       reveal03(ctx, "FIRST_JUMP");
     }
+    if (ctx.s.act >= 3 && ctx.s.collapse >= 6) startRoll(ctx, p, "S3_TIME_JUMP", m`temporal jump stability`, { kind: "S3_TIME_JUMP", carriageIndex: p.carriageIndex });
   },
 };
+
+onRollOutcome("S3_TIME_JUMP", (ctx, p, roll) => {
+  resolveActionRoll03(ctx, p, roll, "S3_TIME_JUMP");
+  if (roll.tier !== "FAIL") return;
+  const lag = statusOf(p, "TEMPORAL_LAG");
+  if (lag) lag.expiresAtRound = Math.max(lag.expiresAtRound ?? 0, ctx.s.round + 1);
+  else addStatus(ctx, p, {
+    kind: "TEMPORAL_LAG", polarity: "NEGATIVE", sourceId: "SYSTEM",
+    expiresAtRound: ctx.s.round + 1, hidden: false, ordinary: false,
+  });
+});
 
 const SEARCH03: Spec<Extract<GameAction, { type: "SEARCH" }>> = {
   check: (s, p) => {
@@ -130,12 +162,34 @@ const SEARCH03: Spec<Extract<GameAction, { type: "SEARCH" }>> = {
     if (p.counters.s03Searched) return fail("ILLEGAL_TARGET", m`You already searched this supply cabinet.`);
     return null;
   },
-  hint: () => m`Draw one ordinary supply from the research cabinet.`,
+  hint: () => m`Search the research cabinet. A successful roll finds one supply.`,
   apply: (ctx, p) => {
-    p.counters.s03Searched = 1;
-    grantItem(ctx, p.playerId, "ANY", m`the research cabinet`);
+    startRoll(ctx, p, "S3_SEARCH", m`research cabinet search`, { kind: "S3_SEARCH", carriageIndex: p.carriageIndex });
   },
 };
+
+onRollOutcome("S3_SEARCH", (ctx, p, roll) => {
+  if (!resolveActionRoll03(ctx, p, roll, "S3_SEARCH")) return;
+  p.counters.s03Searched = 1;
+  if (roll.tier !== "PERFECT") {
+    grantItem(ctx, p.playerId, "ANY", m`the research cabinet`);
+    return;
+  }
+  openWindow(ctx, {
+    kind: "SUPPLY_CHOICE", title: m`Choose a supply`, prompt: m`Your precise search found both supplies. Take one.`,
+    addressees: [p.playerId], options: ORDINARY_POOL03.map((id) => ({ id, label: ref.item(id) })),
+    defaultOptionId: ORDINARY_POOL03[0], resume: { kind: "S3_SEARCH_SUPPLY" }, blocksTable: true, ownerId: p.playerId,
+  });
+});
+
+onResume("S3_SEARCH_SUPPLY", (ctx, w, answers) => {
+  const id = answers[w.ownerId!] as S03ItemId;
+  const p = ctx.s.players[w.ownerId!];
+  if (!p || !ORDINARY_POOL03.includes(id)) return;
+  p.items.push(id);
+  cue(ctx, "ITEM", { playerId: p.playerId, item: id });
+  log(ctx, m`${p.nickname} takes ${ref.item(id)} from the research cabinet.`, "ITEM", p.playerId);
+});
 
 const USE_ITEM03: Spec<Extract<GameAction, { type: "USE_ITEM" }>> = {
   targets: (_s, p) => [...new Set(p.items.filter((id) => id === "PHASE_BATTERY" || id === "SEDATIVE03"))],
@@ -320,33 +374,42 @@ const INVESTIGATE03: Spec<Extract<GameAction, { type: "INVESTIGATE" }>> = {
     return undefined;
   },
   apply: (ctx, p) => {
-    const temporal = ctx.s.temporal!;
-    const here = temporal.locations[p.playerId];
     const id = investigation03(ctx.s, p)!;
-    temporal.evidence[p.playerId].push(id);
-    p.stats.fragmentsFound++;
-    if (here.year === "Y1996") recordTrace03(ctx, p, { kind: "INVESTIGATION", roomId: here.roomId, evidenceId: id });
-    if (id.startsWith("CASE_FILE_")) {
-      log(ctx, m`${p.nickname} examines a sealed case file.`, "INVESTIGATE", p.playerId);
-      reveal03(ctx, "OFFICIAL_FILE");
-    } else if (id === "SURVEILLANCE_TAPE") {
-      temporal.surveillanceReviewed = true;
-      reveal03(ctx, "SURVEILLANCE_FOUND");
-    } else if (id === "ACCESS_LEDGER") {
-      temporal.accessLedgerReviewed = true;
-      reveal03(ctx, "ACCESS_LEDGER_FOUND");
-    } else if (id === "PROTOTYPE_LOG") {
-      temporal.prototypeLogReviewed = true;
-      reveal03(ctx, "PROTOTYPE_LOG_FOUND");
-    } else if (id === "FOUNDING_CHARTER") reveal03(ctx, "FOUNDING_PARADOX");
-    else if (id === "JI_MARGIN_NOTE") reveal03(ctx, "JI_NOTE");
-    else {
-      const fact = id === "FOUNDER_DISCREPANCY" ? "FOUNDER" : id === "STAFF_DISCREPANCY" ? "STAFF" : "PROTOTYPE";
-      if (!temporal.discoveredFacts.includes(fact)) temporal.discoveredFacts.push(fact);
-      reveal03(ctx, fact === "FOUNDER" ? "FOUNDER_CLUE" : fact === "STAFF" ? "STAFF_CLUE" : "PROTOTYPE_CLUE");
-    }
+    startRoll(ctx, p, "S3_INVESTIGATE", m`incident investigation`, { kind: "S3_INVESTIGATE", carriageIndex: p.carriageIndex, scenario03: { evidenceId: id } });
   },
 };
+
+onRollOutcome("S3_INVESTIGATE", (ctx, p, roll, rc) => {
+  if (!resolveActionRoll03(ctx, p, roll, "S3_INVESTIGATE")) return;
+  completeInvestigation03(ctx, p, rc.scenario03!.evidenceId!);
+});
+
+function completeInvestigation03(ctx: Ctx, p: PlayerGameState, id: string): void {
+  const temporal = ctx.s.temporal!;
+  const here = temporal.locations[p.playerId];
+  temporal.evidence[p.playerId].push(id);
+  p.stats.fragmentsFound++;
+  if (here.year === "Y1996") recordTrace03(ctx, p, { kind: "INVESTIGATION", roomId: here.roomId, evidenceId: id });
+  if (id.startsWith("CASE_FILE_")) {
+    log(ctx, m`${p.nickname} examines a sealed case file.`, "INVESTIGATE", p.playerId);
+    reveal03(ctx, "OFFICIAL_FILE");
+  } else if (id === "SURVEILLANCE_TAPE") {
+    temporal.surveillanceReviewed = true;
+    reveal03(ctx, "SURVEILLANCE_FOUND");
+  } else if (id === "ACCESS_LEDGER") {
+    temporal.accessLedgerReviewed = true;
+    reveal03(ctx, "ACCESS_LEDGER_FOUND");
+  } else if (id === "PROTOTYPE_LOG") {
+    temporal.prototypeLogReviewed = true;
+    reveal03(ctx, "PROTOTYPE_LOG_FOUND");
+  } else if (id === "FOUNDING_CHARTER") reveal03(ctx, "FOUNDING_PARADOX");
+  else if (id === "JI_MARGIN_NOTE") reveal03(ctx, "JI_NOTE");
+  else {
+    const fact = id === "FOUNDER_DISCREPANCY" ? "FOUNDER" : id === "STAFF_DISCREPANCY" ? "STAFF" : "PROTOTYPE";
+    if (!temporal.discoveredFacts.includes(fact)) temporal.discoveredFacts.push(fact);
+    reveal03(ctx, fact === "FOUNDER" ? "FOUNDER_CLUE" : fact === "STAFF" ? "STAFF_CLUE" : "PROTOTYPE_CLUE");
+  }
+}
 
 const INTERACT_NPC03: Spec<Extract<GameAction, { type: "INTERACT_NPC" }>> = {
   targets: (s, p) => {
@@ -361,15 +424,21 @@ const INTERACT_NPC03: Spec<Extract<GameAction, { type: "INTERACT_NPC" }>> = {
   },
   hint: (s, p) => s.temporal!.locations[p.playerId].roomId === "CENTRAL_HALL" && s.act >= 3 ? m`Ask Administrator ZERO why Incident Zero must happen.` : m`Ask Archivist 00 about the 1996 access record.`,
   apply: (ctx, p, action) => {
-    if (action.npcId === "ZERO") {
-      ctx.s.temporal!.evidence[p.playerId].push("ZERO_TRANSCRIPT");
-      reveal03(ctx, "ZERO_CONSULTED");
-    } else {
-      ctx.s.temporal!.evidence[p.playerId].push("ARCHIVIST_NOTE");
-      reveal03(ctx, "ARCHIVIST_CONTACT");
-    }
+    startRoll(ctx, p, "S3_SPEAK", m`contact conversation`, { kind: "S3_SPEAK", carriageIndex: p.carriageIndex, scenario03: { npcId: action.npcId } });
   },
 };
+
+onRollOutcome("S3_SPEAK", (ctx, p, roll, rc) => {
+  if (!resolveActionRoll03(ctx, p, roll, "S3_SPEAK")) return;
+  const id = rc.scenario03!.npcId!;
+  if (id === "ZERO") {
+    ctx.s.temporal!.evidence[p.playerId].push("ZERO_TRANSCRIPT");
+    reveal03(ctx, "ZERO_CONSULTED");
+  } else {
+    ctx.s.temporal!.evidence[p.playerId].push("ARCHIVIST_NOTE");
+    reveal03(ctx, "ARCHIVIST_CONTACT");
+  }
+});
 
 const INTERVENE03: Spec<Extract<GameAction, { type: "INTERVENE" }>> = {
   targets: (s, p) => {
@@ -386,37 +455,46 @@ const INTERVENE03: Spec<Extract<GameAction, { type: "INTERVENE" }>> = {
     if (!NODES03[action.nodeId].choices.includes(action.choiceId)) return fail("INVALID", m`Choose a valid intervention.`);
     return null;
   },
-  hint: () => m`Change a 1996 decision and recalculate its 2026 consequences.`,
+  hint: () => m`Attempt a 1996 decision. Success changes its 2026 consequences.`,
   apply: (ctx, p, action) => {
-    const temporal = ctx.s.temporal!;
-    const before = { ...temporal.present };
-    const here = temporal.locations[p.playerId];
-    temporal.interventions.push({ seq: temporal.interventions.length + 1, nodeId: action.nodeId, choiceId: action.choiceId, actorId: p.playerId, round: ctx.s.round, roomId: here.roomId, year: "Y1996" });
-    p.stats.repairs++;
-    recordTrace03(ctx, p, { kind: "INTERVENTION", roomId: here.roomId, nodeId: action.nodeId, choiceId: action.choiceId });
-    temporal.present = derivePresent03(temporal.baselinePresent, temporal.interventions);
-    if (action.nodeId === "WORKER" && action.choiceId === "SAVE") {
-      temporal.storedItems["relic-badge"] = { instanceId: "relic-badge", itemId: "OLD_BADGE", roomId: "RESEARCH_WING", status: "AVAILABLE_2026", ownerId: null, bootstrapOwnerId: null, storedBy: null, storedRound: null };
-    }
-    const changed = JSON.stringify(before) !== JSON.stringify(temporal.present);
-    if (changed) {
-      temporal.causalRevision++;
-      cue(ctx, "S3_CAUSAL_REWRITE", { revision: temporal.causalRevision, nodeId: action.nodeId, roomId: here.roomId, year: "Y2026", before, after: temporal.present });
-      log(ctx, m`${p.nickname} changes a 1996 decision. The 2026 record is rewritten.`, "STORY", p.playerId);
-      reveal03(ctx, "FIRST_REWRITE");
-      if (action.nodeId === "PROTOTYPE_CORE" && action.choiceId === "SHUT_DOWN") {
-        reveal03(ctx, "PREVENTION_ATTEMPT");
-        changeCollapse(ctx, 1, m`the attempted shutdown destabilizes the Administration's history`);
-      }
-      if (before.administrationIntegrity === "FADING" && temporal.present.administrationIntegrity === "STABLE") {
-        changeCollapse(ctx, -1, m`the controlled accident restores the Administration's history`);
-      }
-    } else {
-      cue(ctx, "S3_CAUSAL_DECISION", { nodeId: action.nodeId, roomId: here.roomId, year: "Y1996", changed: false });
-      log(ctx, m`${p.nickname} preserves the 1996 record.`, "STORY", p.playerId);
-    }
+    startRoll(ctx, p, "S3_INTERVENE", m`historical intervention`, { kind: "S3_INTERVENE", carriageIndex: p.carriageIndex, scenario03: { nodeId: action.nodeId, choiceId: action.choiceId } });
   },
 };
+
+onRollOutcome("S3_INTERVENE", (ctx, p, roll, rc) => {
+  if (!resolveActionRoll03(ctx, p, roll, "S3_INTERVENE")) return;
+  completeIntervention03(ctx, p, rc.scenario03!.nodeId!, rc.scenario03!.choiceId!);
+});
+
+function completeIntervention03(ctx: Ctx, p: PlayerGameState, nodeId: CausalNodeId03, choiceId: string): void {
+  const temporal = ctx.s.temporal!;
+  const before = { ...temporal.present };
+  const here = temporal.locations[p.playerId];
+  temporal.interventions.push({ seq: temporal.interventions.length + 1, nodeId, choiceId, actorId: p.playerId, round: ctx.s.round, roomId: here.roomId, year: "Y1996" });
+  p.stats.repairs++;
+  recordTrace03(ctx, p, { kind: "INTERVENTION", roomId: here.roomId, nodeId, choiceId });
+  temporal.present = derivePresent03(temporal.baselinePresent, temporal.interventions);
+  if (nodeId === "WORKER" && choiceId === "SAVE") {
+    temporal.storedItems["relic-badge"] = { instanceId: "relic-badge", itemId: "OLD_BADGE", roomId: "RESEARCH_WING", status: "AVAILABLE_2026", ownerId: null, bootstrapOwnerId: null, storedBy: null, storedRound: null };
+  }
+  const changed = JSON.stringify(before) !== JSON.stringify(temporal.present);
+  if (changed) {
+    temporal.causalRevision++;
+    cue(ctx, "S3_CAUSAL_REWRITE", { revision: temporal.causalRevision, nodeId, roomId: here.roomId, year: "Y2026", before, after: temporal.present });
+    log(ctx, m`${p.nickname} changes a 1996 decision. The 2026 record is rewritten.`, "STORY", p.playerId);
+    reveal03(ctx, "FIRST_REWRITE");
+    if (nodeId === "PROTOTYPE_CORE" && choiceId === "SHUT_DOWN") {
+      reveal03(ctx, "PREVENTION_ATTEMPT");
+      changeCollapse(ctx, 1, m`the attempted shutdown destabilizes the Administration's history`);
+    }
+    if (before.administrationIntegrity === "FADING" && temporal.present.administrationIntegrity === "STABLE") {
+      changeCollapse(ctx, -1, m`the controlled accident restores the Administration's history`);
+    }
+  } else {
+    cue(ctx, "S3_CAUSAL_DECISION", { nodeId, roomId: here.roomId, year: "Y1996", changed: false });
+    log(ctx, m`${p.nickname} preserves the 1996 record.`, "STORY", p.playerId);
+  }
+}
 
 const RESOLVE_HISTORY03: Spec<Extract<GameAction, { type: "RESOLVE_HISTORY" }>> = {
   targets: (s, p) => {

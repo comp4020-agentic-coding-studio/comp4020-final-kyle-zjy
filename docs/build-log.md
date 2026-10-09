@@ -603,3 +603,49 @@ names); each variant is now a whole template. No rule, RNG or replay changed
   - `Private03`: the drawer's private and public sections.
 - **Kept scenario-03 visuals:** the 1996 / 2026 switch, the tree map, the causal ripple, the incident record and causal history styles, and the identity and third-route scenes.
 - **Browser check:** `scripts/ui-play03.ts`. The old `scripts/ui-play03-phase*.ts` assert the previous screen's buttons and no longer match it.
+
+## Scenario 03: action dice resolution pass
+
+- Investigate, Intervene, Speak and Search now enter the existing server d6,
+  Fate-spend and reaction pipeline after their original AP cost is paid.
+  Time Jump rolls for stability only in Acts III–IV at Collapse 6 or above;
+  it always reaches the other year in the same room. Temporal Scan keeps its
+  separate four-tier Fate economy. Failed action rolls leave evidence, NPC
+  opportunities, causal decisions and the once-successful search allowance
+  available for another attempt. Only successful interventions run the
+  existing causal rewrite, trace and story logic. Perfect Search offers one
+  choice between the two existing supplies.
+- The selected action target lives in server-only `rollContext` until the
+  shared pipeline completes. The shared roll's `done` flag and persisted
+  decision windows prevent reconnects and duplicate answers from repeating
+  the outcome. Scenario 03 action-roll Fate and reaction windows wait through
+  a disconnect; the host can still skip one explicitly. Existing Dice and
+  Decision components are reused. The new
+  outcome cue and log lines have English and Chinese text; the Scenario 03
+  run layout and Scenario 01/02 rules were not changed.
+- Checks: `pnpm typecheck`, production build, `pnpm check` (1042 tests), the
+  Scenario 03 two-browser walkthrough at 320/1280 and 390/1280 px (including
+  a desktop refresh with a pending Fate window), Scenario
+  01's two-context walkthrough, and Scenario 02's departure-through-results
+  browser walkthrough passed. Scenario 03 screenshots of the new Dice/Fate
+  presentation were inspected. The temporary Chromium runtime libraries for
+  this WSL host were extracted under `/tmp`, not installed into the system.
+- Seeded Scenario 03 simulation: a scripted team that spends Fate to turn
+  required rolls into successes reached its intended route in 118/120 runs
+  across 2, 3, 4, 6 and 10 players. The two misses were both at two players
+  (one no-tomorrow, one true route). The previous 120/120 result preceded
+  these action rolls and is no longer the current balance result. No AP,
+  Collapse, route or story rule was adjusted to erase this variance.
+
+## Scenario 03: unstable Time Jump temporal lag
+
+- A Time Jump Failure (final 2–3) still arrives and now gives one public,
+  persisted `TEMPORAL_LAG` status. It reduces AP by 1 in the next cycle, with
+  a floor of 1, and expires at that cycle's end. Repeated failures in one
+  cycle do not stack; a new failure during the affected cycle schedules the
+  following cycle. Disaster, Success and Perfect keep their existing effects.
+- The player sheet distinguishes pending and active lag in English and
+  Chinese. The Time Jump outcome cue distinguishes Disaster from Failure.
+- Checks: `pnpm check` (1045 tests), production build, Scenario 03's
+  two-browser five-cycle walkthrough at 320/1280 px, and a focused browser
+  save/reconnect check showing lag in the player sheet at 320/1280 px.

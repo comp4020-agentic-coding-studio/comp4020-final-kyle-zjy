@@ -94,6 +94,23 @@ function describe(c: Cue, g: PlayerView, t: TFunction, text: ScenarioText, skill
       return { icon: "CONFRONT", text: t("s2.cue.road"), tone: "text-ember border-ember/50" };
     case "SHIELD":
       return { icon: "ANCHOR", text: t("cue.shield", { name: who(p.playerId) }), tone: "text-signal border-signal/50" };
+    case "S3_ACTION_RESOLVED": {
+      const action = String(p.action) as "S3_INVESTIGATE" | "S3_INTERVENE" | "S3_SPEAK" | "S3_SEARCH" | "S3_TIME_JUMP";
+      const tier = String(p.tier) as "DISASTER" | "FAIL" | "SUCCESS" | "PERFECT";
+      const result = p.success ? "success" : "fail";
+      const effect = action === "S3_TIME_JUMP" && tier === "DISASTER"
+        ? t("s3.cue.effect.S3_TIME_JUMP.disaster")
+        : t(`s3.cue.effect.${action}.${result}`);
+      return {
+        icon: "DICE",
+        text: t("s3.cue.result", {
+          action: t(`s3.cue.action.${action}`), tier: t(`dice.tier.${tier}`),
+          effect,
+          resource: t(tier === "DISASTER" ? "s3.cue.resource.DISASTER" : tier === "PERFECT" ? "s3.cue.resource.PERFECT" : "s3.cue.resource.other"),
+        }),
+        tone: tier === "DISASTER" ? "text-ember border-ember/50" : tier === "PERFECT" ? "text-gold-bright border-gold/60" : tier === "SUCCESS" ? "text-moss border-moss/50" : "text-mist border-ash/50",
+      };
+    }
     default:
       return null;
   }

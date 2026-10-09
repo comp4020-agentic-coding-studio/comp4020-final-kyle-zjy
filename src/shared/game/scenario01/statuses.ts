@@ -13,6 +13,7 @@ export const STATUSES: Record<string, { short: string; long: string }> = {
   UNTARGETABLE: { short: "Untargetable", long: "Untargetable" },
   SHIELD_NEXT_ROUND: { short: "Shield next round", long: "Prepared Shield" },
   CHILL: { short: "Chill −1 AP", long: "Chill (−1 action point next round)" },
+  TEMPORAL_LAG: { short: "Temporal lag −1 AP", long: "Temporal lag (−1 action point next cycle, minimum 1)" },
   TAUNT: { short: "Taunt", long: "Taunt (hostile effects aim here first)" },
   MARKED: { short: "Marked", long: "Marked" },
   REROLL_NEXT_FAILURE: { short: "Reroll next failure", long: "Quiet Warning (reroll next failure)" },

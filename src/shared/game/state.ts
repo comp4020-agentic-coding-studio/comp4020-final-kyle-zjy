@@ -269,7 +269,7 @@ export type PlayerStats = {
   timesLost: number;
 };
 
-export type RollPurpose = "INVESTIGATE" | "SEARCH" | "REPAIR" | "CONFRONT" | "TICKET_CHECK" | "EVENT" | "SKILL" | "S2_WADE" | "S2_SEARCH" | "S2_INVESTIGATE" | "S2_WORK" | "S2_RESCUE" | "S2_RISK" | "S2_RESTART" | "S3_SCAN_ARCHIVE" | "S3_SCAN_FIELD" | "S3_SCAN_STABILIZE";
+export type RollPurpose = "INVESTIGATE" | "SEARCH" | "REPAIR" | "CONFRONT" | "TICKET_CHECK" | "EVENT" | "SKILL" | "S2_WADE" | "S2_SEARCH" | "S2_INVESTIGATE" | "S2_WORK" | "S2_RESCUE" | "S2_RISK" | "S2_RESTART" | "S3_SCAN_ARCHIVE" | "S3_SCAN_FIELD" | "S3_SCAN_STABILIZE" | "S3_INVESTIGATE" | "S3_INTERVENE" | "S3_SPEAK" | "S3_SEARCH" | "S3_TIME_JUMP";
 
 export type Roll = {
   id: string;
@@ -294,6 +294,8 @@ export type RollContext = {
   repairTarget?: string;
   eventId?: string;
   skillOwner?: PlayerId;
+  /** The chosen Scenario 03 action target, persisted until Fate and reactions finish. */
+  scenario03?: { evidenceId?: string; nodeId?: TemporalIntervention03["nodeId"]; choiceId?: string; npcId?: string };
   /** Effects keyed by tier, for skill/event rolls. */
   onTier?: Partial<Record<RollTier, Effect[]>>;
   /** Doubles every reward / penalty of this roll (All In, Double Down…). */
@@ -323,7 +325,7 @@ export type RoundRecord = {
 
 export type Job = { kind: "TICKET_CHECK" | "ECHO_STRIKE"; playerId: PlayerId; payload?: Record<string, string | number> };
 
-export type WindowKind = "FATE_SPEND" | "REACTION" | "PASSIVE_CONFIRM" | "TARGET_CHOICE" | "EVENT_CHOICE" | "VOTE" | "TRADE_OFFER" | "ENDING_CHOICE" | "SKILL_CHOICE";
+export type WindowKind = "FATE_SPEND" | "REACTION" | "PASSIVE_CONFIRM" | "TARGET_CHOICE" | "EVENT_CHOICE" | "VOTE" | "TRADE_OFFER" | "ENDING_CHOICE" | "SKILL_CHOICE" | "SUPPLY_CHOICE";
 
 export type WindowOption = { id: string; label: Msg; detail?: Msg };
 

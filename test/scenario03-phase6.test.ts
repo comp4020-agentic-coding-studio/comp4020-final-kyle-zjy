@@ -5,7 +5,7 @@ import { project } from "../src/server/engine/project.ts";
 import { ROOM_IDS, placeKey03, type RoomId03, type Year03 } from "../src/shared/game/scenario03/map.ts";
 import type { GameState } from "../src/shared/game/state.ts";
 import { SEED, seatsFor, T0 } from "./helpers.ts";
-import { endTurn03, settle03 } from "./scenario03-helpers.ts";
+import { endTurn03, settle03, successfulAction03 } from "./scenario03-helpers.ts";
 
 function start(): GameState {
   let s = startGame(createGame("s3-act3", seatsFor(3), SEED, T0, "S03_INCIDENT_ZERO"), T0).state;
@@ -42,7 +42,7 @@ describe("Scenario 03 Act III", () => {
     place(s, id, "PROTOTYPE_ROOM", "Y1996");
     const collapse = s.collapse;
     const revision = s.temporal!.causalRevision;
-    const result = applyGameAction(s, id, { type: "INTERVENE", nodeId: "PROTOTYPE_CORE", choiceId: "SHUT_DOWN" }, T0 + 70);
+    const result = successfulAction03(s, id, { type: "INTERVENE", nodeId: "PROTOTYPE_CORE", choiceId: "SHUT_DOWN" }, T0 + 70);
     s = result.state;
     expect(s.collapse).toBe(collapse + 1);
     expect(s.temporal!.causalRevision).toBe(revision + 1);
@@ -69,7 +69,7 @@ describe("Scenario 03 Act III", () => {
     const id = s.turnOrder[s.activeIndex];
     place(s, id, "PROTOTYPE_ROOM", "Y1996");
     const before = s.collapse;
-    s = applyGameAction(s, id, { type: "INTERVENE", nodeId: "PROTOTYPE_CORE", choiceId: "LEAVE" }, T0 + 70).state;
+    s = successfulAction03(s, id, { type: "INTERVENE", nodeId: "PROTOTYPE_CORE", choiceId: "LEAVE" }, T0 + 70).state;
     expect(s.collapse).toBe(before);
     expect(s.temporal!.present.powerRoomExists).toBe(true);
     expect(s.temporal!.story.revealed).not.toContain("PREVENTION_ATTEMPT");
@@ -80,10 +80,10 @@ describe("Scenario 03 Act III", () => {
     const id = s.turnOrder[s.activeIndex];
     const other = s.turnOrder.find((person) => person !== id)!;
     place(s, id, "DIRECTOR_OFFICE", "Y2026");
-    s = applyGameAction(s, id, { type: "INVESTIGATE" }, T0 + 70).state;
+    s = successfulAction03(s, id, { type: "INVESTIGATE" }, T0 + 70).state;
     expect(s.temporal!.evidence[id]).toContain("SURVEILLANCE_TAPE");
     expect(s.temporal!.discoveredFacts).toEqual([]);
-    s = applyGameAction(s, id, { type: "INVESTIGATE" }, T0 + 71).state;
+    s = successfulAction03(s, id, { type: "INVESTIGATE" }, T0 + 71).state;
     expect(s.temporal!.discoveredFacts).toEqual(["FOUNDER"]);
     expect(project(s, id).temporal!.myEvidence).toContain("FOUNDER_DISCREPANCY");
     expect(project(s, other).temporal!.myEvidence).not.toContain("FOUNDER_DISCREPANCY");
@@ -92,14 +92,14 @@ describe("Scenario 03 Act III", () => {
     expect(s.temporal!.story.revealed).not.toContain("JI_NOTE");
     place(s, id, "CENTRAL_HALL", "Y2026");
     expect(project(s, id).myActions.find((a) => a.type === "INTERACT_NPC")?.targets).toContain("ZERO");
-    s = applyGameAction(s, id, { type: "INTERACT_NPC", npcId: "ZERO" }, T0 + 72).state;
+    s = successfulAction03(s, id, { type: "INTERACT_NPC", npcId: "ZERO" }, T0 + 72).state;
     expect(project(s, id).temporal!.myEvidence).toContain("ZERO_TRANSCRIPT");
     expect(project(s, other).temporal!.myEvidence).not.toContain("ZERO_TRANSCRIPT");
     expect(project(s, other).temporal!.story.revealed).toContain("ZERO_CONSULTED");
     expect(s.temporal!.story.revealed).not.toContain("ARCHIVIST_CONTACT");
     place(s, id, "DIRECTOR_OFFICE", "Y1996");
-    s = applyGameAction(s, id, { type: "INVESTIGATE" }, T0 + 73).state;
-    s = applyGameAction(s, id, { type: "INVESTIGATE" }, T0 + 74).state;
+    s = successfulAction03(s, id, { type: "INVESTIGATE" }, T0 + 73).state;
+    s = successfulAction03(s, id, { type: "INVESTIGATE" }, T0 + 74).state;
     expect(s.temporal!.surveillance.at(-1)).toMatchObject({ kind: "INVESTIGATION", evidenceId: "JI_MARGIN_NOTE" });
     expect(JSON.stringify(project(s, other).temporal!.surveillance)).not.toContain("evidenceId");
     expect(project(s, other).temporal!.myEvidence).not.toContain("JI_MARGIN_NOTE");

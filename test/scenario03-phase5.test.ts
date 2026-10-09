@@ -5,7 +5,7 @@ import { project } from "../src/server/engine/project.ts";
 import { placeKey03, type RoomId03, type Year03 } from "../src/shared/game/scenario03/map.ts";
 import type { GameState } from "../src/shared/game/state.ts";
 import { SEED, seatsFor, T0 } from "./helpers.ts";
-import { endTurn03, settle03 } from "./scenario03-helpers.ts";
+import { endTurn03, settle03, successfulAction03 } from "./scenario03-helpers.ts";
 
 function start(n = 3): GameState {
   let s = startGame(createGame("s3-act2", seatsFor(n), SEED, T0, "S03_INCIDENT_ZERO"), T0).state;
@@ -40,12 +40,12 @@ describe("Scenario 03 Act II surveillance and reveal", () => {
     expect(project(s, other).temporal!.surveillance).toEqual([]);
     s = toRound(s, 2);
     place(s, id, "ARCHIVES", "Y1996");
-    s = applyGameAction(s, id, { type: "INTERVENE", nodeId: "ARCHIVE_GATE", choiceId: "OPEN" }, T0 + 20).state;
+    s = successfulAction03(s, id, { type: "INTERVENE", nodeId: "ARCHIVE_GATE", choiceId: "OPEN" }, T0 + 20).state;
     expect(s.temporal!.surveillance.at(-1)).toMatchObject({ seq: 3, kind: "INTERVENTION", actorId: id, nodeId: "ARCHIVE_GATE", choiceId: "OPEN", round: 2 });
     expect(project(s, other).temporal!.interventions[0].actorId).toBeNull();
     s = toRound(s, 4);
     place(s, id, "DIRECTOR_OFFICE", "Y2026");
-    s = applyGameAction(s, id, { type: "INVESTIGATE" }, T0 + 40).state;
+    s = successfulAction03(s, id, { type: "INVESTIGATE" }, T0 + 40).state;
     const publicView = project(s, other).temporal!;
     expect(publicView.surveillance.map((trace) => trace.kind)).toEqual(["ARRIVAL", "MOVEMENT", "INTERVENTION"]);
     expect(publicView.surveillance.every((trace) => trace.actorId === null)).toBe(true);
@@ -69,12 +69,12 @@ describe("Scenario 03 Act II surveillance and reveal", () => {
     let s = toRound(start(), 4);
     const id = s.turnOrder[s.activeIndex];
     place(s, id, "DIRECTOR_OFFICE", "Y1996");
-    s = applyGameAction(s, id, { type: "INVESTIGATE" }, T0 + 40).state;
+    s = successfulAction03(s, id, { type: "INVESTIGATE" }, T0 + 40).state;
     expect(s.temporal!.accessLedgerReviewed).toBe(true);
     expect(s.temporal!.evidence[id]).toContain("ACCESS_LEDGER");
     expect(() => applyGameAction(s, id, { type: "INVESTIGATE" }, T0 + 41)).toThrow();
     place(s, id, "MAIN_LAB", "Y1996");
-    s = applyGameAction(s, id, { type: "INVESTIGATE" }, T0 + 42).state;
+    s = successfulAction03(s, id, { type: "INVESTIGATE" }, T0 + 42).state;
     expect(s.temporal!.prototypeLogReviewed).toBe(true);
     expect(s.temporal!.story.revealed).toContain("PROTOTYPE_LOG_FOUND");
     expect(s.temporal!.story.revealed).not.toContain("INTRUDERS_IDENTIFIED");

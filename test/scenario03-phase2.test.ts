@@ -7,6 +7,7 @@ import { derivePresent03 } from "../src/shared/game/scenario03/nodes.ts";
 import { placeKey03 } from "../src/shared/game/scenario03/map.ts";
 import type { GameState } from "../src/shared/game/state.ts";
 import { SEED, seatsFor, T0 } from "./helpers.ts";
+import { successfulAction03 } from "./scenario03-helpers.ts";
 
 function start(): GameState {
   let s = startGame(createGame("s3-causal", seatsFor(3), SEED, T0, "S03_INCIDENT_ZERO"), T0).state;
@@ -25,7 +26,7 @@ describe("Scenario 03 causal rewrites", () => {
     let s = start();
     const id = s.turnOrder[s.activeIndex];
     place(s, id, "ARCHIVES", "Y1996");
-    const first = applyGameAction(s, id, { type: "INTERVENE", nodeId: "ARCHIVE_GATE", choiceId: "OPEN" }, T0 + 2);
+    const first = successfulAction03(s, id, { type: "INTERVENE", nodeId: "ARCHIVE_GATE", choiceId: "OPEN" }, T0 + 2);
     s = first.state;
     expect(first.events.find((e) => e.kind === "S3_CAUSAL_REWRITE")?.payload).toMatchObject({ revision: 1, nodeId: "ARCHIVE_GATE", before: { secretArchiveOpen: false }, after: { secretArchiveOpen: true } });
     expect(s.temporal!.present.secretArchiveOpen).toBe(true);
@@ -36,10 +37,10 @@ describe("Scenario 03 causal rewrites", () => {
     s = applyGameAction(s, id, { type: "MOVE", toCarriage: placeKey03("SECRET_ARCHIVE", "Y2026") }, T0 + 3).state;
     expect(s.temporal!.locations[id].roomId).toBe("SECRET_ARCHIVE");
     place(s, id, "RESEARCH_WING", "Y1996");
-    s = applyGameAction(s, id, { type: "INTERVENE", nodeId: "WORKER", choiceId: "SAVE" }, T0 + 4).state;
+    s = successfulAction03(s, id, { type: "INTERVENE", nodeId: "WORKER", choiceId: "SAVE" }, T0 + 4).state;
     expect(s.temporal!.present).toMatchObject({ workerPresent: true, badgeCache: true });
     place(s, id, "ARCHIVES", "Y1996");
-    s = applyGameAction(s, id, { type: "INTERVENE", nodeId: "REPORT", choiceId: "CORRECT" }, T0 + 5).state;
+    s = successfulAction03(s, id, { type: "INTERVENE", nodeId: "REPORT", choiceId: "CORRECT" }, T0 + 5).state;
     expect(s.temporal!.present.report).toBe("CORRECTED");
     expect(s.temporal!.causalRevision).toBe(3);
     expect(s.temporal!.interventions.map((i) => i.seq)).toEqual([1, 2, 3]);
@@ -53,7 +54,7 @@ describe("Scenario 03 causal rewrites", () => {
     const id = s.turnOrder[s.activeIndex];
     const other = s.turnOrder.find((x) => x !== id)!;
     place(s, id, "ARCHIVES", "Y2026");
-    s = applyGameAction(s, id, { type: "INVESTIGATE" }, T0 + 2).state;
+    s = successfulAction03(s, id, { type: "INVESTIGATE" }, T0 + 2).state;
     const evidence = `CASE_FILE_${s.temporal!.present.caseFile}`;
     expect(project(s, id).temporal!.myEvidence).toContain(evidence);
     expect(project(s, other).temporal!.myEvidence).toEqual([]);
@@ -79,14 +80,14 @@ describe("Scenario 03 causal rewrites", () => {
     const s = start();
     const id = s.turnOrder[s.activeIndex];
     place(s, id, "ARCHIVES", "Y1996");
-    const step = applyGameAction(s, id, { type: "INTERVENE", nodeId: "ARCHIVE_GATE", choiceId: "LEAVE" }, T0 + 2);
+    const step = successfulAction03(s, id, { type: "INTERVENE", nodeId: "ARCHIVE_GATE", choiceId: "LEAVE" }, T0 + 2);
     expect(step.state.temporal!.interventions).toHaveLength(1);
     expect(step.state.temporal!.causalRevision).toBe(0);
     expect(step.events.some((e) => e.kind === "S3_CAUSAL_REWRITE")).toBe(false);
     expect(step.state.temporal!.present).toEqual(step.state.temporal!.baselinePresent);
   });
 
-  it("replays the same seeded case file and intervention without another RNG draw", () => {
+  it("replays the same seeded case file and intervention roll", () => {
     const initialA = start();
     const initialB = start();
     const id = initialA.turnOrder[initialA.activeIndex];
@@ -95,9 +96,9 @@ describe("Scenario 03 causal rewrites", () => {
     place(initialB, id, "RESEARCH_WING", "Y1996");
     const beforeCalls = initialA.rngCalls;
     const action = { type: "INTERVENE", nodeId: "WORKER", choiceId: "SAVE" } as const;
-    const a = applyGameAction(initialA, id, action, T0 + 2).state;
-    const b = applyGameAction(initialB, id, action, T0 + 2).state;
+    const a = successfulAction03(initialA, id, action, T0 + 2).state;
+    const b = successfulAction03(initialB, id, action, T0 + 2).state;
     expect(a.temporal).toEqual(b.temporal);
-    expect(a.rngCalls).toBe(beforeCalls);
+    expect(a.rngCalls).toBeGreaterThan(beforeCalls);
   });
 });

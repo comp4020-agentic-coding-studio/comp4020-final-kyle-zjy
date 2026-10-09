@@ -119,7 +119,10 @@ PHASE 8 resolves all 192 skill names and descriptions through
 revisions are in `scenario03/skill-adapters.ts` and `zh-CN/skills03.ts`.
 The public anomaly deck uses event IDs in `scenario03/events.ts` with English
 and Chinese text in the matching i18n modules. Three scan protocols and
-co-located help have parallel client keys and engine templates.
+co-located help have parallel client keys and engine templates. The action
+rolls add bilingual tier and outcome cues under `s3.cue.*`, a supply-choice
+window, and whole engine message templates. Outcome IDs remain independent
+of locale.
 
 | English | 中文 | Notes |
 | --- | --- | --- |

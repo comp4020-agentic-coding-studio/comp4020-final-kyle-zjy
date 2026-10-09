@@ -20,6 +20,11 @@ registerScenario({
   itemPools: { any: ORDINARY_POOL03, buff: ORDINARY_POOL03 },
   roundHeader: (s) => m`— Cycle ${s.round} of 12 —`,
   apFor: (_s, p) => p.lost ? 1 : 3,
+  playerRoundStart: (ctx, p) => {
+    if (p.statuses.some((status) => status.kind === "TEMPORAL_LAG" && status.expiresAtRound === ctx.s.round)) {
+      p.ap = Math.max(1, p.ap - 1);
+    }
+  },
   onRoundStart: (ctx) => {
     if (ctx.s.round === 4) reveal03(ctx, "ACT2_OPEN");
     if (ctx.s.round === 7) {

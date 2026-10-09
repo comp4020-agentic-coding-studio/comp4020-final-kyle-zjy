@@ -5,7 +5,7 @@ import { project } from "../src/server/engine/project.ts";
 import { placeKey03 } from "../src/shared/game/scenario03/map.ts";
 import type { GameState } from "../src/shared/game/state.ts";
 import { SEED, seatsFor, T0 } from "./helpers.ts";
-import { endTurn03 } from "./scenario03-helpers.ts";
+import { endTurn03, successfulAction03 } from "./scenario03-helpers.ts";
 
 function start(): GameState {
   let s = startGame(createGame("s3-act1", seatsFor(3), SEED, T0, "S03_INCIDENT_ZERO"), T0).state;
@@ -20,12 +20,12 @@ describe("Scenario 03 Act I", () => {
     const other = s.turnOrder.find((x) => x !== id)!;
     expect(s.temporal!.story.revealed).toEqual(["LOCKDOWN"]);
     s = applyGameAction(s, id, { type: "MOVE", toCarriage: placeKey03("ARCHIVES", "Y2026") }, T0 + 2).state;
-    s = applyGameAction(s, id, { type: "INTERACT_NPC", npcId: "ARCHIVIST_00" }, T0 + 3).state;
+    s = successfulAction03(s, id, { type: "INTERACT_NPC", npcId: "ARCHIVIST_00" }, T0 + 3).state;
     expect(s.temporal!.story.revealed).toContain("ARCHIVIST_CONTACT");
     expect(project(s, id).temporal!.myEvidence).toContain("ARCHIVIST_NOTE");
     expect(project(s, other).temporal!.myEvidence).toEqual([]);
     expect(() => applyGameAction(s, id, { type: "INTERACT_NPC", npcId: "ARCHIVIST_00" }, T0 + 4)).toThrow();
-    s = applyGameAction(s, id, { type: "INVESTIGATE" }, T0 + 5).state;
+    s = successfulAction03(s, id, { type: "INVESTIGATE" }, T0 + 5).state;
     expect(s.temporal!.story.revealed).toContain("OFFICIAL_FILE");
     expect(s.temporal!.evidence[id]).toContain(`CASE_FILE_${s.temporal!.present.caseFile}`);
     expect(s.temporal!.story.revealed).not.toContain("FIRST_REWRITE");
@@ -42,13 +42,13 @@ describe("Scenario 03 Act I", () => {
     s.temporal!.locations[id] = { roomId: "ARCHIVES", year: "Y1996" };
     s.players[id].carriageIndex = placeKey03("ARCHIVES", "Y1996");
     s.players[id].ap = 3;
-    s = applyGameAction(s, id, { type: "INTERVENE", nodeId: "ARCHIVE_GATE", choiceId: "LEAVE" }, T0 + 3).state;
+    s = successfulAction03(s, id, { type: "INTERVENE", nodeId: "ARCHIVE_GATE", choiceId: "LEAVE" }, T0 + 3).state;
     expect(s.temporal!.story.revealed).not.toContain("FIRST_REWRITE");
     s = start();
     const actor = s.turnOrder[s.activeIndex];
     s.temporal!.locations[actor] = { roomId: "ARCHIVES", year: "Y1996" };
     s.players[actor].carriageIndex = placeKey03("ARCHIVES", "Y1996");
-    s = applyGameAction(s, actor, { type: "INTERVENE", nodeId: "ARCHIVE_GATE", choiceId: "OPEN" }, T0 + 4).state;
+    s = successfulAction03(s, actor, { type: "INTERVENE", nodeId: "ARCHIVE_GATE", choiceId: "OPEN" }, T0 + 4).state;
     expect(s.temporal!.story.revealed.filter((beat) => beat === "FIRST_REWRITE")).toHaveLength(1);
     expect(s.temporal!.interventions[0]).toMatchObject({ actorId: actor, round: 1, choiceId: "OPEN" });
     expect(s.temporal!.story.revealed).not.toContain("INTRUDERS_IDENTIFIED");

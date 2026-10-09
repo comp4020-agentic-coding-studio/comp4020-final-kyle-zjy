@@ -216,6 +216,19 @@ raw = d6 (server RNG)
 The `Roll` record stores every step (`raw`, `modifiers[]`, `fateSpent`,
 `final`, `tier`), and the UI shows **raw → fate → final** in full.
 
+Scenario 03 action rolls use the same pipeline. Its investigation,
+intervention, NPC conversation and supply search commit their effects only
+after a successful final tier. Their targets remain in server-only
+`rollContext` while Fate and reaction windows are pending. At Collapse 6 or
+above in Acts III–IV, Time Jump also rolls for stability after arriving in the
+other year. These action rolls change resources only at the endpoints:
+Disaster costs 1 Sanity and Perfect gains 1 Fate. Temporal Scan keeps its own
+Fate and Sanity results. A perfect supply search uses a persisted choice
+window to award exactly one of the two existing supplies.
+An unstable Time Jump Failure (final 2–3) adds `TEMPORAL_LAG`: the next
+cycle starts with 1 less AP, never below 1, and the status expires at that
+cycle's end. Repeated failures cannot stack the AP penalty.
+
 ## 8. Randomness and replay
 
 - At game start the server draws `seed` (crypto random, 32 bits ×4).

@@ -7,6 +7,7 @@ import { placeKey03, type RoomId03, type Year03 } from "../src/shared/game/scena
 import type { GameState } from "../src/shared/game/state.ts";
 import type { GameAction } from "../src/shared/game/actions.ts";
 import { SEED, seatsFor, T0 } from "./helpers.ts";
+import { successfulAction03 } from "./scenario03-helpers.ts";
 
 function start(): GameState {
   let s = startGame(createGame("s3-items", seatsFor(3), SEED, T0, "S03_INCIDENT_ZERO"), T0).state;
@@ -107,7 +108,7 @@ describe("Scenario 03 numbered relic conservation", () => {
     const id = s.turnOrder[s.activeIndex];
     place(s, id, "RESEARCH_WING", "Y2026");
     s.temporal!.holdings[id].artifacts.push("STAGED_DEATH_RECORD");
-    s = applyGameAction(s, id, { type: "SEARCH" }, T0 + 2).state;
+    s = successfulAction03(s, id, { type: "SEARCH" }, T0 + 2).state;
     expect(["PHASE_BATTERY", "SEDATIVE03"]).toContain(s.players[id].items[0]);
     const item = s.players[id].items[0];
     s = applyGameAction(s, id, { type: "USE_ITEM", item }, T0 + 3).state;
@@ -120,7 +121,7 @@ describe("Scenario 03 numbered relic conservation", () => {
     let s = start();
     const id = s.turnOrder[s.activeIndex];
     place(s, id, "RESEARCH_WING", "Y1996");
-    s = applyGameAction(s, id, { type: "INTERVENE", nodeId: "WORKER", choiceId: "SAVE" }, T0 + 2).state;
+    s = successfulAction03(s, id, { type: "INTERVENE", nodeId: "WORKER", choiceId: "SAVE" }, T0 + 2).state;
     expect(Object.values(s.temporal!.storedItems).filter((item) => item.itemId === "OLD_BADGE")).toHaveLength(1);
     expect(() => applyGameAction(s, id, { type: "INTERVENE", nodeId: "WORKER", choiceId: "SAVE" }, T0 + 3)).toThrow();
     place(s, id, "RESEARCH_WING", "Y2026");

@@ -475,6 +475,40 @@ window; public anomaly events give event-triggered skills real targets.
 Skill effects, help and scans pass through the existing serialized action
 queue and server projection.
 
+## Scenario 03 action dice resolution
+
+Temporal Scan retains its separate Fate economy. Investigate, the 1996 causal
+interventions, formal NPC conversations and the 2026 Research Wing supply
+search now enter the shared server d6 pipeline after spending their existing
+AP. Help applies to the next shared roll in the same way it already did for a
+scan. Time Jump enters it only in Acts III–IV at Collapse 6 or above; the jump
+and its 1996 arrival trace occur regardless of the stability result.
+
+For Investigate, Intervene, Speak and Search, a final 1 fails and costs 1
+Sanity; 2–3 fails with no extra resource change; 4–5 succeeds with no extra
+resource change; and 6 succeeds and gains 1 Fate. Failure leaves evidence,
+NPC testimony, the supply search allowance and causal decisions uncommitted
+so the player may retry.
+Time Jump always arrives: its final 1 costs 1 Sanity, 2–3 applies
+`TEMPORAL_LAG`, 4–5 has no extra effect, and 6+ gains 1 Fate. Temporal lag
+reduces AP by 1 in the next cycle only, to a minimum of 1. It does not stack;
+a further failed jump during the affected cycle schedules the following cycle.
+The status expires after the cycle it affects.
+Successful investigation, conversation and intervention run their original
+story and causal effects. A successful ordinary search draws one of the two
+existing supplies; a perfect search opens one persisted choice between them.
+
+The selected evidence, NPC or causal option is stored only in server-side
+`rollContext` until Fate spending and reactions finish. `finishRoll` marks a
+roll done before its outcome handler runs. The room's serialized queue
+persists each action, answer and resulting state atomically. Reconnect
+projects the same pending window; repeated answers cannot replay the action.
+An in-progress Scenario 03
+action roll's Fate or reaction window waits through a brief disconnect; the
+host can still skip it explicitly. Existing Dice, Fate, reaction and decision
+components render the process. Scenario 03 adds only
+localized outcome cues and log messages, without changing the run layout.
+
 ## PHASE 9 visual contract
 
 Both years render the same eight physical rooms and adjacency tree. The

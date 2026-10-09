@@ -343,6 +343,7 @@ export const en = {
   "decision.kind.TRADE_OFFER": "Trade offer",
   "decision.kind.ENDING_CHOICE": "The last choice",
   "decision.kind.SKILL_CHOICE": "Your ability",
+  "decision.kind.SUPPLY_CHOICE": "Choose a supply",
   "decision.voted": "{n}/{of} voted · votes stay secret until everyone has chosen",
   "decision.youChose": "You chose \"{label}\". ",
   "decision.answered": "{title}: {n}/{of} answered",

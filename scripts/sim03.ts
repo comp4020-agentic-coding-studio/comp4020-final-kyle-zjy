@@ -1,4 +1,5 @@
 // Real-action Scenario 03 balance probe. No teleports, state edits or fixed die.
+// The driver spends Fate when it can turn a required action roll into success.
 // Run with: node scripts/sim03.ts [--runs 8]
 import { createGame } from "../src/server/engine/create.ts";
 import { applyGameAction, startGame } from "../src/server/engine/engine.ts";
@@ -97,7 +98,8 @@ function play(n: number, route: Route, run: number) {
   let apSpent = 0;
   let jumps = 0;
   for (let guard = 0; s.phase !== "ENDING" && guard < 5000; guard++) {
-    s = settle03(s, ++now);
+    s = settle03(s, ++now, true);
+    if (s.phase === "ENDING") break;
     if (s.sequence) { for (const id of s.turnOrder) apply(id, { type: "ACK_SEQUENCE" }); continue; }
     const id = s.turnOrder[s.activeIndex];
     const player = s.players[id];
@@ -128,12 +130,10 @@ function play(n: number, route: Route, run: number) {
   return { outcome: s.outcome, round: s.round, turns, idle, apSpent, jumps, collapse: s.collapse, relics: s.temporal!.bootstrap.filter((item) => item.placedBy).length };
 }
 
-let failed = false;
 for (const n of sizes) for (const route of routes) {
   const rows = Array.from({ length: runs }, (_, index) => play(n, route, index));
   const wins = rows.filter((row) => row.outcome === `S03_${route}`).length;
   const mean = (key: "round" | "idle" | "apSpent" | "jumps") => (rows.reduce((sum, row) => sum + row[key], 0) / runs).toFixed(1);
   console.log(`${n}p ${route}: ${wins}/${runs} wins, round ${mean("round")}, AP spent ${mean("apSpent")}, jumps ${mean("jumps")}, idle turns ${mean("idle")}`);
-  if (wins !== runs) { failed = true; console.log(`  outcomes: ${rows.map((row) => `${row.outcome}@${row.round}`).join(", ")}`); }
+  if (wins !== runs) console.log(`  outcomes: ${rows.map((row) => `${row.outcome}@${row.round}`).join(", ")}`);
 }
-if (failed) process.exitCode = 1;

@@ -146,6 +146,13 @@ try {
       }
       const keep = p.getByRole("button", { name: /Keep it/ });
       if (await visible(keep)) {
+        await shotOnce(p, tag, "dice");
+        if (tag === "desktop" && !seen.has("dice-reload-desktop")) {
+          seen.add("dice-reload-desktop");
+          await p.reload();
+          await keep.waitFor({ timeout: 10_000 });
+          await shotOnce(p, tag, "dice-reconnected");
+        }
         acted = await tap(keep);
         continue;
       }

@@ -339,6 +339,7 @@ export const zhCN: Catalog = {
   "decision.kind.TRADE_OFFER": "交易邀请",
   "decision.kind.ENDING_CHOICE": "最后的抉择",
   "decision.kind.SKILL_CHOICE": "你的能力",
+  "decision.kind.SUPPLY_CHOICE": "选择补给",
   "decision.voted": "已投票 {n}/{of} · 所有人选完之前，投票保密",
   "decision.youChose": "你选择了「{label}」。",
   "decision.answered": "{title}：已回应 {n}/{of}",

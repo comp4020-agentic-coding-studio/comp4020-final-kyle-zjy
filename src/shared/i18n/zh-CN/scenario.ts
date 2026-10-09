@@ -122,6 +122,7 @@ export const ZH_SCENARIO: ScenarioText = {
     UNTARGETABLE: { short: "无法被指定", long: "无法被指定" },
     SHIELD_NEXT_ROUND: { short: "下轮护盾", long: "预备护盾" },
     CHILL: { short: "寒意 −1 行动点", long: "寒意（下一轮 −1 行动点）" },
+    TEMPORAL_LAG: { short: "时间迟滞 −1 行动点", long: "时间迟滞（下一周期 −1 行动点，最低保留 1 点）" },
     TAUNT: { short: "嘲讽", long: "嘲讽（敌意效果优先指向这里）" },
     MARKED: { short: "已标记", long: "已标记" },
     REROLL_NEXT_FAILURE: { short: "下次失败重掷", long: "无声警告（下一次失败可重掷）" },

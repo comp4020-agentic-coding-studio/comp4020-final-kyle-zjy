@@ -44,8 +44,14 @@ export function settleIfAnswered(ctx: Ctx, w: PendingWindow): void {
 let beforeClose: (ctx: Ctx, w: PendingWindow) => boolean = () => false;
 export const setBeforeClose = (fn: typeof beforeClose) => (beforeClose = fn);
 
-const allAnswered = (ctx: Ctx, w: PendingWindow): boolean =>
-  w.addressees.every((id) => w.answers[id] !== undefined || ctx.s.players[id]?.away);
+const allAnswered = (ctx: Ctx, w: PendingWindow): boolean => {
+  // A Scenario 03 action roll survives a brief disconnect/refresh. The host
+  // can still close its Fate or reaction window explicitly with hostSkip.
+  const actionRoll03 = ctx.s.scenarioId === "S03_INCIDENT_ZERO" && ctx.s.roll && !ctx.s.roll.done &&
+    ["S3_INVESTIGATE", "S3_INTERVENE", "S3_SPEAK", "S3_SEARCH", "S3_TIME_JUMP"].includes(ctx.s.roll.purpose);
+  const holdForReconnect = actionRoll03 && (w.kind === "FATE_SPEND" || w.kind === "REACTION");
+  return w.addressees.every((id) => w.answers[id] !== undefined || (!holdForReconnect && ctx.s.players[id]?.away));
+};
 
 /** Closes the top window, filling defaults for anyone who didn't answer. */
 export function closeTop(ctx: Ctx): void {

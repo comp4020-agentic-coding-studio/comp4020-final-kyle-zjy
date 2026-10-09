@@ -5,7 +5,7 @@ import { project } from "../src/server/engine/project.ts";
 import { placeKey03, type RoomId03, type Year03 } from "../src/shared/game/scenario03/map.ts";
 import type { GameState } from "../src/shared/game/state.ts";
 import { SEED, seatsFor, T0 } from "./helpers.ts";
-import { endTurn03, settle03 } from "./scenario03-helpers.ts";
+import { endTurn03, settle03, successfulAction03 } from "./scenario03-helpers.ts";
 
 function start(n = 3): GameState {
   let s = startGame(createGame("s3-endings", seatsFor(n), SEED, T0, "S03_INCIDENT_ZERO"), T0).state;
@@ -32,7 +32,7 @@ function intervene(s: GameState, nodeId: "PROTOTYPE_CORE" | "ACCIDENT_RECORD" | 
   const id = s.turnOrder[s.activeIndex];
   const roomId = { PROTOTYPE_CORE: "PROTOTYPE_ROOM", ACCIDENT_RECORD: "ARCHIVES", STAFF_EVACUATION: "MAIN_LAB", JI_RECORD: "DIRECTOR_OFFICE", PROTOTYPE_FATE: "PROTOTYPE_ROOM" }[nodeId] as RoomId03;
   place(s, id, roomId, "Y1996");
-  return applyGameAction(s, id, { type: "INTERVENE", nodeId, choiceId }, T0 + 100).state;
+  return successfulAction03(s, id, { type: "INTERVENE", nodeId, choiceId }, T0 + 100).state;
 }
 
 function closeBootstrap(s: GameState): GameState {
