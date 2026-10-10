@@ -5,6 +5,12 @@ import { auctionIntelText, auctionLotText } from "../../../shared/i18n/scenario0
 import { Avatar } from "../../components/Avatar.tsx";
 import { useLocale, useT } from "../../i18n/index.ts";
 import { debtTier04 } from "../../../shared/game/scenario04/debt.ts";
+import { Icon } from "../Icon.tsx";
+
+const LOT_ICON04: Record<string, string> = {
+  LOT_01: "DICE", LOT_02: "SECRET", LOT_03: "S4_COIN", LOT_04: "CHALLENGE", LOT_05: "KEY",
+  LOT_06: "S4_CREDIT", LOT_07: "REGISTER", LOT_08: "S4_CROWN", LOT_09: "S4_DEVIL_KEY", LOT_10: "S4_EXIT",
+};
 
 export function AuctionTable04({ g }: { g: PlayerView }) {
   const a = g.auction!;
@@ -26,8 +32,8 @@ export function AuctionTable04({ g }: { g: PlayerView }) {
           <p className="mt-1 text-sm text-moon">{t(hostLines[Math.min(8, Math.max(0, g.round - 1))])}</p>
         </div>
         <p className="label text-signal">{t("s4.top.round", { n: Math.max(1, g.round) })} · {t("s4.table.lot")}</p>
+        <div className="mx-auto mt-3 flex size-16 items-center justify-center rounded-2xl border border-gold/40 bg-gold/10 text-gold-bright" aria-hidden="true"><Icon name={LOT_ICON04[a.currentLot] ?? "USE_LOT"} size={36} /></div>
         <h1 className="mt-1 font-display text-3xl text-gold-bright sm:text-4xl">{lot.name}</h1>
-        <p className="mt-2 text-sm text-mist">{lot.description}</p>
         {!!a.publicIntel.length && <div className="mt-3 rounded-xl border border-signal/30 p-2 text-left text-xs text-signal"><p className="label">{t("s4.table.publicIntel")}</p>{a.publicIntel.map((id) => <p key={id} className="mt-1">{auctionIntelText(locale, id)}</p>)}</div>}
         <div className="mt-4 grid grid-cols-1 gap-2 text-left sm:grid-cols-3">
           <Stat label={t(a.currentBidder ? "s4.table.bid" : "s4.table.startingBid")} value={a.currentBidder ? String(a.currentBid) : String(startingBid)} />

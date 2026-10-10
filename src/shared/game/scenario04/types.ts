@@ -92,6 +92,7 @@ export type AuctionState04 = {
     turn: PlayerId;
     stood: PlayerId[];
     coinAsked: PlayerId[];
+    bust: null | { playerId: PlayerId; card: number; total: number; winnerId: PlayerId };
   };
   stats: { highestBid: number; challengesWon: Record<PlayerId, number>; investigations: Record<PlayerId, number>; deals: number; borrows: Record<PlayerId, number> };
 };

@@ -361,6 +361,7 @@ export const en = {
   "decision.kind.S4_DEAL": "Auction deal",
   "decision.kind.S4_CHALLENGE": "Blackjack challenge",
   "decision.kind.S4_BLACKJACK": "Blackjack turn",
+  "decision.kind.S4_BLACKJACK_RESULT": "Blackjack result",
   "decision.kind.S4_COIN": "Gambler's Coin",
   "decision.voted": "{n}/{of} voted · votes stay secret until everyone has chosen",
   "decision.youChose": "You chose \"{label}\". ",

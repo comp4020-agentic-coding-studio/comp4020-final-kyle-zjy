@@ -48,6 +48,11 @@ const PATHS: Record<string, string> = {
   EXPOSE: "M12 3v11M12 18v3M5 6l3 3M19 6l-3 3M4 15h4M16 15h4",
   RECOVER: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10zM12 9v6M9 12h6",
   USE_LOT: "M6 8h12v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2zM9 8V6a3 3 0 0 1 6 0v2M10 13h4",
+  S4_COIN: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v10M15 9c-1-1-5-1-5 1 0 2 5 1 5 4 0 2-4 3-6 1",
+  S4_CREDIT: "M3 6h18v12H3zM7 10h10M7 14h5M17 14h.01",
+  S4_CROWN: "M3 8l4 4 5-7 5 7 4-4-2 11H5zM5 19h14",
+  S4_DEVIL_KEY: "M7 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zM11 12h10M17 12v4M20 12v3M4 5l2 2M10 4l-1 3",
+  S4_EXIT: "M4 3h12v18H4zM9 12h11M16 8l4 4-4 4M12 15h.01",
 };
 
 export function Icon({ name, size = 22, className = "" }: { name: keyof typeof PATHS | string; size?: number; className?: string }) {

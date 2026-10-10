@@ -28,7 +28,7 @@ export const CHALLENGE04: Spec<Extract<GameAction, { type: "CHALLENGE" }>> = {
   targets: (s, p) => s.auction!.seatOrder.filter((id) => id !== p.playerId),
   check: (s, p, action) => action ? offerLegal(s, p, action) : null,
   apply: (ctx, p, action) => {
-    ctx.s.auction!.challenge = { challenger: p.playerId, target: action.targetId, wager: action.wager, effectiveWager: 0, deck: [], challengerHand: [], targetHand: [], turn: action.targetId, stood: [], coinAsked: [] };
+    ctx.s.auction!.challenge = { challenger: p.playerId, target: action.targetId, wager: action.wager, effectiveWager: 0, deck: [], challengerHand: [], targetHand: [], turn: action.targetId, stood: [], coinAsked: [], bust: null };
     openWindow(ctx, {
       kind: "S4_CHALLENGE", title: m`Blackjack challenge`, prompt: m`Accept the Blackjack wager or decline?`,
       addressees: [action.targetId], options: [{ id: "ACCEPT", label: m`Accept` }, { id: "DECLINE", label: m`Decline` }],
@@ -42,6 +42,14 @@ function turnWindow(ctx: Ctx, challenge: Challenge): void {
     kind: "S4_BLACKJACK", title: m`Blackjack`, prompt: m`Hit or stand?`,
     addressees: [challenge.turn], options: [{ id: "HIT", label: m`Hit` }, { id: "STAND", label: m`Stand` }],
     defaultOptionId: "STAND", resume: { kind: "S4_BLACKJACK" }, blocksTable: true, ownerId: challenge.turn,
+  });
+}
+
+function bustWindow(ctx: Ctx, challenge: Challenge): void {
+  openWindow(ctx, {
+    kind: "S4_BLACKJACK_RESULT", title: m`Blackjack result`, prompt: m`The final card is on the table. Confirm to return to the auction.`,
+    addressees: [challenge.target, challenge.challenger], options: [{ id: "CONTINUE", label: m`Continue` }],
+    defaultOptionId: "CONTINUE", resume: { kind: "S4_BLACKJACK_RESULT" }, blocksTable: true, ownerId: challenge.bust!.playerId,
   });
 }
 
@@ -129,9 +137,13 @@ onResume("S4_BLACKJACK", (ctx, _window, answers) => {
   const actor = challenge.turn;
   const hand = actor === challenge.target ? challenge.targetHand : challenge.challengerHand;
   if (answers[actor] === "HIT") {
-    hand.push(challenge.deck.pop()!);
+    const card = challenge.deck.pop()!;
+    hand.push(card);
     cue(ctx, "S4_BLACKJACK_CARD", { playerId: actor, total: blackjackTotal04(hand) });
-    if (blackjackTotal04(hand) > 21) return settle(ctx, actor === challenge.target ? challenge.challenger : challenge.target);
+    if (blackjackTotal04(hand) > 21) {
+      challenge.bust = { playerId: actor, card, total: blackjackTotal04(hand), winnerId: actor === challenge.target ? challenge.challenger : challenge.target };
+      return bustWindow(ctx, challenge);
+    }
     return turnWindow(ctx, challenge);
   }
   challenge.stood.push(actor);
@@ -142,4 +154,9 @@ onResume("S4_BLACKJACK", (ctx, _window, answers) => {
   const target = blackjackTotal04(challenge.targetHand);
   const challenger = blackjackTotal04(challenge.challengerHand);
   settle(ctx, target === challenger ? null : target > challenger ? challenge.target : challenge.challenger);
+});
+
+onResume("S4_BLACKJACK_RESULT", (ctx) => {
+  const winner = ctx.s.auction?.challenge?.bust?.winnerId;
+  if (winner) settle(ctx, winner);
 });

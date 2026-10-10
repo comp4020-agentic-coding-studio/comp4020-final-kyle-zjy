@@ -284,6 +284,11 @@ describe("Scenario 04 revised rules", () => {
     grant(s, "a", "LOT_05", "LOT_07");
     while (activePlayerId(s) !== "a") { const id = activePlayerId(s)!; s = act(s, id, { type: "PASS" }); s = act(s, id, { type: "END_TURN" }); }
     s = act(s, "a", { type: "USE_LOT", lotId: "LOT_05", sourceLotId: "LOT_01" });
+    expect(s.auction!.players.a.items).toEqual(["LOT_07"]);
+    expect(s.auction!.itemInstances.LOT_05.consumed).toBe(true);
+    expect(s.auction!.players.a.armedBlackDie).toBe(0);
+    expect(project(s, "a").auction!.players.a.itemNotice).toMatchObject({ lotId: "LOT_05", result: "COUNTERFEIT" });
+    expect(project(s, "b").auction!.players.a.itemNotice).toBeNull();
     s = act(s, "a", { type: "USE_LOT", lotId: "LOT_07" });
     expect(s.auction!.players.a.items).toEqual([]);
     expect(s.auction!.players.a.sanityWard).toBe(false);

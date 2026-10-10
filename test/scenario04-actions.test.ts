@@ -115,6 +115,28 @@ describe("Scenario 04 tactical actions", () => {
     expect(s.auction!.players.b.debt).toBe(1);
   });
 
+  it("holds a busted Blackjack hand and last card until both players confirm", () => {
+    let s = start();
+    s = act(s, "a", { type: "CHALLENGE", targetId: "b", wager: 2 });
+    s = answer(s, "ACCEPT");
+    s.auction!.challenge!.targetHand = [10, 10];
+    s.auction!.challenge!.deck.push(13);
+    const chipsBefore = s.auction!.players.a.blackChips;
+    s = answer(s, "HIT");
+    expect(s.pending.at(-1)).toMatchObject({ kind: "S4_BLACKJACK_RESULT", addressees: ["b", "a"] });
+    expect(s.auction!.challenge!.targetHand).toEqual([10, 10, 13]);
+    expect(s.auction!.challenge!.bust).toMatchObject({ playerId: "b", card: 13, total: 30, winnerId: "a" });
+    expect(project(s, "b").auction!.challenge?.bust?.card).toBe(13);
+    expect(project(s, "a").auction!.challenge?.targetHand).toEqual([10, 10, 13]);
+    expect(s.auction!.players.a.blackChips).toBe(chipsBefore);
+    s = answer(s, "CONTINUE");
+    expect(s.auction!.challenge?.bust?.total).toBe(30);
+    expect(s.pending.at(-1)?.kind).toBe("S4_BLACKJACK_RESULT");
+    s = act(s, "a", { type: "RESPOND", windowId: s.pending.at(-1)!.id, optionId: "CONTINUE" });
+    expect(s.auction!.challenge).toBeNull();
+    expect(s.auction!.players.a.blackChips).toBe(chipsBefore + 4);
+  });
+
   it("borrowing increases private chips and public debt, while sabotage is consumed by the next roll", () => {
     let s = start();
     s = act(s, "a", { type: "BORROW" });

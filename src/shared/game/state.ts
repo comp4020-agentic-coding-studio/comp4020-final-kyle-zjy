@@ -327,7 +327,7 @@ export type RoundRecord = {
 
 export type Job = { kind: "TICKET_CHECK" | "ECHO_STRIKE"; playerId: PlayerId; payload?: Record<string, string | number> };
 
-export type WindowKind = "FATE_SPEND" | "REACTION" | "PASSIVE_CONFIRM" | "TARGET_CHOICE" | "EVENT_CHOICE" | "VOTE" | "TRADE_OFFER" | "ENDING_CHOICE" | "SKILL_CHOICE" | "SUPPLY_CHOICE" | "S4_DEAL" | "S4_CHALLENGE" | "S4_BLACKJACK" | "S4_COIN";
+export type WindowKind = "FATE_SPEND" | "REACTION" | "PASSIVE_CONFIRM" | "TARGET_CHOICE" | "EVENT_CHOICE" | "VOTE" | "TRADE_OFFER" | "ENDING_CHOICE" | "SKILL_CHOICE" | "SUPPLY_CHOICE" | "S4_DEAL" | "S4_CHALLENGE" | "S4_BLACKJACK" | "S4_BLACKJACK_RESULT" | "S4_COIN";
 
 export type WindowOption = { id: string; label: Msg; detail?: Msg };
 

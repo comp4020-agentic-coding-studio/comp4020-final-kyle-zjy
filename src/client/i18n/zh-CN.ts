@@ -357,6 +357,7 @@ export const zhCN: Catalog = {
   "decision.kind.S4_DEAL": "拍卖交易",
   "decision.kind.S4_CHALLENGE": "二十一点挑战",
   "decision.kind.S4_BLACKJACK": "二十一点回合",
+  "decision.kind.S4_BLACKJACK_RESULT": "二十一点结果",
   "decision.kind.S4_COIN": "赌徒硬币",
   "decision.voted": "已投票 {n}/{of} · 所有人选完之前，投票保密",
   "decision.youChose": "你选择了「{label}」。",

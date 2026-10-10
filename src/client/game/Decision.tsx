@@ -19,6 +19,13 @@ export function DecisionLayer({ g }: { g: PlayerView }) {
   return <AnimatePresence>{mine ? <DecisionCard key={w.id} g={g} w={w} /> : <Waiting key={`wait-${w.id}`} g={g} w={w} />}</AnimatePresence>;
 }
 
+const blackjackCard = (card: number) => card === 1 ? "A" : card === 11 ? "J" : card === 12 ? "Q" : card === 13 ? "K" : String(card);
+function blackjackScore(cards: number[]) {
+  let total = cards.reduce((sum, card) => sum + (card === 1 ? 1 : Math.min(card, 10)), 0);
+  for (const card of cards) if (card === 1 && total + 10 <= 21) total += 10;
+  return total;
+}
+
 function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
   // an event's vote happens while it is open; a later vote (the boat's departure) is its own decision
   const isEvent = (w.kind === "VOTE" || w.kind === "EVENT_CHOICE") && g.currentEvent && !g.currentEvent.resolved;
@@ -71,12 +78,16 @@ function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
             const asset = deal.forPass ? t("s4.decision.pass") : deal.giveIntel ? auctionIntelText(locale, deal.giveIntel) : deal.forIntel ? auctionIntelText(locale, deal.forIntel) : deal.giveItem ? auctionLotText(locale, deal.giveItem).name : deal.forItem ? auctionLotText(locale, deal.forItem).name : "·";
             return <p className="mt-2 rounded-xl border border-gold/30 p-3 text-sm">{t("s4.decision.deal", { from: g.players[deal.from].nickname, to: g.players[deal.to].nickname, pay: deal.chips, receive: deal.receiveChips ?? 0, asset })}</p>;
           })()}
-          {w.kind === "S4_BLACKJACK" && g.auction?.challenge && <div className="mt-2 grid gap-1 rounded-xl border border-gold/30 p-3 text-sm">
+          {(w.kind === "S4_BLACKJACK" || w.kind === "S4_BLACKJACK_RESULT") && g.auction?.challenge && <div className="mt-2 grid gap-1 rounded-xl border border-gold/30 p-3 text-sm">
             {([g.auction.challenge.target, g.auction.challenge.challenger] as const).map((id) => {
               const hand = id === g.auction!.challenge!.target ? g.auction!.challenge!.targetHand : g.auction!.challenge!.challengerHand;
-              const score = (cards: number[]) => { let n = cards.reduce((sum, card) => sum + (card === 1 ? 1 : Math.min(card, 10)), 0); for (const card of cards) if (card === 1 && n + 10 <= 21) n += 10; return n; };
-              return <p key={id}>{t("s4.decision.hand", { name: g.players[id].nickname, cards: hand.map((card) => card === 1 ? "A" : card === 11 ? "J" : card === 12 ? "Q" : card === 13 ? "K" : String(card)).join(" "), total: score(hand) })}</p>;
+              return <p key={id}>{t("s4.decision.hand", { name: g.players[id].nickname, cards: hand.map(blackjackCard).join(" "), total: blackjackScore(hand) })}</p>;
             })}
+          </div>}
+          {w.kind === "S4_BLACKJACK_RESULT" && g.auction?.challenge?.bust && <div role="status" aria-live="assertive" className="mt-3 rounded-xl border-2 border-ember bg-ember/15 p-3 text-center">
+            <p className="label text-ember">{t("s4.decision.bust")}</p>
+            <p className="mt-1 text-sm text-moon">{t("s4.decision.bustCard", { name: g.players[g.auction.challenge.bust.playerId].nickname, card: blackjackCard(g.auction.challenge.bust.card), total: g.auction.challenge.bust.total })}</p>
+            <p className="mt-2 font-display text-2xl font-semibold text-gold-bright">{t(g.auction.challenge.bust.playerId === g.viewerId ? "s4.decision.youLost" : "s4.decision.opponentBustWon")}</p>
           </div>}
           <div className="mt-4 grid gap-2">
             {w.options.map((o, i) => (

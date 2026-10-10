@@ -236,6 +236,9 @@ The auction retains the Scenario 03 screen structure and shared HUD. The
 central panel is a dark, gold-edged table: lot and price in the middle, fixed
 clockwise seats nearby on wide screens (opposed for two players), and a simple
 grid on phones. The own player HUD is centered within the Scenario 04 dock.
+The current public lot card shows its name and distinct symbol with bidding
+status, but never prints its item effect or unrevealed authenticity. Certified
+intel stays in its separate, explicitly exposed section.
 The original auction progress bar remains in the shared top bar. A separate
 Scenario 04 meter under the objective gauges irreversible hall Collapse from
 0 to 10, with its number and a short explanation. The auction header uses two
@@ -255,7 +258,11 @@ The item picker shows held lots and an explicit use control; Chrono Key opens
 the four earlier source choices. Acquiring a lot at auction or in a deal raises
 an owner-only inventory notice for one second. A used item leaves the picker and raises a
 short owner-only result notice for activation, copying, or counterfeit
-discovery. These notices use text as well as colour. Active auction effects and
+discovery. Counterfeit discovery uses an assertive, prominent alert above the
+auction interface, while other players receive no such notice. Blackjack HIT
+busts leave the drawn card and updated total in a two-player result decision;
+both players confirm before the table resumes. These notices use text as well
+as colour. Active auction effects and
 temporary penalties use the same chips as the own ability, immediately after
 it; chips disappear when the server state says the effect ended.
 
