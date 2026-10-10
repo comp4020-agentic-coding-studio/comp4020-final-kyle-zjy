@@ -46,6 +46,8 @@ const PATHS: Record<string, string> = {
   SABOTAGE: "M12 3l2 6 6 1-5 4 1 7-4-3-4 3 1-7-5-4 6-1z",
   BORROW: "M4 8h16M4 12h16M4 16h16M8 5v14M16 5v14",
   EXPOSE: "M12 3v11M12 18v3M5 6l3 3M19 6l-3 3M4 15h4M16 15h4",
+  RECOVER: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10zM12 9v6M9 12h6",
+  USE_LOT: "M6 8h12v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2zM9 8V6a3 3 0 0 1 6 0v2M10 13h4",
 };
 
 export function Icon({ name, size = 22, className = "" }: { name: keyof typeof PATHS | string; size?: number; className?: string }) {

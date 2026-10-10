@@ -39,8 +39,11 @@ describe("Scenario 04 content and abilities", () => {
     for (let round = 1; round <= 10; round++) {
       expect(s.round).toBe(round);
       expect(s.auction!.currentLot).toBe(LOTS04[round - 1].id);
-      if (round === 7) expect(s.auction!.connectedPlayerId).toBe(s.auction!.seatOrder[0]);
-      for (let i = 0; i < 3; i++) s = act(s, activePlayerId(s)!, { type: "PASS" });
+      for (let i = 0; i < 3; i++) {
+        const id = activePlayerId(s)!;
+        s = act(s, id, { type: "PASS" });
+        s = act(s, id, { type: "END_TURN" });
+      }
       expect(s.auction!.auctionHistory.at(-1)).toMatchObject({ round, winnerId: null });
     }
     expect(s.outcome).toBe("S04_UNSOLD");
@@ -50,9 +53,11 @@ describe("Scenario 04 content and abilities", () => {
   it("uses the Black Die once and preserves exact private chip counts", () => {
     let s = start();
     s.auction!.players.a.items.push("LOT_01");
-    rigNextDie(s, 4);
+    s.auction!.players.a.nextRollPenalty = -2;
+    rigNextDie(s, 1);
     s = act(s, "a", { type: "INVESTIGATE" });
-    expect(s.roll!.modifiers.some((modifier) => modifier.delta === 1)).toBe(true);
+    expect(s.roll!.final).toBe(6);
+    expect(s.auction!.players.a.nextRollPenalty).toBe(0);
     expect(s.auction!.players.a.usedLotEffects).toContain("LOT_01");
     expect(project(s, "b").auction!.players.a.blackChips).toBeNull();
   });
@@ -79,16 +84,15 @@ describe("Scenario 04 content and abilities", () => {
     }
   });
 
-  it("shows the Red Contract's actual payment before acceptance and settles that amount", () => {
+  it("settles a deal at its stated terms without a Red Contract discount", () => {
     let s = start();
     s.auction!.players.a.items.push("LOT_04");
     s = act(s, "a", { type: "DEAL", targetId: "b", chips: 2, forPass: true });
-    expect(project(s, "b").auction!.deal).toMatchObject({ chips: 1, contractDiscount: true });
+    expect(project(s, "b").auction!.deal).toMatchObject({ chips: 2 });
     const w = s.pending.at(-1)!;
     s = act(s, "b", { type: "RESPOND", windowId: w.id, optionId: "ACCEPT" });
-    expect(s.auction!.players.a.blackChips).toBe(7);
-    expect(s.auction!.players.b.blackChips).toBe(9);
-    expect(s.auction!.players.a.usedLotEffects).toContain("LOT_04");
+    expect(s.auction!.players.a.blackChips).toBe(6);
+    expect(s.auction!.players.b.blackChips).toBe(10);
     expect(s.auction!.passedPlayers).toContain("b");
   });
 
@@ -99,22 +103,28 @@ describe("Scenario 04 content and abilities", () => {
     s.auction!.currentBid = 7;
     expect(() => act(s, "a", { type: "BID", amount: 10 })).toThrow();
     s.auction!.players.a.items.push("LOT_08");
-    s = act(s, "a", { type: "BID", amount: 10 });
+    s = act(s, "a", { type: "BID", amount: 8 });
+    expect(s.auction!.currentBid).toBe(10);
+    expect(s.auction!.currentBidReal).toBe(8);
+    s = act(s, "a", { type: "END_TURN" });
     s = act(s, "b", { type: "PASS" });
+    s = act(s, "b", { type: "END_TURN" });
     s = act(s, "c", { type: "PASS" });
-    expect(s.auction!.auctionHistory.at(-1)).toMatchObject({ winnerId: "a", price: 10 });
+    s = act(s, "c", { type: "END_TURN" });
+    expect(s.auction!.auctionHistory.at(-1)).toMatchObject({ winnerId: "a", price: 8 });
     expect(s.auction!.players.a.blackChips).toBe(0);
     expect(s.outcome).toBe("S04_EXIT");
   });
 
-  it("uses Bottomless Credit once without adding Debt, then borrows normally", () => {
+  it("uses Bottomless Credit once to clear Debt", () => {
     let s = start();
     s.auction!.players.a.items.push("LOT_06");
-    s = act(s, "a", { type: "BORROW" });
-    expect(s.auction!.players.a).toMatchObject({ blackChips: 10, debt: 0 });
+    s.auction!.players.a.debt = 3;
+    s = act(s, "a", { type: "USE_LOT", lotId: "LOT_06" });
+    expect(s.auction!.players.a).toMatchObject({ blackChips: 8, debt: 0 });
     expect(s.auction!.players.a.usedLotEffects).toContain("LOT_06");
-    s.round = 2;
     s = act(s, "a", { type: "BORROW" });
-    expect(s.auction!.players.a).toMatchObject({ blackChips: 12, debt: 1 });
+    expect(s.auction!.players.a).toMatchObject({ blackChips: 10, debt: 1 });
+    expect(() => act(s, "a", { type: "USE_LOT", lotId: "LOT_06" })).toThrow();
   });
 });

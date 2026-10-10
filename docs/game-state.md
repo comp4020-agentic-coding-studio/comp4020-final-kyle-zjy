@@ -356,12 +356,17 @@ stays in the run). Shields and other protections still apply.
 The ten lots live in `src/shared/game/scenario04/lots.ts`. `auction` records
 fixed seat order, active lot, high bid and bidder, passed seats, each round's
 opening seat, settlement history, player Black Chips, Debt, won lots,
-certified private intel and READ snapshots. Black Chips and intel are private;
+certified private intel, READ results, and Glass Eye snapshots. Black Chips and intel are private;
 Debt and won lots are public. Fate, Sanity, AP, Lost, and the seeded die use
-the shared player and roll structures. AP refreshes to 2 each round (1 when
-Lost), never on an additional bidding lap.
+the shared player and roll structures. AP refreshes to 1 each round, or 2
+for the three full rounds after acquiring Red Contract (1 when Lost). It never
+refreshes on an additional bidding lap. Successful bids and passes remain on
+the same turn until END_TURN; one bid is allowed per turn.
 
 A winner pays only at settlement. The winner opens next round immediately
 after their seat; an unsold round opens after its previous opening seat.
 Round 10 still uses BID/PASS. The crown can cover two chips of its holder's
-final bid; high Debt changes a winning ending into the debt ending.
+final bid while its holder pays the real amount; high Debt changes a winning
+ending into the debt ending. Lots 5 and 7 are counterfeit, while Lot 10 is the
+final objective and does not enter inventory. The active items are Glass Eye,
+Bottomless Credit, and Devil's Key; Gambler's Coin is chosen during Blackjack.

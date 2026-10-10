@@ -10,5 +10,6 @@ export function Private04({ g }: { g: PlayerView }) {
   return <>
     <Section title={t("s4.private.title")} empty={t("s4.private.empty")} items={(mine?.privateIntel ?? []).map((id) => ({ id, text: auctionIntelText(locale, id) }))} />
     <Section title={t("s4.private.reads")} empty={t("s4.private.empty")} items={(mine?.reads ?? []).map((read, index) => ({ id: `${read.targetId}-${index}`, text: t("s4.private.read", { name: g.players[read.targetId]?.nickname ?? "?", chips: read.blackChips, intel: t(read.hasCurrentIntel ? "s4.private.yes" : "s4.private.no") }) }))} />
+    <Section title={t("s4.private.glass")} empty={t("s4.private.empty")} items={(mine?.glassEyeSnapshots ?? []).flatMap((snapshot, index) => Object.entries(snapshot.chips).map(([id, chips]) => ({ id: `${index}-${id}`, text: t("s4.private.glassEntry", { round: snapshot.round, name: g.players[id]?.nickname ?? "?", chips }) })))} />
   </>;
 }

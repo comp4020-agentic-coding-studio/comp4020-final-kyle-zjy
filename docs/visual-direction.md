@@ -234,6 +234,9 @@ toggle is always visible in the top bar and remembered per device.
 
 The auction retains the Scenario 03 screen structure and shared HUD. The
 central panel is a dark, gold-edged table: lot and price in the middle, fixed
-clockwise seats nearby on wide screens, and a simple grid on phones. Turn,
+clockwise seats nearby on wide screens (opposed for two players), and a simple
+grid on phones. The own player HUD is centered within the Scenario 04 dock.
+Core BID/PASS actions, tactical actions, and the shared ability/item/end-turn
+row have distinct levels. Turn,
 leading, and passed states have text labels as well as color. On narrow
 screens the lot, table status, PlayersStrip, and Dock stack in that order.

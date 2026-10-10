@@ -5,7 +5,7 @@ import { startEnding } from "../ending.ts";
 import { registerScenario } from "../scenario.ts";
 import { s04Actions } from "./actions.ts";
 import { openAuctionRound04 } from "./auction.ts";
-import { PASS04 } from "./auction.ts";
+import { skipAuctionTurn04 } from "./auction.ts";
 import { createScenario04 } from "./create.ts";
 
 registerScenario({
@@ -15,8 +15,13 @@ registerScenario({
   itemPools: { any: [], buff: [] },
   roundOpens: openAuctionRound04,
   roundHeader: (s) => m`— Auction ${s.round} of 10 —`,
-  apFor: (_s, p) => p.lost ? 1 : 2,
-  skipTurn: (ctx, p) => PASS04.apply(ctx, p, { type: "PASS" }),
+  apFor: (s, p) => p.lost ? 1 : s.auction!.players[p.playerId].items.includes("LOT_04") && s.round >= s.auction!.players[p.playerId].redContractStartsRound && s.auction!.players[p.playerId].redContractRemainingRounds > 0 ? 2 : 1,
+  skipTurn: skipAuctionTurn04,
+  roundCloses: (ctx) => {
+    for (const player of Object.values(ctx.s.auction!.players)) {
+      if (player.items.includes("LOT_04") && ctx.s.round >= player.redContractStartsRound && player.redContractRemainingRounds > 0) player.redContractRemainingRounds--;
+    }
+  },
   onRoundStart: () => {},
   afterTurns: () => "WORLD",
   worldStep: () => {},

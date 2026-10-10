@@ -51,7 +51,7 @@ export function Scenario04Game() {
     <Objective04 />
     <div className="flex min-h-0 flex-1 flex-col justify-center gap-1 py-1">
       <AuctionTable04 g={g} />
-      <PlacePanel04 />
+      <PlacePanel04 g={g} />
       <EventPanel g={g} />
       <PlayersStrip g={g} onOpen={setSheet} tag={(id) => <><span>{t("s4.table.debt", { n: g.auction!.players[id].debt })}</span>{g.auction!.players[id].passed && <span className="text-ember">{t("s4.table.passed")}</span>}</>} />
     </div>

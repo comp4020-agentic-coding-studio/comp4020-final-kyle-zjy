@@ -35,7 +35,8 @@ describe("Scenario 04 tactical actions", () => {
     s = settleRoll(act(s, "a", { type: "INVESTIGATE" }));
     expect(s.auction!.players.a.privateIntel).toEqual(["LOT_01_LIMIT", "LOT_01_PERFECT"]);
     expect(project(s, "b").auction!.players.a.privateIntel).toBeNull();
-    expect(s.players.a.ap).toBe(1);
+    expect(s.players.a.ap).toBe(0);
+    s.players.a.ap = 1; // Red Contract permits a second tactical action in a turn.
     rigNextDie(s, 6);
     s = settleRoll(act(s, "a", { type: "READ", targetId: "b" }));
     expect(s.auction!.players.a.reads.at(-1)).toMatchObject({ targetId: "b", blackChips: 8, hasCurrentIntel: false });
@@ -60,6 +61,8 @@ describe("Scenario 04 tactical actions", () => {
     expect(s.auction!.passedPlayers).toContain("b");
     expect(activePlayerId(s)).toBe("a");
     s = act(s, "a", { type: "BID", amount: 1 });
+    expect(activePlayerId(s)).toBe("a");
+    s = act(s, "a", { type: "END_TURN" });
     expect(activePlayerId(s)).toBe("c");
   });
 
@@ -87,7 +90,7 @@ describe("Scenario 04 tactical actions", () => {
     let s = start();
     s.auction!.players.b.blackChips = 2;
     s = act(s, "a", { type: "CHALLENGE", targetId: "b", wager: 5 });
-    expect(s.players.a.ap).toBe(1);
+    expect(s.players.a.ap).toBe(0);
     s = answer(s, "ACCEPT");
     expect(s.auction!.challenge?.effectiveWager).toBe(2);
     expect(s.auction!.players.a.blackChips).toBe(6);
@@ -117,10 +120,12 @@ describe("Scenario 04 tactical actions", () => {
     s = act(s, "a", { type: "BORROW" });
     expect(project(s, "b").auction!.players.a).toMatchObject({ blackChips: null, debt: 1 });
     expect(() => act(s, "a", { type: "BORROW" })).toThrow();
+    s.players.a.ap = 1;
     rigNextDie(s, 5);
     s = settleRoll(act(s, "a", { type: "SABOTAGE", targetId: "b" }));
     expect(s.auction!.players.b.nextRollPenalty).toBe(-1);
     s = act(s, "a", { type: "PASS" });
+    s = act(s, "a", { type: "END_TURN" });
     rigNextDie(s, 5);
     s = settleRoll(act(s, "b", { type: "INVESTIGATE" }));
     expect(s.roll?.modifiers).toContainEqual({ source: expect.anything(), delta: -1 });

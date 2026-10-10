@@ -317,13 +317,14 @@ Low-level modules hand hooks upward by registration (`setInterceptor`,
 
 `scenario04/rules.ts` registers a ten-round auction with the same engine
 queue, dice pipeline, persistence, and server projection as the earlier
-scenarios. Bidding may circle the fixed seats repeatedly; BID and PASS advance
-the auction, while the other actions keep the bidder's turn. The client uses
+scenarios. Bidding may circle the fixed seats repeatedly. BID, PASS, and tactical
+actions keep the bidder's turn; only END_TURN advances to the next eligible
+seat. Settlement alone advances the round. The client uses
 the Scenario 03 game-screen skeleton and shared HUD, Dice, Decision, Dock,
 PlayersStrip, PlayerSheet, SecretsDrawer, and LogDrawer. Only the central
 table, auction panels, dock content, and private sections are scenario code.
 
 Black Chips and certified intel stay in authoritative `auction` state. The
-projection emits exact chips, intel, and READ snapshots only to their owner;
+projection emits exact chips, intel, READ results, and Glass Eye snapshots only to their owner;
 Debt, items, bids, turn order, and the record statistics are public. Deal and
 Blackjack windows settle inside the serialized action transaction.

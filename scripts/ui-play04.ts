@@ -67,6 +67,11 @@ const done = new Set<string>();
 let declinedChallenge = false;
 let acceptedChallenge = false;
 let acceptedDeal = false;
+let bidKeptTurn = false;
+let usedCredit = false;
+let usedDevil = false;
+let sawNextRoundOrder = false;
+let sawFakeItem = false;
 try {
   await phone.goto(base);
   await phone.getByRole("button", { name: "Create room" }).click();
@@ -84,6 +89,10 @@ try {
   await shot(desk, "desktop", "intro");
   await phone.getByRole("button", { name: "Enter the auction" }).click();
   await desk.getByRole("button", { name: "Enter the auction" }).click();
+  await phone.locator('[data-action="USE_LOT"]').waitFor({ state: "visible" });
+  if (!await visible(phone.getByText(/1 AP/).first())) problems.push("Scenario 04 did not start with 1 AP");
+  if (!await visible(phone.locator('[data-action="USE_LOT"]'))) problems.push("the shared item entry is missing");
+  if ((await phone.locator('[data-action="USE_SKILL"]').innerText()).trim() === "Ability") problems.push("ability button has no character-specific name");
   const pages: [Page, string][] = [[phone, "phone"], [desk, "desktop"]];
   for (let step = 0; step < 500 && reached < 10; step++) {
     let acted = false;
@@ -92,6 +101,7 @@ try {
       const text = await page.locator("header").first().innerText().catch(() => "");
       const round = Number(text.match(/ROUND\s+(\d+)\s*\/\s*10/i)?.[1] ?? 0);
       if (round > 0) { reached = Math.max(reached, round - 1); await shot(page, tag, `round-${round}`); }
+      if (round === 2 && await visible(page.getByText("First lap: Bea → Kyle", { exact: true }))) sawNextRoundOrder = true;
       const decision = page.locator('[role="dialog"][aria-modal="true"]');
       if (await visible(decision)) {
         await shot(page, tag, "decision");
@@ -122,6 +132,17 @@ try {
         }
         continue;
       }
+      if (await visible(page.locator('[data-s4-picker="USE_LOT"]'))) {
+        await shot(page, tag, "item-picker");
+        if (tag === "desktop" && await visible(page.getByText(/Prototype Chrono Key/))) sawFakeItem = true;
+        const item = round === 10 && tag === "desktop"
+          ? page.locator('[data-s4-picker="USE_LOT"] button').filter({ hasText: "The Devil's Key" })
+          : page.locator('[data-s4-picker="USE_LOT"] button:not([disabled])');
+        acted = await tap(item);
+        if (acted && round === 7 && tag === "phone") usedCredit = true;
+        if (acted && round === 10 && tag === "desktop") usedDevil = true;
+        continue;
+      }
       if (await visible(page.locator('[data-skill-confirm]'))) { acted = await tap(page.locator('[data-skill-confirm]')); continue; }
       if (await visible(page.locator('[data-s4-picker="SABOTAGE"] button'))) { acted = await tap(page.locator('[data-s4-picker="SABOTAGE"] button')); continue; }
       if (await visible(page.locator('[data-s4-picker="READ"] button'))) { acted = await tap(page.locator('[data-s4-picker="READ"] button')); continue; }
@@ -143,21 +164,22 @@ try {
       if (round === 1 && !done.has(key("bid")) && await enabled(action("BID"))) {
         if (!await tap(action("BID"))) continue;
         await shot(page, tag, "bid-picker");
-        acted = await tap(page.getByRole("button", { name: tag === "phone" ? "1" : "2", exact: true }).last());
-        if (acted) done.add(key("bid"));
+        acted = await tap(page.locator('[data-s4-picker="BID"] button').first());
+        if (acted) { done.add(key("bid")); if (tag === "phone") bidKeptTurn = await visible(page.getByText("Your turn", { exact: true })); }
         continue;
       }
-      if (round === 1 && tag === "phone" && done.has(key("bid")) && !done.has(key("rebid")) && await enabled(action("BID"))) {
+      if (round === 1 && tag === "phone" && done.has("desktop:1:bid") && !done.has(key("rebid")) && await enabled(action("BID"))) {
         if (!await tap(action("BID"))) continue;
-        acted = await tap(page.getByRole("button", { name: "3", exact: true }).last());
+        acted = await tap(page.locator('[data-s4-picker="BID"] button').first());
         if (acted) done.add(key("rebid"));
         continue;
       }
-      if (round === 2 && !done.has(key("investigate")) && await enabled(action("INVESTIGATE"))) { acted = await tap(action("INVESTIGATE")); if (acted) done.add(key("investigate")); continue; }
-      if (round === 2 && !done.has(key("read")) && await enabled(action("READ"))) { acted = await tap(action("READ")); if (acted) { done.add(key("read")); await page.locator('[data-s4-picker="READ"]').waitFor(); } continue; }
-      if (round === 3 && !done.has(key("borrow")) && await enabled(action("BORROW"))) { acted = await tap(action("BORROW")); if (acted) done.add(key("borrow")); continue; }
-      if (round === 3 && !done.has(key("challenge")) && await enabled(action("CHALLENGE"))) { acted = await tap(action("CHALLENGE")); if (acted) { done.add(key("challenge")); await page.locator('[data-s4-picker="CHALLENGE"]').waitFor(); } continue; }
+      if (round === 2 && tag === "desktop" && !done.has(key("investigate")) && await enabled(action("INVESTIGATE"))) { acted = await tap(action("INVESTIGATE")); if (acted) done.add(key("investigate")); continue; }
+      if (round === 2 && tag === "phone" && !done.has(key("read")) && await enabled(action("READ"))) { acted = await tap(action("READ")); if (acted) { done.add(key("read")); await page.locator('[data-s4-picker="READ"]').waitFor(); } continue; }
+      if ((tag === "phone" && [2, 3, 8, 10].includes(round) || tag === "desktop" && [3, 9].includes(round)) && !done.has(key("borrow")) && await enabled(action("BORROW"))) { acted = await tap(action("BORROW")); if (acted) done.add(key("borrow")); continue; }
+      if ((round === 3 || round === 5 && tag === "phone") && !done.has(key("challenge")) && await enabled(action("CHALLENGE"))) { acted = await tap(action("CHALLENGE")); if (acted) { done.add(key("challenge")); await page.locator('[data-s4-picker="CHALLENGE"]').waitFor(); } continue; }
       if (round === 4 && !done.has(key("deal")) && await enabled(action("DEAL"))) { acted = await tap(action("DEAL")); if (acted) { done.add(key("deal")); await page.locator('[data-s4-picker="DEAL"]').waitFor(); } continue; }
+      if (round === 7 && tag === "phone" && !done.has(key("item")) && await enabled(action("USE_LOT"))) { acted = await tap(action("USE_LOT")); if (acted) { done.add(key("item")); await page.locator('[data-s4-picker="USE_LOT"]').waitFor(); } continue; }
       if (round === 7 && tag === "phone" && !done.has(key("ability")) && await enabled(action("USE_SKILL"))) { acted = await tap(action("USE_SKILL")); if (acted) { done.add(key("ability")); await page.locator('[data-skill-confirm]').waitFor(); } continue; }
       if (round === 7 && tag === "phone" && done.has(key("ability")) && !done.has(key("expose")) && await enabled(action("EXPOSE"))) { acted = await tap(action("EXPOSE")); if (acted) { done.add(key("expose")); await page.locator('[data-s4-picker="EXPOSE"]').waitFor(); } continue; }
       if (round === 8 && !done.has(key("sabotage")) && await enabled(action("SABOTAGE"))) {
@@ -167,13 +189,28 @@ try {
         if (acted) done.add(key("sabotage"));
         continue;
       }
-      if (round === 10 && !done.has("finalBid") && await enabled(action("BID"))) {
+      if (round === 10 && tag === "desktop" && !done.has(key("devil")) && await enabled(action("USE_LOT"))) { acted = await tap(action("USE_LOT")); if (acted) { done.add(key("devil")); await page.locator('[data-s4-picker="USE_LOT"]').waitFor(); } continue; }
+      if (round === 10 && tag === "desktop" && done.has(key("devil")) && !done.has(key("recover")) && await enabled(action("RECOVER"))) { acted = await tap(action("RECOVER")); if (acted) done.add(key("recover")); continue; }
+      if (round === 10 && tag === "phone" && !done.has("finalBid") && await enabled(action("BID"))) {
         if (!await tap(action("BID"))) continue;
         acted = await tap(page.locator('[data-s4-picker="BID"] button').first());
         if (acted) done.add("finalBid");
         continue;
       }
+      if (round === 2 && tag === "desktop" && !done.has(key("bid")) && await enabled(action("BID"))) {
+        await tap(action("BID")); acted = await tap(page.locator('[data-s4-picker="BID"] button').first()); if (acted) done.add(key("bid")); continue;
+      }
+      if (round === 5 && tag === "desktop" && !done.has(key("bid")) && await enabled(action("BID"))) {
+        await tap(action("BID")); acted = await tap(page.locator('[data-s4-picker="BID"] button').first()); if (acted) done.add(key("bid")); continue;
+      }
+      if (round === 6 && tag === "phone" && !done.has(key("bid")) && await enabled(action("BID"))) {
+        await tap(action("BID")); acted = await tap(page.locator('[data-s4-picker="BID"] button').first()); if (acted) done.add(key("bid")); continue;
+      }
+      if (round === 9 && tag === "desktop" && !done.has(key("bid")) && await enabled(action("BID"))) {
+        await tap(action("BID")); acted = await tap(page.locator('[data-s4-picker="BID"] button').first()); if (acted) done.add(key("bid")); continue;
+      }
       if (await enabled(action("PASS"))) acted = await tap(action("PASS"));
+      else if (await enabled(action("END_TURN"))) acted = await tap(action("END_TURN"));
     }
     if (!acted) await phone.waitForTimeout(200);
   }
@@ -200,7 +237,13 @@ if (!done.has("phone:1:rebid")) problems.push("round one never made a second bid
 if (!declinedChallenge || !acceptedChallenge) problems.push("Blackjack accept and decline were not both exercised");
 if (!acceptedDeal) problems.push("Deal was never accepted");
 if (!done.has("finalBid")) problems.push("Exit Rights were never bid on");
-if (!readPerfect) problems.push("READ never reached a Perfect result");
+if (!seen.has("item-picker-phone") || !seen.has("item-picker-desktop")) problems.push("an owned item was not inspected in both contexts");
+if (!bidKeptTurn) problems.push("BID did not keep the bidder's turn");
+if (!sawNextRoundOrder) problems.push("the winner was not last in the next round's first lap");
+if (!sawFakeItem) problems.push("the counterfeit lot was not seen in inventory");
+if (!usedCredit || !usedDevil) problems.push("Bottomless Credit or Devil's Key was not used");
+if (!done.has("desktop:10:recover")) problems.push("RECOVER was not exercised after Devil's Key");
+if (!readPerfect) problems.push("Black Die did not resolve READ as Perfect");
 if (problems.length) console.error(problems.join("\n"));
 if (errors.length) console.error(errors.join("\n"));
 if (reached < 10 || problems.length || errors.length) process.exit(1);

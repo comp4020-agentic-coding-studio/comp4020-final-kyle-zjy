@@ -18,7 +18,9 @@ export function Objective04() {
   return <ObjectiveLine>{useT()("s4.objective")}</ObjectiveLine>;
 }
 
-export function PlacePanel04() {
+export function PlacePanel04({ g }: { g: PlayerView }) {
   const t = useT();
-  return <PlacePanel ariaLabel={t("s4.place.aria")} kicker={t("s4.place.kicker")} name={t("s4.place.name")} meta={t("s4.place.table")}><span /></PlacePanel>;
+  const a = g.auction!;
+  const state = a.auctionOpen ? "open" : a.auctionHistory.at(-1)?.winnerId ? "sold" : "unsold";
+  return <PlacePanel ariaLabel={t("s4.place.aria")} kicker={t("s4.place.kicker")} name={t("s4.place.name")} meta={t("s4.place.table")} flag={<span className="text-signal">{t("s4.place.roundState", { round: g.round, state: t(`s4.table.${state}`), actor: a.turnPlayerId ? g.players[a.turnPlayerId].nickname : t("s4.table.none") })}</span>}><span className="text-mist">{t("s4.place.atmosphere")}</span></PlacePanel>;
 }

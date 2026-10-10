@@ -7,7 +7,8 @@ import { m } from "../../../shared/i18n/msg.ts";
 import { fail, type Spec } from "../actions.ts";
 import { cue, log } from "../context.ts";
 import { onRollOutcome, startRoll } from "../dice.ts";
-import { loseSanity } from "../players.ts";
+import { gainSanity, loseSanity } from "../players.ts";
+import { MAX_SANITY } from "../../../shared/game/scenario01/content.ts";
 
 const otherPlayers = (s: GameState, p: PlayerGameState) => s.auction!.seatOrder.filter((id) => id !== p.playerId);
 
@@ -40,21 +41,23 @@ export const BORROW04: Spec<Extract<GameAction, { type: "BORROW" }>> = {
   check: (s, p) => {
     const a = s.auction!.players[p.playerId];
     if (p.counters.s4BorrowedRound === s.round) return fail("ILLEGAL_TARGET", m`You have already borrowed this round.`);
-    const credit = a.items.includes("LOT_06") && !Object.values(s.auction!.players).some((holder) => holder.usedLotEffects.includes("LOT_06"));
-    if (a.debt + (credit ? 0 : AUCTION_CONFIG04.borrowDebt) > AUCTION_CONFIG04.maxDebt) return fail("ILLEGAL_TARGET", m`Your debt limit has been reached.`);
+    if (a.debt + AUCTION_CONFIG04.borrowDebt > AUCTION_CONFIG04.maxDebt) return fail("ILLEGAL_TARGET", m`Your debt limit has been reached.`);
     return null;
   },
   apply: (ctx, p) => {
     const a = ctx.s.auction!;
     a.players[p.playerId].blackChips += AUCTION_CONFIG04.borrowChips;
-    const credit = a.players[p.playerId].items.includes("LOT_06") && !Object.values(a.players).some((holder) => holder.usedLotEffects.includes("LOT_06"));
-    a.players[p.playerId].debt += credit ? 0 : AUCTION_CONFIG04.borrowDebt;
-    if (credit) a.players[p.playerId].usedLotEffects.push("LOT_06");
+    a.players[p.playerId].debt += AUCTION_CONFIG04.borrowDebt;
     a.stats.borrows[p.playerId] = (a.stats.borrows[p.playerId] ?? 0) + 1;
     p.counters.s4BorrowedRound = ctx.s.round;
-    log(ctx, credit ? m`${p.nickname} borrows Black Chips using Bottomless Credit without new Debt.` : m`${p.nickname} borrows ${AUCTION_CONFIG04.borrowChips} Black Chips and gains ${AUCTION_CONFIG04.borrowDebt} Debt.`, "S4_BORROW", p.playerId);
+    log(ctx, m`${p.nickname} borrows ${AUCTION_CONFIG04.borrowChips} Black Chips and gains ${AUCTION_CONFIG04.borrowDebt} Debt.`, "S4_BORROW", p.playerId);
     cue(ctx, "S4_BORROW", { playerId: p.playerId });
   },
+};
+
+export const RECOVER04: Spec<Extract<GameAction, { type: "RECOVER" }>> = {
+  check: (_s, p) => p.sanity < MAX_SANITY ? null : fail("ILLEGAL_TARGET", m`Your Sanity is already full.`),
+  apply: (ctx, p) => { gainSanity(ctx, p, 1, m`recovering at the auction table`); },
 };
 
 export const EXPOSE04: Spec<Extract<GameAction, { type: "EXPOSE" }>> = {
@@ -96,11 +99,6 @@ onRollOutcome("S4_READ", (ctx, p, roll, rc) => {
   const targetIntel = target.privateIntel.filter((id) => id.startsWith(a.currentLot));
   mine.reads.push({ targetId, round: ctx.s.round, blackChips: target.blackChips, hasCurrentIntel: targetIntel.length > 0 });
   if (roll.tier === "PERFECT") for (const id of targetIntel) if (!mine.privateIntel.includes(id)) mine.privateIntel.push(id);
-  if (mine.items.includes("LOT_02") && !Object.values(a.players).some((holder) => holder.usedLotEffects.includes("LOT_02"))) {
-    const hidden = lotForRound04(ctx.s.round).hiddenInfo;
-    if (!mine.privateIntel.includes(hidden)) mine.privateIntel.push(hidden);
-    mine.usedLotEffects.push("LOT_02");
-  }
   cue(ctx, "S4_PRIVATE_READ", { playerId: p.playerId });
 });
 

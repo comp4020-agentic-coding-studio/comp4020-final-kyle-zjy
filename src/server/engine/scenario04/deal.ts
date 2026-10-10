@@ -39,8 +39,7 @@ export const DEAL04: Spec<Offer> = {
   check: (s, p, offer) => offer ? legal(s, p, offer) : null,
   apply: (ctx, p, offer) => {
     const a = ctx.s.auction!;
-    const contractDiscount = offer.chips > 0 && a.players[p.playerId].items.includes("LOT_04") && !Object.values(a.players).some((player) => player.usedLotEffects.includes("LOT_04"));
-    a.deal = { from: p.playerId, to: offer.targetId, chips: offer.chips - (contractDiscount ? 1 : 0), contractDiscount, receiveChips: offer.receiveChips, giveIntel: offer.giveIntel as IntelId04 | undefined, giveItem: offer.giveItem as LotId04 | undefined, forIntel: offer.forIntel as IntelId04 | undefined, forItem: offer.forItem as LotId04 | undefined, forPass: offer.forPass };
+    a.deal = { from: p.playerId, to: offer.targetId, chips: offer.chips, receiveChips: offer.receiveChips, giveIntel: offer.giveIntel as IntelId04 | undefined, giveItem: offer.giveItem as LotId04 | undefined, forIntel: offer.forIntel as IntelId04 | undefined, forItem: offer.forItem as LotId04 | undefined, forPass: offer.forPass };
     openWindow(ctx, {
       kind: "S4_DEAL", title: m`Deal offer`, prompt: m`Accept these enforceable terms?`,
       addressees: [offer.targetId],
@@ -61,7 +60,6 @@ onResume("S4_DEAL", (ctx, _window, answers) => {
   if (legal(ctx.s, ctx.s.players[deal.from], offer) || acceptDealError04(ctx.s, deal.to)) return;
   buyer.blackChips -= deal.chips;
   seller.blackChips += deal.chips;
-  if (deal.contractDiscount) buyer.usedLotEffects.push("LOT_04");
   const returnChips = deal.receiveChips ?? 0;
   seller.blackChips -= returnChips;
   buyer.blackChips += returnChips;
@@ -70,10 +68,20 @@ onResume("S4_DEAL", (ctx, _window, answers) => {
   if (deal.giveItem) {
     buyer.items.splice(buyer.items.indexOf(deal.giveItem), 1);
     seller.items.push(deal.giveItem);
+    if (deal.giveItem === "LOT_04") {
+      seller.redContractRemainingRounds = buyer.redContractRemainingRounds;
+      seller.redContractStartsRound = buyer.redContractStartsRound;
+      buyer.redContractRemainingRounds = 0;
+    }
   }
   if (deal.forItem) {
     seller.items.splice(seller.items.indexOf(deal.forItem), 1);
     buyer.items.push(deal.forItem);
+    if (deal.forItem === "LOT_04") {
+      buyer.redContractRemainingRounds = seller.redContractRemainingRounds;
+      buyer.redContractStartsRound = seller.redContractStartsRound;
+      seller.redContractRemainingRounds = 0;
+    }
   }
   if (deal.forPass) a.passedPlayers.push(deal.to);
   a.stats.deals++;

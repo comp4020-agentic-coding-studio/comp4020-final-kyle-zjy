@@ -8,6 +8,7 @@ import type { NpcId03 } from "./scenario03/story.ts";
 // the live state, then reduces it (docs/architecture.md §4).
 import type { MBTI, Zodiac } from "../characters/types.ts";
 import type { ItemId, PlayerId, ScenarioId } from "./state.ts";
+import type { LotId04 } from "./scenario04/types.ts";
 
 export type LobbyAction =
   | { type: "SET_NICKNAME"; nickname: string }
@@ -61,7 +62,9 @@ export type GameAction =
   | { type: "CHALLENGE"; targetId: PlayerId; wager: number }
   | { type: "SABOTAGE"; targetId: PlayerId }
   | { type: "BORROW" }
-  | { type: "EXPOSE"; intelId: string };
+  | { type: "EXPOSE"; intelId: string }
+  | { type: "RECOVER" }
+  | { type: "USE_LOT"; lotId: LotId04 };
 
 export type GameActionType = GameAction["type"];
 

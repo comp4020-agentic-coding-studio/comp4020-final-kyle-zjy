@@ -32,11 +32,14 @@ export type Mode = null | GameActionType;
  */
 export type DockExtension = {
   grid: GameActionType[];
+  coreActions?: GameActionType[];
   direct: Set<GameActionType>;
   /** Tailwind classes for the grid's wide-screen columns. */
   columns: string;
   /** Hide shared skill, item and end-turn controls for a different turn model. */
   showSharedActions?: boolean;
+  itemAction?: GameActionType;
+  hudClassName?: string;
   /** The picker's title (a catalog key) and choices for one of its actions, or null for the shared picker. */
   picker: (p: { g: PlayerView; me: PublicPlayerState; mode: GameActionType; availability: ActionAvailability; send: (a: GameAction) => void }) => { title: MessageKey; body: React.ReactNode } | null;
 };
@@ -72,7 +75,7 @@ export function Dock({ g, mode, setMode, extension }: { g: PlayerView; mode: Mod
   return (
     <div className="safe-bottom relative z-20 border-t border-gold/15 bg-[#05060d]/92 px-3 pt-2 backdrop-blur-md sm:px-4">
       <div className="mx-auto grid max-w-6xl gap-2 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:gap-4">
-        <Hud g={g} me={me} />
+        {extension?.hudClassName ? <div className={extension.hudClassName}><Hud g={g} me={me} /></div> : <Hud g={g} me={me} />}
         <div className="min-w-0">
           <AnimatePresence mode="wait">
             {mode ? (
@@ -81,15 +84,19 @@ export function Dock({ g, mode, setMode, extension }: { g: PlayerView; mode: Mod
               </motion.div>
             ) : (
               <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                {extension?.coreActions && <div className="mb-1.5 grid grid-cols-2 gap-1.5">
+                  {extension.coreActions.map((type) => <ActionButton key={type} a={action(type)} onPress={press} compact wide />)}
+                </div>}
                 <div className={`grid grid-cols-4 gap-1.5 ${extension ? extension.columns : g.city ? "lg:grid-cols-7" : ""}`}>
-                  {(extension?.grid ?? (g.city ? GRID02 : GRID)).map((t) => (
-                    <ActionButton key={t} a={action(t)} onPress={press} compact={!!g.city || !!extension} />
+                  {(extension?.grid ?? (g.city ? GRID02 : GRID)).filter((type) => !extension?.coreActions?.includes(type)).map((type) => (
+                    <ActionButton key={type} a={action(type)} onPress={press} compact={!!g.city || !!extension} />
                   ))}
                 </div>
                 {extension?.showSharedActions !== false && <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-1.5">
-                  <ActionButton a={action("USE_SKILL")} onPress={press} wide label={charText(me.skill.borrowed ?? me.characterId).skillName} />
-                  <ActionButton a={action("USE_ITEM")} onPress={press} wide label={t("dock.items", { n: me.items.length })} />
+                  <ActionButton a={action("USE_SKILL")} onPress={press} wide wrap={!!g.auction} label={charText(me.skill.borrowed ?? me.characterId).skillName} />
+                  <ActionButton a={action(extension?.itemAction ?? "USE_ITEM")} onPress={press} wide label={t("dock.items", { n: g.auction ? g.auction.players[g.viewerId].items.length : me.items.length })} />
                   <button
+                    data-action="END_TURN"
                     className={`btn min-h-12 min-w-0 rounded-xl px-2 text-sm whitespace-nowrap ${myTurn ? (me.ap === 0 ? "btn-signal" : "btn-ghost") : "btn-ghost opacity-40"}`}
                     onClick={() => press(action("END_TURN"))}
                     aria-disabled={!action("END_TURN").enabled}
@@ -109,7 +116,7 @@ export function Dock({ g, mode, setMode, extension }: { g: PlayerView; mode: Mod
   );
 }
 
-function ActionButton({ a, onPress, wide = false, compact = false, label }: { a: ActionAvailability; onPress: (a: ActionAvailability) => void; wide?: boolean; compact?: boolean; label?: string }) {
+function ActionButton({ a, onPress, wide = false, compact = false, wrap = false, label }: { a: ActionAvailability; onPress: (a: ActionAvailability) => void; wide?: boolean; compact?: boolean; wrap?: boolean; label?: string }) {
   const t = useT();
   const fmt = useFormat();
   return (
@@ -123,7 +130,7 @@ function ActionButton({ a, onPress, wide = false, compact = false, label }: { a:
       } ${wide ? "flex-row gap-2 px-2" : ""}`}
     >
       <Icon name={a.type} size={wide ? 18 : 20} className={a.enabled ? "text-gold-bright" : ""} />
-      <span className={`truncate text-[11px] font-semibold sm:text-xs ${wide ? "max-w-[9rem]" : ""}`}>{label ?? t(`action.${a.type}`)}</span>
+      <span className={`${wrap ? "line-clamp-2 min-w-0 break-words leading-tight" : "truncate"} text-[11px] font-semibold sm:text-xs ${wide && !wrap ? "max-w-[9rem]" : ""}`}>{label ?? t(`action.${a.type}`)}</span>
       {a.apCost > 0 && <span className={`absolute top-1 right-1.5 font-mono text-[9px] ${a.enabled ? "text-gold" : "text-ash/70"}`}>{t("dock.apCost", { n: a.apCost })}</span>}
     </button>
   );

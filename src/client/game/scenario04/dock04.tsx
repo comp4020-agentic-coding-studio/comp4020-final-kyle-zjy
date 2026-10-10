@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { GameAction } from "../../../shared/game/actions.ts";
 import { LOTS04 } from "../../../shared/game/scenario04/lots.ts";
+import type { LotId04 } from "../../../shared/game/scenario04/types.ts";
 import type { PlayerView } from "../../../shared/game/state.ts";
 import { auctionIntelText, auctionLotText } from "../../../shared/i18n/scenario04.ts";
 import { useLocale, useT } from "../../i18n/index.ts";
@@ -14,19 +15,46 @@ function BidChoices({ bids, send }: { bids: number[]; send: (action: GameAction)
 }
 
 export const DOCK04: DockExtension = {
-  grid: ["BID", "PASS", "INVESTIGATE", "READ", "DEAL", "CHALLENGE", "SABOTAGE", "BORROW", "EXPOSE", "USE_SKILL"],
-  direct: new Set(["PASS", "INVESTIGATE", "BORROW"]),
+  grid: ["BID", "PASS", "INVESTIGATE", "READ", "DEAL", "CHALLENGE", "SABOTAGE", "BORROW", "EXPOSE", "RECOVER"],
+  coreActions: ["BID", "PASS"],
+  direct: new Set(["PASS", "INVESTIGATE", "BORROW", "RECOVER", "END_TURN"]),
   columns: "lg:grid-cols-5",
-  showSharedActions: false,
+  itemAction: "USE_LOT",
+  hudClassName: "flex min-w-0 justify-center lg:justify-self-center",
   picker: ({ g, mode, availability, send }) => {
     if (mode === "BID") return { title: "s4.dock.pickBid", body: <BidChoices bids={(availability.targets ?? []).map(Number)} send={send} /> };
     if (mode === "READ" || mode === "SABOTAGE") return { title: mode === "READ" ? "s4.dock.read" : "s4.dock.sabotage", body: <TargetChoice g={g} ids={(availability.targets ?? []).map(String)} send={send} mode={mode} /> };
     if (mode === "DEAL") return { title: "s4.dock.deal", body: <DealBuilder g={g} send={send} /> };
     if (mode === "CHALLENGE") return { title: "s4.dock.challenge", body: <ChallengeBuilder g={g} ids={(availability.targets ?? []).map(String)} send={send} /> };
     if (mode === "EXPOSE") return { title: "s4.dock.expose", body: <ExposeChoices ids={(availability.targets ?? []).map(String)} send={send} /> };
+    if (mode === "USE_LOT") return { title: "s4.dock.items", body: <ItemChoices g={g} send={send} /> };
     return null;
   },
 };
+
+function ItemChoices({ g, send }: { g: PlayerView; send: (action: GameAction) => void }) {
+  const t = useT();
+  const locale = useLocale();
+  const a = g.auction!;
+  const mine = a.players[g.viewerId];
+  const known = [...(mine.privateIntel ?? []), ...a.publicIntel];
+  const used = (id: LotId04) => Object.values(a.players).some((p) => p.usedLotEffects.includes(id));
+  return <div data-s4-picker="USE_LOT" className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto">
+    {mine.items.map((id) => {
+      const lot = LOTS04.find((entry) => entry.id === id)!;
+      const counterfeit = lot.tags.includes("COUNTERFEIT");
+      const status = counterfeit ? known.includes(lot.hiddenInfo) || known.includes(lot.perfectInfo) ? "counterfeit" : "unverified"
+        : used(id) || id === "LOT_04" && mine.redContractRemainingRounds === 0 ? "used"
+        : ["LOT_04", "LOT_08"].includes(id) ? "passive" : "available";
+      const actionable = ["LOT_02", "LOT_06", "LOT_09"].includes(id) && !used(id) && (id !== "LOT_06" || mine.debt > 0) && (id !== "LOT_09" || g.players[g.viewerId].sanity > 0);
+      const text = auctionLotText(locale, id);
+      return <button key={id} className="btn btn-ghost min-h-12 h-auto min-w-0 flex-col items-start whitespace-normal text-left" disabled={!actionable} onClick={() => send({ type: "USE_LOT", lotId: id })}>
+        <span className="font-semibold">{text.name} · {t(`s4.item.${status}`)}</span>
+        <span className="text-xs text-mist">{text.description}</span>
+      </button>;
+    })}
+  </div>;
+}
 
 function TargetChoice({ g, ids, send, mode }: { g: PlayerView; ids: string[]; send: (action: GameAction) => void; mode: "READ" | "SABOTAGE" }) {
   return <div data-s4-picker={mode}><PeopleRow people={ids.map((id) => g.players[id])} onPick={(targetId) => send({ type: mode, targetId })} /></div>;

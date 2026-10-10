@@ -76,10 +76,11 @@ export function startRoll(ctx: Ctx, p: PlayerGameState, purpose: RollPurpose, la
     raw = Math.max(raw, second);
   }
   const modifiers: Roll["modifiers"] = [...(opts.extra ?? [])];
+  let blackDie04 = false;
   if (purpose.startsWith("S4_") && ctx.s.auction) {
     const auctionPlayer = ctx.s.auction.players[p.playerId];
-    if (auctionPlayer?.items.includes("LOT_01") && !Object.values(ctx.s.auction.players).some((holder) => holder.usedLotEffects.includes("LOT_01"))) {
-      modifiers.push({ source: m`The Black Die`, delta: 1 });
+    if (["S4_INVESTIGATE", "S4_READ", "S4_SABOTAGE"].includes(purpose) && auctionPlayer?.items.includes("LOT_01") && !Object.values(ctx.s.auction.players).some((holder) => holder.usedLotEffects.includes("LOT_01"))) {
+      blackDie04 = true;
       auctionPlayer.usedLotEffects.push("LOT_01");
     }
     if (auctionPlayer?.nextRollPenalty) {
@@ -102,7 +103,8 @@ export function startRoll(ctx: Ctx, p: PlayerGameState, purpose: RollPurpose, la
   const staticStatus = statusOf(p, "STATIC");
   if (staticStatus) modifiers.push({ source: ref.status("STATIC"), delta: staticStatus.value ?? -1 });
   const total = raw + modifiers.reduce((sum, m) => sum + m.delta, 0);
-  const final = clampDie(total);
+  if (blackDie04) modifiers.push({ source: m`The Black Die`, delta: 6 - total });
+  const final = blackDie04 ? 6 : clampDie(total);
   const roll: Roll = {
     id: newId(ctx, "r"),
     playerId: p.playerId,

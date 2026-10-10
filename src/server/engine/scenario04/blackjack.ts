@@ -6,6 +6,7 @@ import { fail, type Spec } from "../actions.ts";
 import { cue, log, type Ctx } from "../context.ts";
 import { shuffle } from "../rng.ts";
 import { onResume, openWindow } from "../windows.ts";
+import { AUCTION_CONFIG04 } from "../../../shared/game/scenario04/config.ts";
 
 type Challenge = NonNullable<AuctionState04["challenge"]>;
 
@@ -27,7 +28,7 @@ export const CHALLENGE04: Spec<Extract<GameAction, { type: "CHALLENGE" }>> = {
   targets: (s, p) => s.auction!.seatOrder.filter((id) => id !== p.playerId),
   check: (s, p, action) => action ? offerLegal(s, p, action) : null,
   apply: (ctx, p, action) => {
-    ctx.s.auction!.challenge = { challenger: p.playerId, target: action.targetId, wager: action.wager, effectiveWager: 0, deck: [], challengerHand: [], targetHand: [], turn: action.targetId, stood: [] };
+    ctx.s.auction!.challenge = { challenger: p.playerId, target: action.targetId, wager: action.wager, effectiveWager: 0, deck: [], challengerHand: [], targetHand: [], turn: action.targetId, stood: [], coinAsked: [] };
     openWindow(ctx, {
       kind: "S4_CHALLENGE", title: m`Blackjack challenge`, prompt: m`Accept the Blackjack wager or decline?`,
       addressees: [action.targetId], options: [{ id: "ACCEPT", label: m`Accept` }, { id: "DECLINE", label: m`Decline` }],
@@ -42,6 +43,27 @@ function turnWindow(ctx: Ctx, challenge: Challenge): void {
     addressees: [challenge.turn], options: [{ id: "HIT", label: m`Hit` }, { id: "STAND", label: m`Stand` }],
     defaultOptionId: "STAND", resume: { kind: "S4_BLACKJACK" }, blocksTable: true, ownerId: challenge.turn,
   });
+}
+
+function coinStage(ctx: Ctx, challenge: Challenge): void {
+  const a = ctx.s.auction!;
+  const id = [challenge.target, challenge.challenger].find((playerId) =>
+    !challenge.coinAsked.includes(playerId) && a.players[playerId].items.includes("LOT_03") &&
+    !Object.values(a.players).some((holder) => holder.usedLotEffects.includes("LOT_03")));
+  if (!id) return turnWindow(ctx, challenge);
+  challenge.coinAsked.push(id);
+  const hand = id === challenge.target ? challenge.targetHand : challenge.challengerHand;
+  const options = [{ id: "KEEP", label: m`Keep both starting cards` }];
+  for (const [index, card] of hand.entries()) {
+    const base = Math.min(card, 10);
+    for (const delta of [-AUCTION_CONFIG04.coinCardAdjustment, AUCTION_CONFIG04.coinCardAdjustment]) {
+      const value = base + delta;
+      if (value < AUCTION_CONFIG04.coinMinValue || value > AUCTION_CONFIG04.coinMaxValue) continue;
+      options.push({ id: `${index}:${value}`, label: m`Change starting card ${index + 1} from ${base} to ${value}` });
+    }
+  }
+  openWindow(ctx, { kind: "S4_COIN", title: m`Gambler's Coin`, prompt: m`Adjust one starting card by one point?`,
+    addressees: [id], options, defaultOptionId: "KEEP", resume: { kind: "S4_COIN" }, blocksTable: true, ownerId: id });
 }
 
 function settle(ctx: Ctx, winner: PlayerId | null): void {
@@ -79,20 +101,27 @@ onResume("S4_CHALLENGE", (ctx, _window, answers) => {
   challenge.deck = shuffle(ctx.s, Array.from({ length: 52 }, (_, i) => i % 13 + 1));
   challenge.targetHand = [challenge.deck.pop()!, challenge.deck.pop()!];
   challenge.challengerHand = [challenge.deck.pop()!, challenge.deck.pop()!];
-  for (const id of [challenge.target, challenge.challenger]) {
-    const player = a.players[id];
-    if (!player.items.includes("LOT_03") || Object.values(a.players).some((holder) => holder.usedLotEffects.includes("LOT_03"))) continue;
-    const hand = id === challenge.target ? challenge.targetHand : challenge.challengerHand;
-    const replacement = challenge.deck.pop()!;
-    const before = blackjackTotal04(hand);
-    const options = hand.map((_, index) => blackjackTotal04(hand.map((card, i) => i === index ? replacement : card)));
-    const best = options.findIndex((total) => total <= 21 && (before > 21 || total > before));
-    if (best >= 0) hand[best] = replacement;
-    player.usedLotEffects.push("LOT_03");
-  }
   challenge.turn = challenge.target;
   cue(ctx, "S4_BLACKJACK_START", { challenger: challenge.challenger, target: challenge.target, wager: challenge.effectiveWager });
-  turnWindow(ctx, challenge);
+  coinStage(ctx, challenge);
+});
+
+onResume("S4_COIN", (ctx, window, answers) => {
+  const challenge = ctx.s.auction!.challenge;
+  if (!challenge) return;
+  const id = window.addressees[0];
+  const choice = answers[id];
+  if (choice !== "KEEP") {
+    const [index, value] = choice.split(":").map(Number);
+    const hand = id === challenge.target ? challenge.targetHand : challenge.challengerHand;
+    const base = Math.min(hand[index], 10);
+    if (index >= 0 && index < 2 && Math.abs(value - base) === AUCTION_CONFIG04.coinCardAdjustment && value >= AUCTION_CONFIG04.coinMinValue && value <= AUCTION_CONFIG04.coinMaxValue) {
+      hand[index] = value;
+      ctx.s.auction!.players[id].usedLotEffects.push("LOT_03");
+      cue(ctx, "S4_COIN_USED", { playerId: id, cardIndex: index });
+    }
+  }
+  coinStage(ctx, challenge);
 });
 
 onResume("S4_BLACKJACK", (ctx, _window, answers) => {
