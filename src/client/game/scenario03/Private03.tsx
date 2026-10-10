@@ -5,6 +5,8 @@
 // labelled as such: the incident record, the 2026 consequence record, the
 // intruder traces, history under strain and the final record.
 import type { StoryBeatId03 } from "../../../shared/game/scenario03/story.ts";
+import type { S03ItemId } from "../../../shared/game/scenario03/items.ts";
+import { RELIC_STORAGE03 } from "../../../shared/game/scenario03/items.ts";
 import { characterSkill } from "../../../shared/game/skills.ts";
 import type { PlayerView } from "../../../shared/game/state.ts";
 import { useCharacterText, useFormat, useItemText, useT } from "../../i18n/index.ts";
@@ -28,6 +30,8 @@ const EVIDENCE: Record<string, S3Key> = {
   ZERO_TRANSCRIPT: "s3.paradox.zeroEvidence",
 };
 
+const RELIC_INSTANCE03: Record<string, S03ItemId> = { "relic-1": "TIME_MARKER", "relic-2": "AUTHORITY_CARD" };
+
 export function Private03({ g }: { g: PlayerView }) {
   const t = useT();
   const fmt = useFormat();
@@ -40,28 +44,48 @@ export function Private03({ g }: { g: PlayerView }) {
   const skill = characterSkill(skillId, g.scenarioId);
   const words = charText(skillId);
   const p = tp.present;
+  const numberedItems = tp.myItems.filter((item) => item.itemId === "TIME_MARKER" || item.itemId === "AUTHORITY_CARD");
+  const otherItems = tp.myItems.filter((item) => item.itemId !== "TIME_MARKER" && item.itemId !== "AUTHORITY_CARD");
+  const relicName = (id: string) => {
+    const itemId = tp.myItems.find((item) => item.instanceId === id)?.itemId
+      ?? tp.worldItems.find((item) => item.instanceId === id)?.itemId
+      ?? RELIC_INSTANCE03[id];
+    return itemId ? itemText(itemId).name : id;
+  };
   return (
     <>
       <Section title={t("s3.secrets.evidence")} empty={t("s3.secrets.evidenceEmpty")} items={tp.myEvidence.map((id) => ({ id, text: t(EVIDENCE[id] ?? "s3.causal.evidenceA") }))} />
       {s?.archiveLead03 && <Section title={t("s3.scan.archive.title")} empty="" items={[{ id: "archive-lead", text: archiveLeadText03(t, s.archiveLead03), meta: t("secrets.round", { n: s.archiveLead03.round }) }]} />}
       <section className="tarot p-3">
+        <p className="label text-gold">{t("s3.items.loopTitle")}</p>
+        {tp.myObligations.length === 0 && <p className="mt-1 text-sm text-mist">{t("s3.items.noLoop")}</p>}
+        <ul className="mt-1 space-y-3">
+          {tp.myObligations.map((entry) => <li key={entry.instanceId} className="min-w-0 text-sm">
+            <p className="font-semibold text-moon">{relicName(entry.instanceId)} · {entry.instanceId}</p>
+            {entry.placedBy ? <p className="mt-0.5 text-moss">{t("s3.items.loopDone", { room: t(roomKey03(entry.storageRoom)) })}</p>
+              : <>
+                <p className="mt-0.5 text-mist">{t("s3.items.loopKeeper")}</p>
+                <p className="mt-0.5 text-gold-bright">{t(tp.myItems.some((item) => item.instanceId === entry.instanceId) ? "s3.items.loopCarry" : "s3.items.loopGet", { name: relicName(entry.instanceId), id: entry.instanceId, room: t(roomKey03(entry.storageRoom)) })}</p>
+                <p className="mt-0.5 text-xs text-mist">{t("s3.items.loopWhy")}</p>
+              </>}
+          </li>)}
+        </ul>
+      </section>
+      <section className="tarot p-3">
         <p className="label text-gold">{t("s3.items.held")}</p>
-        {tp.myItems.length === 0 && <p className="mt-1 text-sm text-mist">{t("s3.items.none")}</p>}
-        <ul className="mt-1 space-y-1.5">
-          {tp.myItems.map((item) => (
+        {numberedItems.length === 0 && <p className="mt-1 text-sm text-mist">{t("s3.items.none")}</p>}
+        <ul className="mt-1 space-y-3">
+          {numberedItems.map((item) => (
             <li key={item.instanceId} className="text-sm">
               <span className="text-moon">
                 {itemText(item.itemId).name} · {item.instanceId}
               </span>
-              <span className="block text-xs text-mist">{t("s3.items.storageRoom", { room: t(roomKey03(item.roomId)) })}</span>
+              <span className="block text-xs text-mist">{t("s3.items.storageRoom", { room: t(roomKey03(RELIC_STORAGE03[item.itemId] ?? item.roomId)) })}</span>
+              <span className="block text-xs text-gold-bright">{t(tp.myObligations.some((entry) => entry.instanceId === item.instanceId && entry.placedBy) ? "s3.items.heldDone" : tp.myObligations.some((entry) => entry.instanceId === item.instanceId) ? "s3.items.heldNext" : "s3.items.heldTransfer", { room: t(roomKey03(RELIC_STORAGE03[item.itemId] ?? item.roomId)) })}</span>
             </li>
           ))}
         </ul>
-        {tp.myObligations.map((entry) => (
-          <p key={entry.instanceId} className="mt-1 text-xs text-mist">
-            {entry.placedBy ? t("s3.items.obligationDone", { id: entry.instanceId }) : t("s3.items.obligation", { id: entry.instanceId, room: t(roomKey03(entry.storageRoom)) })}
-          </p>
-        ))}
+        {otherItems.length > 0 && <p className="mt-2 text-xs text-mist">{t("s3.items.otherHeld", { names: otherItems.map((item) => itemText(item.itemId).name).join(t("common.listSep")) })}</p>}
       </section>
       <section className="rounded-lg border border-violet/40 bg-violet/5 p-3">
         <p className="label text-signal">{t("s3.skill.title")}</p>
@@ -73,6 +97,8 @@ export function Private03({ g }: { g: PlayerView }) {
       </section>
       {s && s.peeks.length > 0 && <Section title={t("secrets.glimpses")} empty="" items={s.peeks.map((x) => ({ id: x.id, text: fmt(x.text), meta: t("secrets.round", { n: x.round }) }))} />}
 
+      <p className="label border-b border-signal/20 pb-1 text-signal">{t("s3.secrets.publicGroup")}</p>
+      <p className="text-sm text-mist">{t("s3.items.teamLoops", { n: tp.bootstrapProgress.placed, total: tp.bootstrapProgress.total })}</p>
       <section>
         <p className="label">{t("s3.secrets.record")}</p>
         <ol className="s3-story-list mt-2">
@@ -87,7 +113,7 @@ export function Private03({ g }: { g: PlayerView }) {
         </ol>
       </section>
       <section>
-        <p className="label">{t("s3.secrets.causal", { n: tp.causalRevision })}</p>
+        <p className="label">{t(tp.causalRevision ? "s3.secrets.causal" : "s3.secrets.causalInitial", { n: tp.causalRevision })}</p>
         <ul className="mt-1 space-y-1 text-sm">
           <li>{t("s3.causal.case", { id: p.caseFile })}</li>
           <li>{t(p.secretArchiveOpen ? "s3.causal.gateOpen" : "s3.causal.gateClosed")}</li>

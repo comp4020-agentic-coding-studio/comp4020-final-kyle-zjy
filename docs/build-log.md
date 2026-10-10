@@ -660,7 +660,7 @@ names); each variant is now a whole template. No rule, RNG or replay changed
   and year on Success, plus the investigation name on Perfect. It awards no
   evidence and explicitly reports when no direction remains. Field Focus
   adds +2 through the shared modifier pipeline to the next eligible rolled
-  non-Scan action in this cycle. Temporal Alignment reduces the next safe or
+  non-Scan action, persisting across cycles until used. Temporal Alignment reduces the next safe or
   unstable Time Jump to 1 AP. Both statuses are non-stacking and persist or
   expire according to their rules; Alignment survives save/reconnect.
 - Added a brief, localized Time Jump overlay with a reduced-motion path.
@@ -674,3 +674,23 @@ names); each variant is now a whole template. No rule, RNG or replay changed
   seeded runs; the one miss was the two-player Deceive History route. This
   script does not choose Temporal Scan, so it verifies route regressions but
   does not measure how the new protocol choices change player strategy.
+
+## Scenario 03: player clarity pass
+
+- Replaced source and causal field labels with action-focused objectives,
+  room directions, keeper obligations, carried-relic steps, public records,
+  route checklists and outcome feedback. The Act I relic lead stays checked
+  after the team has found a numbered relic, even if the holder trades it.
+  All guidance uses projected state or the server's action availability;
+  keeper assignments and Archive leads remain private.
+- Clarified the three Scan protocols, including Success and Perfect, and
+  the status lifetimes in both locales. Field Focus persists across cycles
+  until a qualifying rolled action consumes it. Trade remains 0 AP; its
+  picker now exposes existing relic, supply and Fate transfer offers.
+- Verification: production build and `pnpm check` passed (41 files, 1114
+  tests), including objective gate, keeper privacy, final-route agreement,
+  Trade cost, relic storage, Scan privacy and Field Focus persistence tests.
+  The two-context browser run at 320/1280 px passed four cycles, with no
+  clipped content or undersized touch targets. A longer 390/1280 px run
+  reached Act III and then a normal ending in cycle 7. A separate four-cycle
+  run at 390/1280 px passed its layout and two-browser checks.

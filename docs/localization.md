@@ -132,12 +132,12 @@ of locale.
 | Research Wing | 研究区 | `TEMPORAL_CONTAINMENT` is a 2026 facility here, not a room |
 | time jump | 时间迁跃 | costs 2 AP and keeps the room |
 | cycle | 轮 | round label for the foundation |
-| causal revision | 因果改写 | counts material changes to the 2026 state |
+| history changed | 历史已改写 | player-facing count of material changes to 2026; internal `causalRevision` stays stable |
 | sealed case file | 密封案卷 | owner-only evidence until shared by a later rule |
 | intervention | 干预 | a 1996 decision resolved by the server |
 | official account / corrected report | 官方版本 / 已更正报告 | separate from fixed facts |
-| numbered relic / source obligation | 编号遗物 / 来源义务 | one conserved item instance across years |
-| protected storage / Temporal Containment | 保护存放处 / 时间收容设施 | facilities inside existing rooms |
+| numbered relic / your time loop task | 编号遗物 / 你的时间闭环任务 | carrying a relic and being its assigned keeper are shown separately |
+| seal at / Temporal Containment | 封存地点 / 时间收容设施 | storage facilities stay inside existing rooms |
 | Phase Battery / Sedative | 相位电池 / 镇静剂 | ordinary consumables in the Scenario 03 pool |
 | Archive / Field / Stabilization scan | 档案扫描 / 现场扫描 / 稳定扫描 | one ordinary server roll per cycle, with distinct success-kind bits |
 | public anomaly | 公共异常事件 | Scenario 03's own five-card event deck |

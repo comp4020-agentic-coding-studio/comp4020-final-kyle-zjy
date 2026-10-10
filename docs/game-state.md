@@ -225,8 +225,8 @@ other year. These action rolls change resources only at the endpoints:
 Disaster costs 1 Sanity and Perfect gains 1 Fate. Temporal Scan follows the
 same baseline and grants its chosen protocol effect on Success or Perfect.
 Archive directions are owner-only secrets; Field Focus and Temporal Alignment
-are persisted public statuses. The former expires after the current cycle or
-one eligible roll, while the latter lasts until the next Time Jump lowers its
+are persisted public statuses. The former persists across cycles until one
+eligible roll consumes it, while the latter lasts until the next Time Jump lowers its
 AP cost from 2 to 1. The Time Jump cue triggers a brief client animation.
 A perfect supply search uses a persisted choice
 window to award exactly one of the two existing supplies.

@@ -2,8 +2,9 @@ import type { GameAction, TradeOffer } from "../../../shared/game/actions.ts";
 import { ADJACENT03, OPENS_IN_ACT03, placeFromKey03, placeKey03, type RoomId03, type Year03 } from "../../../shared/game/scenario03/map.ts";
 import { ITEMS03, ORDINARY_POOL03, PROTECTED_STORAGE03, RELIC_STORAGE03, type S03ItemId } from "../../../shared/game/scenario03/items.ts";
 import { NODES03, derivePresent03, type CausalNodeId03 } from "../../../shared/game/scenario03/nodes.ts";
-import { NPCS03 } from "../../../shared/game/scenario03/story.ts";
+import { NPCS03, type EndingRoute03 } from "../../../shared/game/scenario03/story.ts";
 import type { GameState, PlayerGameState, Roll, RollPurpose } from "../../../shared/game/state.ts";
+import type { Msg } from "../../../shared/i18n/types.ts";
 import { list, m, ref } from "../../../shared/i18n/msg.ts";
 import { END_TURN, USE_SKILL, fail, helped, type Spec } from "../actions.ts";
 import { cue, log, type Ctx } from "../context.ts";
@@ -14,7 +15,7 @@ import type { ActionSet } from "../scenario.ts";
 import { onResume, openWindow } from "../windows.ts";
 import { reveal03 } from "./story.ts";
 import { recordTrace03 } from "./surveillance.ts";
-import { resolveHistory03, routeTargets03 } from "./ending.ts";
+import { bootstrapClosed03, resolveHistory03, routeTargets03 } from "./ending.ts";
 
 export const canEnter03 = (s: GameState, room: RoomId03, year: Year03 = "Y2026"): boolean =>
   !(room === "POWER_ROOM" && year === "Y2026" && !s.temporal?.present.powerRoomExists) &&
@@ -142,7 +143,7 @@ const HELP03: Spec<Extract<GameAction, { type: "HELP" }>> = {
 const TIME_JUMP: Spec<Extract<GameAction, { type: "TIME_JUMP" }>> = {
   check: (s, p) => {
     const here = s.temporal!.locations[p.playerId];
-    if (!canEnter03(s, here.roomId, here.year === "Y1996" ? "Y2026" : "Y1996")) return fail("ILLEGAL_TARGET", m`This room cannot receive a time jump.`);
+    if (!canEnter03(s, here.roomId, here.year === "Y1996" ? "Y2026" : "Y1996")) return fail("ILLEGAL_TARGET", m`This room is not open in the other year. Move to an open room before using Time Jump.`);
     return null;
   },
   hint: (_s, p) => statusOf(p, "TEMPORAL_ALIGNMENT")
@@ -181,8 +182,8 @@ onRollOutcome("S3_TIME_JUMP", (ctx, p, roll) => {
 const SEARCH03: Spec<Extract<GameAction, { type: "SEARCH" }>> = {
   check: (s, p) => {
     const here = s.temporal!.locations[p.playerId];
-    if (here.year !== "Y2026" || here.roomId !== "RESEARCH_WING") return fail("ILLEGAL_TARGET", m`Search for supplies in the 2026 Research Wing.`);
-    if (p.counters.s03Searched) return fail("ILLEGAL_TARGET", m`You already searched this supply cabinet.`);
+    if (here.year !== "Y2026" || here.roomId !== "RESEARCH_WING") return fail("ILLEGAL_TARGET", m`To search for supplies, go to the 2026 Research Wing.`);
+    if (p.counters.s03Searched) return fail("ILLEGAL_TARGET", m`You already completed your supply search this game.`);
     return null;
   },
   hint: () => m`Search the research cabinet. A successful roll finds one supply.`,
@@ -260,8 +261,8 @@ const STORE_ITEM03: Spec<Extract<GameAction, { type: "STORE_ITEM" }>> = {
   },
   check: (s, p, action) => {
     const targets = STORE_ITEM03.targets!(s, p);
-    if (!targets.length) return fail("ILLEGAL_TARGET", m`No relic can be sealed in this 1996 storage facility.`);
-    if (action && !targets.includes(action.instanceId)) return fail("ILLEGAL_TARGET", m`That relic needs its assigned keeper and protected 1996 storage room.`);
+    if (!targets.length) return fail("ILLEGAL_TARGET", storeReason03(s, p));
+    if (action && !targets.includes(action.instanceId)) return fail("ILLEGAL_TARGET", storeReason03(s, p));
     return null;
   },
   hint: () => m`Seal a numbered relic in its designated 1996 storage facility.`,
@@ -279,6 +280,18 @@ const STORE_ITEM03: Spec<Extract<GameAction, { type: "STORE_ITEM" }>> = {
     log(ctx, m`${p.nickname} seals ${ref.item(item.itemId)} in 1996.`, "ITEM", p.playerId);
   },
 };
+
+function storeReason03(s: GameState, p: PlayerGameState): Msg {
+  const here = s.temporal!.locations[p.playerId];
+  const held = Object.values(s.temporal!.storedItems).filter((item) => item.ownerId === p.playerId);
+  if (!held.length) return m`You are not carrying a numbered relic to store here.`;
+  const own = held.find((item) => !item.bootstrapOwnerId || item.bootstrapOwnerId === p.playerId);
+  if (!own) return m`This relic has another assigned keeper. Trade it to that keeper in the same room and year.`;
+  if (own.itemId === "TIME_MARKER") return m`Store the Time Marker in 1996 · Archives. Go there, then use Store item.`;
+  if (own.itemId === "AUTHORITY_CARD") return m`Store the Authority Card in 1996 · Central Hall. Go there, then use Store item.`;
+  if (own.itemId === "OLD_BADGE") return m`Store the Old Badge in 1996 · Research Wing. Go there, then use Store item.`;
+  return here.year === "Y1996" ? m`You have no relic assigned to this room.` : m`Take the relic to its 1996 storage room before using Store item.`;
+}
 
 const emptyOffer03 = (offer: TradeOffer): boolean => !offer.items.length && !offer.fate && !(offer.instances?.length);
 const wellFormedOffer03 = (offer: TradeOffer): boolean =>
@@ -316,7 +329,8 @@ const TRADE03: Spec<Extract<GameAction, { type: "TRADE" }>> = {
   targets: (s, p) => Object.values(s.players).filter((other) => other.playerId !== p.playerId && !other.away && other.carriageIndex === p.carriageIndex).map((other) => other.playerId),
   check: (s, p, action) => {
     const targets = TRADE03.targets!(s, p);
-    if (!targets.length) return fail("ILLEGAL_TARGET", m`No teammate is with you in this year and room.`);
+    if (!targets.length) return fail("ILLEGAL_TARGET", m`To trade, find a teammate in the same room and year.`);
+    if (!p.fate && !p.items.length && !Object.values(s.temporal!.storedItems).some((item) => item.ownerId === p.playerId)) return fail("ILLEGAL_TARGET", m`You have no Fate, supply, or relic to trade.`);
     if (!action) return null;
     if (!targets.includes(action.targetId)) return fail("ILLEGAL_TARGET", m`You can only offer a relic to a teammate in the same year and room.`);
     if (!validOffer03(s, p, action.give)) return fail("INVALID", m`You do not hold everything in this offer.`);
@@ -380,6 +394,47 @@ function investigation03(s: GameState, p: PlayerGameState, here = s.temporal!.lo
   return null;
 }
 
+function investigationReason03(s: GameState, p: PlayerGameState): Msg {
+  const here = s.temporal!.locations[p.playerId];
+  if (investigation03(s, p, here, 4)) return m`This room's next investigation opens in a later act.`;
+  const investigatedRoom = here.year === "Y2026" && ["ARCHIVES", "DIRECTOR_OFFICE", "MAIN_LAB", "PROTOTYPE_ROOM"].includes(here.roomId)
+    || here.year === "Y1996" && ["DIRECTOR_OFFICE", "MAIN_LAB"].includes(here.roomId);
+  return investigatedRoom ? m`You have already examined the available clues in this room and year.` : m`There are no new clues to investigate here. Try another room or year.`;
+}
+
+function missingForRoute03(s: GameState, route: EndingRoute03): Msg[] {
+  const p = s.temporal!.present;
+  const stopped = s.temporal!.interventions.some((entry) => entry.nodeId === "PROTOTYPE_CORE" && entry.choiceId === "SHUT_DOWN");
+  const loops = bootstrapClosed03(s);
+  if (route === "OFFICIAL_HISTORY") return [
+    ...(p.accidentRecord !== "OFFICIAL" ? [m`record the official accident`] : []),
+    ...(stopped ? [m`keep the prototype core running`] : []),
+    ...(p.staffEvacuated ? [m`leave the staff in the official record`] : []),
+    ...(p.jiStaged ? [m`do not stage Ji's disappearance`] : []),
+    ...(p.prototypeHidden ? [m`do not hide the prototype`] : []),
+    ...(!loops ? [m`complete both numbered relic time loops`] : []),
+  ];
+  if (route === "NO_TOMORROW") return [
+    ...(p.accidentRecord !== "ERASED" ? [m`erase the accident record`] : []),
+    ...(!stopped ? [m`shut down the prototype core`] : []),
+  ];
+  return [
+    ...(p.accidentRecord !== "CONTROLLED" ? [m`record a controlled accident`] : []),
+    ...(!p.staffEvacuated ? [m`evacuate the staff`] : []),
+    ...(!p.jiStaged ? [m`stage Ji's official death`] : []),
+    ...(!p.prototypeHidden ? [m`hide the prototype`] : []),
+    ...(!loops ? [m`complete both numbered relic time loops`] : []),
+  ];
+}
+
+function missingHistoryReason03(s: GameState, requested?: EndingRoute03): Msg {
+  const routes = requested ? [requested] : s.temporal!.story.availableRoutes;
+  const route = [...routes].sort((a, b) => missingForRoute03(s, a).length - missingForRoute03(s, b).length)[0];
+  if (!route) return m`Final histories are not available yet.`;
+  const name = route === "OFFICIAL_HISTORY" ? m`Official history` : route === "NO_TOMORROW" ? m`No tomorrow` : m`Deceive history`;
+  return m`Cannot resolve ${name} yet. Missing: ${list(missingForRoute03(s, route))}.`;
+}
+
 const ARCHIVE_DIRECTIONS03: { roomId: RoomId03; year: Year03 }[] = [
   { roomId: "ARCHIVES", year: "Y2026" },
   { roomId: "DIRECTOR_OFFICE", year: "Y2026" },
@@ -398,7 +453,7 @@ function archiveLead03(s: GameState, p: PlayerGameState): { roomId: RoomId03; ye
 }
 
 const INVESTIGATE03: Spec<Extract<GameAction, { type: "INVESTIGATE" }>> = {
-  check: (s, p) => investigation03(s, p) ? null : fail("ILLEGAL_TARGET", m`No new investigation is available in this room and year.`),
+  check: (s, p) => investigation03(s, p) ? null : fail("ILLEGAL_TARGET", investigationReason03(s, p)),
   hint: (s, p) => {
     const id = investigation03(s, p);
     if (id?.startsWith("CASE_FILE_")) return m`Read the sealed case file privately.`;
@@ -457,7 +512,11 @@ const INTERACT_NPC03: Spec<Extract<GameAction, { type: "INTERACT_NPC" }>> = {
   },
   check: (s, p, action) => {
     const targets = INTERACT_NPC03.targets!(s, p);
-    if (!targets.length) return fail("ILLEGAL_TARGET", m`No new testimony is available here.`);
+    if (!targets.length) {
+      const here = s.temporal!.locations[p.playerId];
+      const person = Object.entries(NPCS03).find(([, npc]) => npc.roomId === here.roomId && npc.year === here.year && s.act >= npc.minAct);
+      return fail("ILLEGAL_TARGET", person ? m`You already received this person's available information.` : m`There is no key person to speak with in this room and year.`);
+    }
     if (action && !targets.includes(action.npcId)) return fail("ILLEGAL_TARGET", m`That person is not available here.`);
     return null;
   },
@@ -488,7 +547,11 @@ const INTERVENE03: Spec<Extract<GameAction, { type: "INTERVENE" }>> = {
   },
   check: (s, p, action) => {
     const targets = INTERVENE03.targets!(s, p) as CausalNodeId03[];
-    if (!targets.length) return fail("ILLEGAL_TARGET", m`No unresolved causal decision is here in 1996.`);
+    if (!targets.length) {
+      const here = s.temporal!.locations[p.playerId];
+      const node = here.year === "Y1996" && Object.keys(NODES03).find((id) => NODES03[id as CausalNodeId03].roomId === here.roomId && s.act >= NODES03[id as CausalNodeId03].minAct);
+      return fail("ILLEGAL_TARGET", node ? m`The historical decisions in this room have already been recorded.` : m`There is no open historical decision here. Check a 1996 room with an unfinished node.`);
+    }
     if (!action) return null;
     if (!Object.hasOwn(NODES03, action.nodeId) || !targets.includes(action.nodeId)) return fail("ILLEGAL_TARGET", m`That causal decision is unavailable here.`);
     if (!NODES03[action.nodeId].choices.includes(action.choiceId)) return fail("INVALID", m`Choose a valid intervention.`);
@@ -543,9 +606,9 @@ const RESOLVE_HISTORY03: Spec<Extract<GameAction, { type: "RESOLVE_HISTORY" }>> 
   check: (s, p, action) => {
     if (s.act < 4) return fail("ILLEGAL_TARGET", m`The final history is not open yet.`);
     const here = s.temporal!.locations[p.playerId];
-    if (here.year !== "Y1996" || here.roomId !== "ARCHIVES") return fail("ILLEGAL_TARGET", m`Resolve history at the 1996 Archives.`);
-    if (!action) return routeTargets03(s).length ? null : fail("ILLEGAL_TARGET", m`No history route has all its required actions yet.`);
-    if (!routeTargets03(s).includes(action.route)) return fail("ILLEGAL_TARGET", m`That history route is not supported by the recorded actions.`);
+    if (here.year !== "Y1996" || here.roomId !== "ARCHIVES") return fail("ILLEGAL_TARGET", m`Go to 1996 · Archives to use Resolve history.`);
+    if (!action) return routeTargets03(s).length ? null : fail("ILLEGAL_TARGET", missingHistoryReason03(s));
+    if (!routeTargets03(s).includes(action.route)) return fail("ILLEGAL_TARGET", missingHistoryReason03(s, action.route));
     return null;
   },
   hint: () => m`Commit one history supported by the 1996 record and the relic sources.`,

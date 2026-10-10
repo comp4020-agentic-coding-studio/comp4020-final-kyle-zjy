@@ -99,6 +99,22 @@ function describe(c: Cue, g: PlayerView, t: TFunction, text: ScenarioText, skill
       return p.playerId === g.viewerId ? { icon: "SECRET", text: archiveLeadText03(t, g.mySecrets?.archiveLead03), tone: "text-signal border-signal/50" } : null;
     case "S3_SCAN_PROTOCOL":
       return p.playerId === g.viewerId ? { icon: "SCAN", text: t(p.protocol === "FIELD" ? "s3.scan.effect.FIELD" : "s3.scan.effect.STABILIZE"), tone: "text-signal border-signal/50" } : null;
+    case "S3_ITEM_PICKUP": {
+      if (p.playerId !== g.viewerId) return null;
+      const item = g.temporal?.myItems.find((entry) => entry.instanceId === p.instanceId);
+      return item ? { icon: "KEY", text: t("s3.cue.pickup", { name: itemName(item.itemId), id: item.instanceId }), tone: "text-gold-bright border-gold/60" } : null;
+    }
+    case "S3_ITEM_STORED": {
+      if (p.playerId !== g.viewerId) return null;
+      const item = g.temporal?.worldItems.find((entry) => entry.instanceId === p.instanceId);
+      const obligation = g.temporal?.myObligations.find((entry) => entry.instanceId === p.instanceId && entry.placedBy === g.viewerId);
+      if (!item) return null;
+      return { icon: "KEY", text: t(obligation ? "s3.cue.loopDone" : "s3.cue.storeDone", { name: itemName(item.itemId), id: item.instanceId }), tone: "text-moss border-moss/50" };
+    }
+    case "S3_CAUSAL_REWRITE":
+      return { icon: "ANCHOR", text: t("s3.cue.rewrite"), tone: "text-signal border-signal/50" };
+    case "S3_CAUSAL_DECISION":
+      return { icon: "ANCHOR", text: t("s3.cue.preserved"), tone: "text-mist border-ash/50" };
     case "S3_ACTION_RESOLVED": {
       const action = String(p.action) as "S3_INVESTIGATE" | "S3_INTERVENE" | "S3_SPEAK" | "S3_SEARCH" | "S3_TIME_JUMP";
       const tier = String(p.tier) as "DISASTER" | "FAIL" | "SUCCESS" | "PERFECT";

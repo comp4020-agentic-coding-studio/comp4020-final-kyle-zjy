@@ -13,6 +13,7 @@ import { useItemText, useT } from "../../i18n/index.ts";
 import type { S3Key } from "../../i18n/types.ts";
 import { PeopleRow, type DockExtension } from "../Dock.tsx";
 import { roomKey03 } from "./Map03.tsx";
+import { routeSteps03 } from "./clarity03.ts";
 
 const option = "btn btn-ghost min-h-12 text-sm";
 
@@ -68,8 +69,9 @@ function Scan({ send }: { send: Send }) {
   return (
     <div className="flex flex-wrap gap-2">
       {(["ARCHIVE", "FIELD", "STABILIZE"] as const).map((protocol) => (
-        <button key={protocol} className={option} onClick={() => send({ type: "SCAN", protocol })}>
-          {t(`s3.scan.${protocol}`)}
+        <button key={protocol} className={`${option} h-auto min-w-0 flex-1 basis-48 flex-col items-start py-2 text-left whitespace-normal`} onClick={() => send({ type: "SCAN", protocol })}>
+          <span className="font-semibold text-gold-bright">{t(`s3.scan.${protocol}`)}</span>
+          <span className="mt-0.5 text-xs leading-snug text-mist">{t(`s3.scan.description.${protocol}`)}</span>
         </button>
       ))}
     </div>
@@ -101,7 +103,8 @@ function Decisions({ availability, send }: { availability: ActionAvailability; s
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {NODES03[node].choices.map((choiceId) => (
                 <button key={choiceId} className={`${option} h-auto min-w-0 py-2 whitespace-normal`} onClick={() => send({ type: "INTERVENE", nodeId: node, choiceId })}>
-                  {t(`s3.choice.${node}.${choiceId}` as S3Key)}
+                  <span className="block font-semibold">{t(`s3.choice.${node}.${choiceId}` as S3Key)}</span>
+                  <span className="mt-1 block text-xs leading-snug text-mist">{t(`s3.choice.effect.${node}.${choiceId}` as S3Key)}</span>
                 </button>
               ))}
             </div>
@@ -117,11 +120,13 @@ function Routes({ g, availability, send }: { g: PlayerView; availability: Action
   const ready = new Set((availability.targets ?? []).map(String));
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-      {g.temporal!.story.availableRoutes.map((route: EndingRoute03) => (
-        <button key={route} className={`${option} h-auto min-w-0 py-2 whitespace-normal`} disabled={!ready.has(route)} onClick={() => send({ type: "RESOLVE_HISTORY", route })}>
-          {t(`s3.route.${route}`)}
-        </button>
-      ))}
+      {g.temporal!.story.availableRoutes.map((route: EndingRoute03) => {
+        const missing = routeSteps03(g, route).filter((step) => !step.done).length;
+        return <button key={route} className={`${option} h-auto min-w-0 flex-col py-2 whitespace-normal`} disabled={!ready.has(route)} onClick={() => send({ type: "RESOLVE_HISTORY", route })}>
+          <span className="font-semibold">{t(`s3.route.${route}`)}</span>
+          <span className="mt-1 text-xs text-mist">{t(missing ? "s3.pick.routeMissing" : "s3.pick.routeReady", { n: missing })}</span>
+        </button>;
+      })}
     </div>
   );
 }
@@ -147,20 +152,27 @@ function Relics({ g, ids, source, onPick }: { g: PlayerView; ids: string[]; sour
 /** A relic handed to a teammate in the same room and year (a transfer: nothing is asked back). */
 function Transfer({ g, availability, send }: { g: PlayerView; availability: ActionAvailability; send: Send }) {
   const t = useT();
+  const itemText = useItemText();
   const [to, setTo] = useState<string | null>(null);
   const partners = (availability.targets ?? []).map(String).filter((id) => g.players[id]).map((id) => g.players[id]);
   const mine = g.temporal!.myItems.map((x) => x.instanceId);
+  const supplies = [...new Set(g.players[g.viewerId].items.filter((id) => id === "PHASE_BATTERY" || id === "SEDATIVE03"))];
+  const fate = g.players[g.viewerId].fate;
+  const transfer = (offer: { instances?: string[]; items?: (typeof supplies)[number][]; fate?: number }) => send({
+    type: "TRADE", targetId: to!,
+    give: { instances: offer.instances ?? [], items: offer.items ?? [], fate: offer.fate ?? 0 },
+    want: { items: [], fate: 0 },
+  });
   return (
     <div className="grid grid-cols-1 gap-2">
       <PeopleRow people={partners} selected={to ? [to] : []} onPick={setTo} />
       {to && (
         <>
           <p className="text-xs text-mist">{t("s3.pick.tradeWhat")}</p>
-          {mine.length ? (
-            <Relics g={g} ids={mine} source="mine" onPick={(id) => send({ type: "TRADE", targetId: to, give: { items: [], fate: 0, instances: [id] }, want: { items: [], fate: 0 } })} />
-          ) : (
-            <p className="text-sm text-ash">{t("s3.items.none")}</p>
-          )}
+          {mine.length > 0 && <Relics g={g} ids={mine} source="mine" onPick={(id) => transfer({ instances: [id] })} />}
+          {supplies.length > 0 && <div className="flex flex-wrap gap-2">{supplies.map((id) => <button key={id} className={option} onClick={() => transfer({ items: [id] })}>{t("s3.pick.tradeSupply", { name: itemText(id).name })}</button>)}</div>}
+          {fate > 0 && <button className={`${option} self-start`} onClick={() => transfer({ fate: 1 })}>{t("s3.pick.tradeFate")}</button>}
+          {!mine.length && !supplies.length && !fate && <p className="text-sm text-ash">{t("s3.pick.tradeNone")}</p>}
         </>
       )}
     </div>

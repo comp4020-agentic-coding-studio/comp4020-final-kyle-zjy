@@ -481,14 +481,14 @@ Temporal Scan uses the same baseline as other action dice: Disaster loses 1
 Sanity, Failure and Success have no baseline resource effect, and Perfect
 grants 1 Fate. Its protocol-specific effect applies on Success or Perfect:
 Archive gives the scanning player an unresolved investigation direction,
-Field grants a one-use +2 shared roll bonus to the next non-Scan dice action
-this cycle, and Stabilization reduces the next Time Jump from 2 AP to 1 AP.
+Field grants a one-use +2 shared roll bonus to the next rolled non-Scan action,
+and Stabilization reduces the next Time Jump from 2 AP to 1 AP.
 Archive's direction lives in the scanning player's secrets and its cue carries
 only the player ID; Success reveals room and year, Perfect also names the
 investigation, and no eligible investigation produces an explicit empty lead.
 Field Focus is consumed by the shared roll modifier pipeline for Investigate,
-Intervene, Speak, Search, or unstable Time Jump, and expires unused after the
-current cycle. Temporal Alignment survives cycles and save/reconnect until a
+Intervene, Speak, Search, or unstable Time Jump, and persists across cycles
+until used. Temporal Alignment survives cycles and save/reconnect until a
 safe or unstable Time Jump consumes it. Neither status stacks. The action set's
 dynamic AP-cost hook drives both validation and available-action display.
 Investigate, the 1996 causal
@@ -538,3 +538,23 @@ revision briefly illuminates the map and record. Synchronized round 6 and
 round 9 scenes and the three ending cards use distinct visual accents;
 all information is also written as localized text. The phone map uses a
 two-column tree at 320 px without adding a room or page overflow.
+
+## Player clarity pass
+
+Scenario 03 keeps the Scenario 02 screen shell. Its Objective area now reads
+the viewer's projected state and shows act-specific, optional investigation
+leads in Acts I–III. Act IV exposes one compact checklist per revealed route.
+The checklist mirrors `routeTargets03`: the accident record, prototype core,
+staff, Ji, prototype fate and completed numbered relic loops are checked from
+public state. It never unlocks an ending; the server still validates it.
+
+The private drawer separates owner-only evidence, the viewer's keeper
+obligations, relics currently carried, ability and glimpses from the public
+incident and 2026 records. The public time-loop count does not name keepers.
+Room guidance names only open locations, available investigations and history
+nodes, projected relics and the viewer's own eligible storage. Server action
+checks supply localized reasons, including the correct 1996 storage room and
+specific missing final-route conditions. Scan picker descriptions explain
+the three existing effects. The Trade picker exposes the server's existing
+relic, ordinary supply and Fate offers at its existing 0 AP cost. Story beats,
+phase transitions, map, dice and ending requirements remain unchanged.

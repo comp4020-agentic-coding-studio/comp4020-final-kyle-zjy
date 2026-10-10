@@ -2,13 +2,17 @@
 // the year you are in, the causal revision, relic sources), its objective
 // line and its room panel. The shells are scenario 02's (RunTopBar,
 // ObjectiveLine, PlacePanel); only the contents are this scenario's.
+import { useState } from "react";
 import { NODE_IDS03, NODES03 } from "../../../shared/game/scenario03/nodes.ts";
 import { NPCS03 } from "../../../shared/game/scenario03/story.ts";
-import { OPENS_IN_ACT03, type RoomId03, type Year03 } from "../../../shared/game/scenario03/map.ts";
+import type { EndingRoute03 } from "../../../shared/game/scenario03/story.ts";
+import { ADJACENT03, OPENS_IN_ACT03, type RoomId03, type Year03 } from "../../../shared/game/scenario03/map.ts";
+import { RELIC_STORAGE03 } from "../../../shared/game/scenario03/items.ts";
 import type { PlayerView } from "../../../shared/game/state.ts";
 import { useItemText, useT } from "../../i18n/index.ts";
 import type { S3Key } from "../../i18n/types.ts";
-import { ObjectiveLine, PlacePanel, RunTopBar } from "../RunTopBar.tsx";
+import { PlacePanel, RunTopBar } from "../RunTopBar.tsx";
+import { actSteps03, routeSteps03 } from "./clarity03.ts";
 import { roomKey03, roomState03 } from "./Map03.tsx";
 
 const chip = "rounded-full border px-1.5 py-0.5 text-[10px] font-bold tracking-wider";
@@ -36,21 +40,50 @@ export function TopBar03({ g, onLog, onSecrets, secretsCount }: { g: PlayerView;
 
 export function Objective03({ g }: { g: PlayerView }) {
   const t = useT();
-  return <ObjectiveLine>{t(`s3.objective.${Math.min(Math.max(g.act, 1), 4) as 1 | 2 | 3 | 4}`)}</ObjectiveLine>;
+  const [selectedRoute, setSelectedRoute] = useState<EndingRoute03>("OFFICIAL_HISTORY");
+  const routes = g.temporal!.story.availableRoutes;
+  const route = routes.includes(selectedRoute) ? selectedRoute : routes[0];
+  const steps = g.act === 4 && route ? routeSteps03(g, route) : actSteps03(g);
+  const ready = steps.length > 0 && steps.every((step) => step.done);
+  return <section className="mx-auto mt-1 w-full max-w-6xl px-3 text-xs sm:px-4" aria-label={t("s3.guide.title")}>
+    <div className="rounded-lg border border-signal/20 bg-[#0b1028]/75 px-3 py-2">
+      <p className="text-mist"><span className="label mr-2 text-[10px] text-signal">{t("s3.guide.title")}</span>{t(`s3.objective.${Math.min(Math.max(g.act, 1), 4) as 1 | 2 | 3 | 4}`)}</p>
+      {g.act === 4 && <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label={t("s3.guide.route.select")}>
+        {routes.map((id) => <button key={id} type="button" className={`btn min-h-12 min-w-0 px-2 text-xs ${route === id ? "btn-signal" : "btn-ghost"}`} aria-pressed={route === id} onClick={() => setSelectedRoute(id)}>{t(`s3.route.${id}`)}</button>)}
+      </div>}
+      <ul className="mt-1.5 grid min-w-0 gap-0.5 sm:grid-cols-2">
+        {steps.map((step) => <li key={step.key} className={`min-w-0 break-words ${step.done ? "text-moss" : "text-moon"}`}>
+          <span aria-hidden="true">{step.done ? "✓" : "□"} </span><span className="sr-only">{t(step.done ? "s3.guide.done" : "s3.guide.todo")}</span>
+          {step.recommended && <span className="text-mist">{t("s3.guide.recommended")} </span>}{t(step.key)}
+        </li>)}
+      </ul>
+      {g.act === 4 && <p className="mt-1.5 text-gold-bright">{t(ready ? "s3.guide.route.ready" : "s3.guide.route.pending")}</p>}
+    </div>
+  </section>;
 }
 
-/** What Investigate does in your room and year, as the old screen labelled it (null: nothing to investigate here). */
-export function investigateLabel03(g: PlayerView): S3Key | null {
+/** Match the server's investigation order using only the viewer's evidence. */
+export function investigationAt03(g: PlayerView, roomId: RoomId03, year: Year03): S3Key | null {
   const tp = g.temporal!;
-  const { roomId, year } = tp.locations[g.viewerId];
   const has = (id: string) => tp.myEvidence.includes(id);
-  if (roomId === "ARCHIVES" && year === "Y2026") return g.act >= 3 && has(tp.present.caseFile === "A" ? "CASE_FILE_A" : "CASE_FILE_B") ? "s3.paradox.charter" : "s3.causal.investigate";
+  if (roomId === "ARCHIVES" && year === "Y2026") {
+    if (!tp.myEvidence.some((id) => id.startsWith("CASE_FILE_"))) return "s3.causal.investigate";
+    return g.act >= 3 && !has("FOUNDING_CHARTER") ? "s3.paradox.charter" : null;
+  }
   if (g.act < 2) return null;
-  if (roomId === "DIRECTOR_OFFICE") return year === "Y2026" ? (g.act >= 3 && has("SURVEILLANCE_TAPE") ? "s3.paradox.founder" : "s3.intruders.surveillance") : g.act >= 3 && has("ACCESS_LEDGER") ? "s3.paradox.ji" : "s3.intruders.ledger";
-  if (roomId === "MAIN_LAB" && year === "Y1996") return "s3.intruders.prototype";
-  if (g.act >= 3 && year === "Y2026" && roomId === "MAIN_LAB") return "s3.paradox.staff";
-  if (g.act >= 3 && year === "Y2026" && roomId === "PROTOTYPE_ROOM") return "s3.paradox.prototype";
+  if (roomId === "DIRECTOR_OFFICE") {
+    if (year === "Y2026") return !has("SURVEILLANCE_TAPE") ? "s3.intruders.surveillance" : g.act >= 3 && !has("FOUNDER_DISCREPANCY") ? "s3.paradox.founder" : null;
+    return !has("ACCESS_LEDGER") ? "s3.intruders.ledger" : g.act >= 3 && !has("JI_MARGIN_NOTE") ? "s3.paradox.ji" : null;
+  }
+  if (roomId === "MAIN_LAB" && year === "Y1996") return has("PROTOTYPE_LOG") ? null : "s3.intruders.prototype";
+  if (g.act >= 3 && year === "Y2026" && roomId === "MAIN_LAB") return has("STAFF_DISCREPANCY") ? null : "s3.paradox.staff";
+  if (g.act >= 3 && year === "Y2026" && roomId === "PROTOTYPE_ROOM") return has("PROTOTYPE_DISCREPANCY") ? null : "s3.paradox.prototype";
   return null;
+}
+
+export function investigateLabel03(g: PlayerView): S3Key | null {
+  const here = g.temporal!.locations[g.viewerId];
+  return investigationAt03(g, here.roomId, here.year);
 }
 
 /** The selected room in the year on view: its state, what is there, who is there, and what you could do there now. */
@@ -69,18 +102,32 @@ export function RoomPanel03({ g, room, year, onBack }: { g: PlayerView; room: Ro
   if (room === NPCS03.ZERO.roomId && year === NPCS03.ZERO.year && g.act >= NPCS03.ZERO.minAct) describe.push("s3.paradox.zero");
   if (room === "SECRET_ARCHIVE" && year === "Y2026") describe.push(tp.present.secretArchiveOpen ? "s3.causal.gateOpen" : "s3.causal.gateClosed");
   if (room === "POWER_ROOM" && year === "Y2026" && g.act >= 3) describe.push(tp.present.powerRoomExists ? "s3.paradox.powerHere" : "s3.paradox.powerGone");
-  // what you could do here, now (only in your own room and year)
-  const here: string[] = [];
-  if (mine) {
-    const inv = investigateLabel03(g);
-    if (inv) here.push(t(inv));
-    if (room === NPCS03.ARCHIVIST_00.roomId && year === NPCS03.ARCHIVIST_00.year) here.push(t("s3.npc.ask"));
-    if (room === NPCS03.ZERO.roomId && year === NPCS03.ZERO.year && g.act >= NPCS03.ZERO.minAct) here.push(t("s3.paradox.askZero"));
-    if (room === "RESEARCH_WING" && year === "Y2026") here.push(t("s3.items.search"));
-    if (year === "Y1996" && room === "ARCHIVES" && g.act >= 4) here.push(t(g.myActions.find((a) => a.type === "RESOLVE_HISTORY")?.enabled ? "s3.final.where" : "s3.final.unready"));
-  }
-  const nodes = year === "Y1996" ? NODE_IDS03.filter((id) => NODES03[id].roomId === room && g.act >= NODES03[id].minAct) : [];
+  const nodes = year === "Y1996" && open ? NODE_IDS03.filter((id) => NODES03[id].roomId === room && g.act >= NODES03[id].minAct) : [];
+  const unresolved = nodes.filter((id) => !tp.interventions.some((entry) => entry.nodeId === id));
   const relics = year === "Y2026" ? tp.worldItems.filter((item) => item.roomId === room) : [];
+  const here: string[] = [];
+  let specialCount = 0;
+  if (open) {
+    const inv = investigationAt03(g, room, year);
+    if (inv) here.push(t("s3.panel.canInvestigate", { lead: t(inv) }));
+    if (unresolved.length) here.push(t("s3.panel.canIntervene"));
+    if (room === NPCS03.ARCHIVIST_00.roomId && year === NPCS03.ARCHIVIST_00.year && !tp.myEvidence.includes("ARCHIVIST_NOTE")) here.push(t("s3.panel.canSpeak", { name: t("s3.npc.ARCHIVIST_00") }));
+    if (room === NPCS03.ZERO.roomId && year === NPCS03.ZERO.year && g.act >= NPCS03.ZERO.minAct && !tp.myEvidence.includes("ZERO_TRANSCRIPT")) here.push(t("s3.panel.canSpeak", { name: t("s3.npc.ZERO") }));
+    if (mine && room === "RESEARCH_WING" && year === "Y2026" && g.myActions.find((a) => a.type === "SEARCH")?.enabled) here.push(t("s3.panel.canSearch"));
+    for (const item of tp.myItems.filter((item) => year === "Y1996" && RELIC_STORAGE03[item.itemId] === room && (item.itemId === "OLD_BADGE" || tp.myObligations.some((entry) => entry.instanceId === item.instanceId)))) {
+      here.push(t("s3.panel.canSeal", { name: itemText(item.itemId).name, id: item.instanceId }));
+    }
+    if (year === "Y2026" && relics.some((item) => item.itemId === "TIME_MARKER" || item.itemId === "AUTHORITY_CARD")) here.push(t("s3.panel.canPickup"));
+    if (year === "Y2026" && relics.some((item) => item.itemId === "OLD_BADGE")) here.push(t("s3.panel.canPickupOther"));
+    if (year === "Y1996" && room === "ARCHIVES" && g.act >= 4) here.push(t("s3.panel.finalHere"));
+    specialCount = here.length;
+    if (mine) {
+      const next = ADJACENT03[room].filter((id) => roomState03(g, id, year).open);
+      if (next.length) here.push(t("s3.panel.canMove", { rooms: next.map((id) => t(roomKey03(id))).join(sep) }));
+      const other = year === "Y1996" ? "Y2026" : "Y1996";
+      if (roomState03(g, room, other).open) here.push(t("s3.panel.canJump", { year: t(`s3.year.short.${other}`) }));
+    }
+  }
   return (
     <PlacePanel
       ariaLabel={t("s3.panel.aria")}
@@ -109,6 +156,8 @@ export function RoomPanel03({ g, room, year, onBack }: { g: PlayerView; room: Ro
         </p>
       ))}
       <p className="mt-0.5 text-mist">{people.length ? t("s3.panel.people", { names: people.map((p) => p.nickname).join(sep) }) : t("s3.panel.nobody")}</p>
+      <p className="label mt-1 text-signal">{t("s3.panel.what")}</p>
+      {(!open || specialCount === 0) && <p className="mt-0.5 text-mist">{t(open ? "s3.panel.noNew" : "s3.panel.notOpen")}</p>}
       {here.map((line) => (
         <p key={line} className="mt-0.5 font-semibold text-gold-bright">
           › {line}

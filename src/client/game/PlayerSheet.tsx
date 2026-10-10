@@ -45,11 +45,16 @@ export function PlayerSheet({ g, p, onClose }: { g: PlayerView; p: PublicPlayerS
         </div>
         <div>
           <p className="label">{t("sheet.statuses")}</p>
-          <p className="mt-1 text-sm text-mist">{live.statuses.length ? live.statuses.map((s) =>
-            g.scenarioId === "S03_INCIDENT_ZERO" && s.kind === "TEMPORAL_LAG"
+          {g.scenarioId === "S03_INCIDENT_ZERO" ? (live.statuses.length ? <ul className="mt-1 space-y-1 text-sm text-mist">{live.statuses.map((s) => <li key={s.id}>
+            {s.kind === "TEMPORAL_LAG"
               ? t(s.expiresAtRound === g.round ? "s3.status.temporalLag.active" : "s3.status.temporalLag.pending")
-              : statusName(text, s.kind),
-          ).join(sep) : t("common.none")}</p>
+              : s.kind === "FIELD_FOCUS"
+                ? t("s3.status.fieldFocus")
+                : s.kind === "TEMPORAL_ALIGNMENT"
+                  ? t("s3.status.temporalAlignment")
+                  : statusName(text, s.kind)}
+          </li>)}</ul> : <p className="mt-1 text-sm text-mist">{t("common.none")}</p>)
+            : <p className="mt-1 text-sm text-mist">{live.statuses.length ? live.statuses.map((s) => statusName(text, s.kind)).join(sep) : t("common.none")}</p>}
         </div>
       </div>
     </Drawer>
