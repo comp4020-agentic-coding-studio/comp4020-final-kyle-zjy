@@ -382,8 +382,17 @@ capped at negative four, and stays negative until investment raises it. READY
 locks the settlement and clamps only the usable amount to zero. After everyone
 is READY, each player secretly submits a Final Bid no greater than their usable
 Final Chips. All bids reveal together. An activated Black Crown adds two to its
-holder's effective bid, while the winner pays only the submitted bid. A tie
-goes to the earliest seat. A zero effective high bid leaves Exit Rights unsold;
+holder's effective bid, while the winner pays only the submitted bid. A unique
+highest effective bid resolves as before. A tie, including tied zero bids,
+pauses the reveal without a winner and starts a Final Showdown after everyone
+continues. Only tied bidders receive five seeded, server-only card ranks (2
+through Ace) and each locks one index. Projections show five hidden slots only
+to participants and public locked status, never ranks or chosen indexes.
+After every participant locks, only selected ranks reveal together. A unique
+highest card claims Exit Rights; tied highest cards begin another draw among
+only those bidders after reveal confirmation. Each draw is freshly seeded and
+uses no player resources. Round 10 history, payment, and Ending wait for a
+unique Showdown winner. A unique zero effective high bid leaves Exit Rights unsold;
 high Debt still changes a winning ending into the debt ending. Debt of 2–3,
 4–5, 6–7, or 8+ also adds a persistent -1, -2, -3, or -4 modifier to every
 Scenario 04 Dice Resolution; the raw seeded die is unchanged, and Blackjack

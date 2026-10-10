@@ -80,10 +80,21 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
       stats: s.auction.stats,
       final: s.auction.final ? {
         stage: s.auction.final.stage,
-        winnerId: s.auction.final.stage === "REVEAL" ? s.auction.final.winnerId : null,
+        winnerId: ["REVEAL", "SHOWDOWN_REVEAL"].includes(s.auction.final.stage) ? s.auction.final.winnerId : null,
+        tiedPlayerIds: [...s.auction.final.tiedPlayerIds],
+        showdown: s.auction.final.showdown ? {
+          participatingPlayerIds: [...s.auction.final.showdown.participatingPlayerIds],
+          showdownRound: s.auction.final.showdown.showdownRound,
+          cardSlots: s.auction.final.showdown.participatingPlayerIds.includes(viewerId) ? Array(5).fill(null) as null[] : [],
+          lockedPlayerIds: s.auction.final.showdown.participatingPlayerIds.filter((id) => s.auction!.final!.showdown!.locked[id]),
+          myLocked: s.auction.final.showdown.locked[viewerId] ?? false,
+          revealedCard: s.auction.final.stage === "SHOWDOWN_REVEAL" && s.auction.final.showdown.revealedCard ? { ...s.auction.final.showdown.revealedCard } : null,
+          advancingPlayerIds: s.auction.final.stage === "SHOWDOWN_REVEAL" ? [...s.auction.final.showdown.advancingPlayerIds] : [],
+          winnerId: s.auction.final.stage === "SHOWDOWN_REVEAL" ? s.auction.final.showdown.winnerId : null,
+        } : null,
         players: Object.fromEntries(Object.entries(s.auction.final.players).map(([id, entry]) => {
           const own = id === viewerId;
-          const revealed = s.auction!.final!.stage === "REVEAL";
+          const revealed = ["REVEAL", "SHOWDOWN_PICK", "SHOWDOWN_REVEAL"].includes(s.auction!.final!.stage);
           const bid = revealed || own ? entry.bid : null;
           const modifier = revealed ? (s.auction!.players[id].activeCrown ? 2 : 0) : null;
           return [id, {
@@ -104,7 +115,7 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
         usedLotEffects: s.auction!.final && id !== viewerId ? [] : [...p.usedLotEffects],
         armedBlackDie: s.auction!.final && id !== viewerId ? 0 : p.armedBlackDie,
         armedCoin: s.auction!.final && id !== viewerId ? 0 : p.armedCoin,
-        activeCrown: s.auction!.final && id !== viewerId && s.auction!.final.stage !== "REVEAL" ? false : p.activeCrown,
+        activeCrown: s.auction!.final && id !== viewerId && !["REVEAL", "SHOWDOWN_PICK", "SHOWDOWN_REVEAL"].includes(s.auction!.final.stage) ? false : p.activeCrown,
         sanityWard: s.auction!.final && id !== viewerId ? false : p.sanityWard,
         itemNotice: id === viewerId ? p.itemNotice : null,
         redContractRemainingRounds: p.redContractRemainingRounds,

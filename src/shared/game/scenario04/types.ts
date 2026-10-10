@@ -52,10 +52,21 @@ export type FinalPlayer04 = {
 };
 
 export type FinalState04 = {
-  stage: "SETTLEMENT" | "AUCTION" | "REVEAL";
+  stage: "SETTLEMENT" | "AUCTION" | "REVEAL" | "SHOWDOWN_PICK" | "SHOWDOWN_REVEAL";
   logStartSeq: number;
   players: Record<PlayerId, FinalPlayer04>;
   winnerId: PlayerId | null;
+  tiedPlayerIds: PlayerId[];
+  showdown: null | {
+    participatingPlayerIds: PlayerId[];
+    showdownRound: number;
+    cards: Record<PlayerId, number[]>;
+    selectedCardIndex: Record<PlayerId, number | null>;
+    locked: Record<PlayerId, boolean>;
+    revealedCard: Record<PlayerId, number> | null;
+    advancingPlayerIds: PlayerId[];
+    winnerId: PlayerId | null;
+  };
 };
 
 export type AuctionState04 = {
@@ -131,6 +142,17 @@ export type PublicFinal04 = {
   stage: FinalState04["stage"];
   players: Record<PlayerId, PublicFinalPlayer04>;
   winnerId: PlayerId | null;
+  tiedPlayerIds: PlayerId[];
+  showdown: null | {
+    participatingPlayerIds: PlayerId[];
+    showdownRound: number;
+    cardSlots: null[];
+    lockedPlayerIds: PlayerId[];
+    myLocked: boolean;
+    revealedCard: Record<PlayerId, number> | null;
+    advancingPlayerIds: PlayerId[];
+    winnerId: PlayerId | null;
+  };
 };
 
 export type PublicAuction04 = Omit<AuctionState04, "players" | "challenge" | "deal" | "final" | "counterfeitLots" | "itemInstances" | "nextItemInstanceNumber"> & {

@@ -8,6 +8,7 @@ import { chromium, type Locator, type Page } from "playwright";
 import { clippedElements, smallTargets } from "./lib/layout-check.ts";
 
 const arg = (name: string, fallback: string) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : fallback; };
+const showdownWalkthrough = process.argv.includes("--showdown");
 const out = arg("out", "/tmp/fate-play04");
 const port = Number(arg("port", "8097"));
 const base = `http://localhost:${port}`;
@@ -80,6 +81,10 @@ let sawChronoItem = false;
 let sawFinalOverture = false;
 let sawEndingStory = false;
 let sawResultsStory = false;
+let sawFinalTie = false;
+let sawShowdownLocked = false;
+let sawShowdownReveal = false;
+let sawShowdownWinner = false;
 try {
   await phone.goto(base);
   await phone.getByRole("button", { name: "Create room" }).click();
@@ -158,13 +163,40 @@ try {
           await shot(page, tag, "final-bid");
           if (await visible(page.locator('[data-final-submit]'))) {
             const usable = Number(await page.locator('[data-final-usable]').innerText());
-            await page.locator('[data-final-bid]').fill(String(tag === "phone" ? usable : 0));
+            await page.locator('[data-final-bid]').fill(String(showdownWalkthrough ? 0 : tag === "phone" ? usable : 0));
             acted = await tap(page.locator('[data-final-submit]'));
             if (acted) { done.add(`${tag}:finalBid`); await shot(page, tag, "final-sealed"); }
           }
           continue;
         }
+        if (showdownWalkthrough && await visible(page.locator('[data-final-showdown-pick]'))) {
+          const cards = page.locator('[data-showdown-card]');
+          if (await visible(cards.first())) {
+            if (await cards.count() !== 5) problems.push(`${tag}: Showdown did not show five hidden cards`);
+            if (await cards.first().isEnabled()) {
+              await shot(page, tag, "showdown-hidden");
+              acted = await tap(cards.nth(tag === "phone" ? 0 : 1));
+              if (acted && await page.getByText(/LOCKED · waiting for the other bidders/).waitFor({ timeout: 3000 }).then(() => true).catch(() => false)) {
+                sawShowdownLocked = true;
+                await shot(page, tag, "showdown-locked");
+              }
+            }
+          }
+          continue;
+        }
+        if (showdownWalkthrough && await visible(page.locator('[data-final-showdown-reveal]'))) {
+          sawShowdownReveal = true;
+          await shot(page, tag, "showdown-reveal");
+          if (await visible(page.locator('[data-final-showdown-reveal]').getByText(/claims Exit Rights/))) sawShowdownWinner = true;
+          acted = await tap(page.locator('[data-final-continue]'));
+          continue;
+        }
         if (await visible(page.locator('[data-final-continue]'))) {
+          if (showdownWalkthrough && await visible(page.locator('[data-final-tie]'))) {
+            sawFinalTie = true;
+            await shot(page, tag, "final-tie");
+            if (await visible(page.locator('[data-final-tie]').getByText(/claims Exit Rights/))) problems.push("Final Reveal named a winner during a tie");
+          }
           await shot(page, tag, "final-reveal");
           acted = await tap(page.locator('[data-final-continue]'));
           continue;
@@ -338,6 +370,7 @@ if (!sawFinalOverture) problems.push("Final Auction collapse warning was not vis
 if (!sawEndingStory) problems.push("Ending lacked the personal fate story");
 if (!sawResultsStory) problems.push("Results lacked the auction story summary");
 if (!seen.has("final-reveal-phone") || !seen.has("final-reveal-desktop")) problems.push("Final Reveal was not visible to both players");
+if (showdownWalkthrough && (!sawFinalTie || !sawShowdownLocked || !sawShowdownReveal || !sawShowdownWinner)) problems.push("Final Showdown tie, lock, reveal, or winner was not reached");
 if (!armedRollPerfect) problems.push("Activated Black Die did not resolve the next Sabotage as Perfect");
 if (problems.length) console.error(problems.join("\n"));
 if (errors.length) console.error(errors.join("\n"));

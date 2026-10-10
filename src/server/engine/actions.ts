@@ -39,7 +39,9 @@ function turnGate(s: GameState, actorId: PlayerId, cost: number, type: GameActio
     const mine = final.players[actorId];
     const allowed = final.stage === "SETTLEMENT" && !mine.ready && ["FINAL_CONVERT", "FINAL_READY", "USE_LOT"].includes(type)
       || final.stage === "AUCTION" && mine.bid === null && type === "FINAL_BID"
-      || final.stage === "REVEAL" && !mine.revealReady && type === "FINAL_CONTINUE";
+      || final.stage === "REVEAL" && !mine.revealReady && type === "FINAL_CONTINUE"
+      || final.stage === "SHOWDOWN_PICK" && final.showdown?.participatingPlayerIds.includes(actorId) && !final.showdown.locked[actorId] && type === "FINAL_SHOWDOWN_PICK"
+      || final.stage === "SHOWDOWN_REVEAL" && !mine.revealReady && type === "FINAL_CONTINUE";
     return allowed ? null : fail("WRONG_PHASE", m`That action is unavailable in the final auction.`);
   }
   const active = activePlayerId(s);

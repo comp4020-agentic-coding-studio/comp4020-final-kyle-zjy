@@ -11,6 +11,8 @@ export const ZH_MESSAGES: Record<string, string> = {
   "Hit or stand?": "要牌还是停牌？",
   "Hit": "要牌",
   "Stand": "停牌",
+  "You cannot choose a Showdown card now.": "现在不能选择最终对决的牌。",
+  "Choose one of the five hidden cards.": "请从五张隐藏的牌中选择一张。",
   "Blackjack result": "二十一点结果",
   "The final card is on the table. Confirm to return to the auction.": "最后抽到的牌已经亮出。确认后返回拍卖。",
   "Continue": "继续",

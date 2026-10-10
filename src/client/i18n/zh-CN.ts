@@ -283,6 +283,7 @@ export const zhCN: Catalog = {
   "action.FINAL_CONVERT": "转换",
   "action.FINAL_READY": "准备完成",
   "action.FINAL_BID": "最终出价",
+  "action.FINAL_SHOWDOWN_PICK": "盲选一张牌",
   "action.FINAL_CONTINUE": "继续",
   "action.RESPOND": "回应",
   "action.ACK_SEQUENCE": "继续",

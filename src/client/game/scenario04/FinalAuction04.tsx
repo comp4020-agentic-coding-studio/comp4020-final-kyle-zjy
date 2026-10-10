@@ -20,6 +20,7 @@ export function FinalAuction04({ g }: { g: PlayerView }) {
   const player = g.players[g.viewerId];
   const [bidText, setBidText] = useState("0");
   const [copySource, setCopySource] = useState<LotId04 | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<{ round: number; index: number } | null>(null);
   useEffect(() => { window.scrollTo(0, 0); }, []);
   const tier = debtTier04(me.debt);
   const resourceRows = [
@@ -30,15 +31,20 @@ export function FinalAuction04({ g }: { g: PlayerView }) {
   ];
   const bid = Number(bidText);
   const legalBid = Number.isSafeInteger(bid) && bid >= 0 && bid <= (own.usable ?? 0);
+  const showdown = final.showdown;
+  const inShowdown = !!showdown?.participatingPlayerIds.includes(g.viewerId);
+  const selectedHere = selectedSlot && selectedSlot.round === showdown?.showdownRound ? selectedSlot.index : null;
+  const tie = final.tiedPlayerIds.length > 1;
+  const cardRank = (card: number) => card === 11 ? "J" : card === 12 ? "Q" : card === 13 ? "K" : card === 14 ? "A" : String(card);
 
   return <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-4 px-3 py-4 sm:px-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,340px)]">
     <div data-s4-final-overture className="min-w-0 rounded-2xl border border-ember/50 bg-[#1d1020]/90 px-4 py-3 lg:col-span-2">
       <p className="label text-ember">{t("s4.final.overture.title")}</p>
       <p className="mt-1 font-mono text-xs text-gold-bright">{t("s4.final.overture.pressure", { n: g.collapse, max: g.collapseMax })}</p>
-      <p className="mt-2 text-sm leading-relaxed text-moon">{t(`s4.final.overture.${final.stage === "SETTLEMENT" ? "settlement" : final.stage === "AUCTION" ? "auction" : "reveal"}`)}</p>
+      <p className="mt-2 text-sm leading-relaxed text-moon">{t(`s4.final.overture.${final.stage === "SETTLEMENT" ? "settlement" : final.stage === "AUCTION" ? "auction" : final.stage === "REVEAL" ? tie ? "tie" : "reveal" : "showdown"}`)}</p>
     </div>
     <section className="min-w-0 rounded-3xl border-2 border-gold/60 bg-[#0b1028]/95 p-4 text-center shadow-[0_0_44px_#d7ae5130] sm:p-7" aria-label={t("s4.final.title")}>
-      {final.stage !== "SETTLEMENT" && <><p className="label text-signal">{t(final.stage === "AUCTION" ? "s4.final.auction" : "s4.final.reveal")}</p><h1 className="mt-2 font-display text-3xl text-gold-bright sm:text-5xl">{t("s4.final.title")}</h1></>}
+      {final.stage !== "SETTLEMENT" && <><p className="label text-signal">{t(final.stage === "AUCTION" ? "s4.final.auction" : final.stage === "REVEAL" ? "s4.final.reveal" : "s4.showdown.title")}</p><h1 className="mt-2 font-display text-3xl text-gold-bright sm:text-5xl">{t(final.stage.startsWith("SHOWDOWN") ? "s4.showdown.title" : "s4.final.title")}</h1></>}
       {final.stage === "SETTLEMENT" && <>
         <div className="sticky top-0 z-30 -mx-2 rounded-xl border-b border-gold/40 bg-[#0b1028]/98 px-2 py-2 backdrop-blur-md">
           <p className="label text-signal">{t("s4.final.settlement")}</p>
@@ -85,13 +91,34 @@ export function FinalAuction04({ g }: { g: PlayerView }) {
         </>}
       </div>}
       {final.stage === "REVEAL" && <>
-        <h2 className="mt-5 font-display text-3xl text-gold-bright">{final.winnerId ? t("s4.final.winner", { name: g.players[final.winnerId].nickname }) : t("s4.final.noWinner")}</h2>
-        <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{a.seatOrder.map((id) => <div key={id} className={`rounded-xl border p-3 text-left ${id === final.winnerId ? "border-gold-bright" : "border-indigo"}`}>
+        {tie ? <div data-final-tie className="mt-5 rounded-2xl border-2 border-ember bg-ember/10 p-4"><h2 className="font-display text-4xl text-ember">{t("s4.showdown.tie")}</h2><p className="mt-1 text-sm text-moon">{t("s4.showdown.tieHint")}</p></div>
+          : <h2 className="mt-5 font-display text-3xl text-gold-bright">{final.winnerId ? t("s4.final.winner", { name: g.players[final.winnerId].nickname }) : t("s4.final.noWinner")}</h2>}
+        <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{a.seatOrder.map((id) => <div key={id} className={`rounded-xl border p-3 text-left ${id === final.winnerId || tie && final.tiedPlayerIds.includes(id) ? "border-gold-bright bg-gold/10" : "border-indigo"}`}>
           <p className="font-bold">{g.players[id].nickname}</p>
           <p className="mt-1 text-sm">{t("s4.final.revealLine", { bid: final.players[id].bid ?? 0, modifier: final.players[id].modifier ?? 0, effective: final.players[id].effectiveBid ?? 0 })}</p>
         </div>)}</div>
-        <button data-final-continue className="btn btn-gold mt-6 min-h-14 w-full" disabled={own.continued} onClick={() => void sendGame({ type: "FINAL_CONTINUE" })}>{own.continued ? t("s4.waiting") : t("s4.final.continue")}</button>
+        <button data-final-continue className="btn btn-gold mt-6 min-h-14 w-full" disabled={own.continued} onClick={() => void sendGame({ type: "FINAL_CONTINUE" })}>{own.continued ? t("s4.waiting") : t(tie ? "s4.showdown.enter" : "s4.final.continue")}</button>
       </>}
+      {final.stage === "SHOWDOWN_PICK" && showdown && <div data-final-showdown-pick className="mx-auto mt-5 max-w-xl">
+        <p className="font-display text-xl text-moon">{t("s4.showdown.round", { n: showdown.showdownRound })}</p>
+        <p className="mt-2 text-sm text-mist">{t("s4.showdown.subtitle")}</p>
+        {inShowdown ? <>
+          <p className="mt-1 text-sm text-moon">{t("s4.showdown.choose")}</p>
+          <div className="mt-5 grid grid-cols-5 gap-1 sm:gap-3">{showdown.cardSlots.map((_, index) => <button key={index} data-showdown-card={index} aria-label={t("s4.showdown.hiddenCard", { n: index + 1 })} className={`min-h-24 min-w-0 rounded-xl border-2 bg-[#111936] text-3xl transition-transform ${selectedHere === index ? "-translate-y-2 border-gold-bright text-gold-bright shadow-lg shadow-gold/30" : "border-indigo text-gold"}`} disabled={showdown.myLocked || selectedHere !== null} onClick={() => { setSelectedSlot({ round: showdown.showdownRound, index }); void sendGame({ type: "FINAL_SHOWDOWN_PICK", cardIndex: index }); }}>?</button>)}</div>
+          <p className={`mt-5 rounded-xl border p-3 text-sm font-semibold ${showdown.myLocked ? "border-moss/50 text-moss" : "border-gold/30 text-moon"}`}>{showdown.myLocked ? t("s4.showdown.lockedWaiting") : selectedHere !== null ? t("s4.showdown.locking") : t("s4.showdown.blind")}</p>
+        </> : <div className="mt-6 rounded-xl border border-indigo p-5"><p className="font-display text-2xl text-gold-bright">{t("s4.showdown.spectator")}</p><p className="mt-2 text-sm text-mist">{t("s4.showdown.spectatorWait")}</p></div>}
+        <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{showdown.participatingPlayerIds.map((id) => <p key={id} className="rounded-xl border border-indigo/70 p-2 text-sm">{g.players[id].nickname} · {t(showdown.lockedPlayerIds.includes(id) ? "s4.showdown.chosen" : "s4.showdown.awaiting")}</p>)}</div>
+      </div>}
+      {final.stage === "SHOWDOWN_REVEAL" && showdown?.revealedCard && <div data-final-showdown-reveal className="mx-auto mt-5 max-w-xl">
+        <p className="font-display text-xl text-moon">{t("s4.showdown.round", { n: showdown.showdownRound })}</p>
+        <p className="mt-1 text-sm text-mist">{t("s4.showdown.flip")}</p>
+        <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{showdown.participatingPlayerIds.map((id) => <motion.div key={`${showdown.showdownRound}-${id}`} initial={{ rotateY: -90, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} transition={{ duration: 0.45 }} className={`rounded-xl border-2 p-4 ${showdown.advancingPlayerIds.includes(id) ? "border-gold-bright bg-gold/10" : "border-indigo"}`}>
+          <p className="text-sm font-bold">{g.players[id].nickname}</p><p className="mt-1 font-display text-5xl text-gold-bright">{cardRank(showdown.revealedCard![id])}</p>
+        </motion.div>)}</div>
+        {showdown.winnerId ? <div className="mt-5 rounded-2xl border-2 border-gold-bright bg-gold/10 p-4"><h2 className="font-display text-3xl text-gold-bright">{t("s4.final.winner", { name: g.players[showdown.winnerId].nickname })}</h2><p className="mt-2 text-sm text-moon">{t("s4.showdown.winnerStory")}</p></div>
+          : <div className="mt-5 rounded-2xl border border-ember/60 p-4"><h2 className="font-display text-2xl text-ember">{t("s4.showdown.again")}</h2><p className="mt-1 text-sm text-mist">{t("s4.showdown.againHint")}</p></div>}
+        <button data-final-continue className="btn btn-gold mt-6 min-h-14 w-full" disabled={own.continued} onClick={() => void sendGame({ type: "FINAL_CONTINUE" })}>{own.continued ? t("s4.waiting") : t(showdown.winnerId ? "s4.final.continue" : "s4.showdown.next")}</button>
+      </div>}
     </section>
     <aside className="min-w-0 rounded-2xl border border-indigo bg-[#0b1028]/90 p-4">
       <h2 className="label text-gold-bright">{t("s4.final.tableStatus")}</h2>
@@ -103,7 +130,7 @@ export function FinalAuction04({ g }: { g: PlayerView }) {
           <div className="min-w-0"><p className="truncate font-semibold">{g.players[id].nickname}</p><p className="text-xs text-mist">{t(`s4.final.status.${final.players[id].status}`)}</p>{debtTier04(debt) !== "none" && <p className="text-xs text-ember">{t("s4.table.debt", { n: debt })} · {t(`s4.debt.${debtTier04(debt)}`)}</p>}</div>
         </div>;
       })}</div>
-      <p className="mt-4 text-sm text-mist">{t(final.stage === "SETTLEMENT" ? "s4.final.privacySettlement" : final.stage === "AUCTION" ? "s4.final.privacyBid" : "s4.final.revealed")}</p>
+      <p className="mt-4 text-sm text-mist">{t(final.stage === "SETTLEMENT" ? "s4.final.privacySettlement" : final.stage === "AUCTION" ? "s4.final.privacyBid" : final.stage === "SHOWDOWN_PICK" ? "s4.showdown.privacyPick" : final.stage === "SHOWDOWN_REVEAL" ? "s4.showdown.privacyReveal" : "s4.final.revealed")}</p>
     </aside>
   </div>;
 }

@@ -272,5 +272,10 @@ shown above individually clickable resource rows and per-item USE/CONVERT
 choices. The Final Chips number remains visible while scrolling and animates
 after every investment. Public player cards show only settlement or bid
 submission status; amounts and choices stay private. Once everyone is READY,
-the board takes sealed Final Bids and then displays every bid, modifier,
-effective bid, and winner in one reveal.
+the board takes sealed Final Bids and then displays every bid, modifier, and
+effective bid in one reveal. A tied high bid shows a central TIE state before
+the same board shifts to Final Showdown. Participants see five large card backs;
+spectators see only selection progress. A locked choice stays face down until
+all tied bidders choose, then the selected ranks flip together. Further ties
+repeat within this board; a unique winner receives the Exit Rights announcement
+and only then the outcome control appears.

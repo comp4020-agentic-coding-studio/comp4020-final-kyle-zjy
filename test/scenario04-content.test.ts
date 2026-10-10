@@ -41,7 +41,7 @@ describe("Scenario 04 content and abilities", () => {
     }
   });
 
-  it("plays nine ordinary lots, then enters simultaneous final settlement and can end unsold", () => {
+  it("plays nine ordinary lots, then resolves tied zero Final Bids before the ending", () => {
     let s = start();
     for (let round = 1; round <= 9; round++) {
       expect(s.round).toBe(round);
@@ -61,10 +61,17 @@ describe("Scenario 04 content and abilities", () => {
     for (const id of s.auction!.seatOrder) s = act(s, id, { type: "FINAL_READY" });
     for (const id of s.auction!.seatOrder) s = act(s, id, { type: "FINAL_BID", amount: 0 });
     expect(s.auction!.final?.stage).toBe("REVEAL");
-    expect(s.auction!.auctionHistory.at(-1)).toMatchObject({ round: 10, winnerId: null });
+    expect(s.auction!.final?.winnerId).toBeNull();
+    expect(s.auction!.auctionHistory.at(-1)?.round).toBe(9);
+    for (const id of s.auction!.seatOrder) s = act(s, id, { type: "FINAL_CONTINUE" });
+    expect(s.auction!.final?.stage).toBe("SHOWDOWN_PICK");
+    for (const id of s.auction!.seatOrder) s.auction!.final!.showdown!.cards[id][0] = id === "a" ? 14 : 2;
+    for (const id of s.auction!.seatOrder) s = act(s, id, { type: "FINAL_SHOWDOWN_PICK", cardIndex: 0 });
+    expect(s.auction!.final?.stage).toBe("SHOWDOWN_REVEAL");
+    expect(s.auction!.auctionHistory.at(-1)).toMatchObject({ round: 10, winnerId: "a" });
     for (const id of s.auction!.seatOrder) s = act(s, id, { type: "FINAL_CONTINUE" });
     expect(Object.values(s.auction!.players).every((player) => !player.items.includes("LOT_10"))).toBe(true);
-    expect(s.outcome).toBe("S04_UNSOLD");
+    expect(s.outcome).toBe("S04_EXIT");
     expect(s.collapse).toBe(10);
     expect(s.phase).toBe("ENDING");
   });

@@ -287,6 +287,7 @@ export const en = {
   "action.FINAL_CONVERT": "Convert",
   "action.FINAL_READY": "Ready",
   "action.FINAL_BID": "Final Bid",
+  "action.FINAL_SHOWDOWN_PICK": "Choose hidden card",
   "action.FINAL_CONTINUE": "Continue",
   "action.RESPOND": "Respond",
   "action.ACK_SEQUENCE": "Continue",

@@ -68,6 +68,7 @@ export type GameAction =
   | { type: "FINAL_CONVERT"; resource: "BLACK_CHIPS" | "SANITY" | "FATE" | "AP" | "ITEM"; lotId?: LotId04 }
   | { type: "FINAL_READY" }
   | { type: "FINAL_BID"; amount: number }
+  | { type: "FINAL_SHOWDOWN_PICK"; cardIndex: number }
   | { type: "FINAL_CONTINUE" };
 
 export type GameActionType = GameAction["type"];
