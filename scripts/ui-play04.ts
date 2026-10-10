@@ -105,14 +105,18 @@ try {
       if (await visible(page.getByRole("heading", { name: /Exit Rights claimed|The debt follows|No one leaves/ }))) { reached = 10; break; }
       const text = await page.locator("header").first().innerText().catch(() => "");
       const round = Number(text.match(/ROUND\s+(\d+)\s*\/\s*10/i)?.[1] ?? 0);
-      if (round > 0) { reached = Math.max(reached, round - 1); await shot(page, tag, `round-${round}`); }
       if (round === 2 && tag === "phone" && !sawAcquiredNotice) {
         const acquired = page.getByRole("status").filter({ hasText: /auction item acquired/i });
         if (await visible(acquired)) {
           sawAcquiredNotice = true;
           await shot(page, tag, "item-acquired");
+          if (!await acquired.waitFor({ state: "hidden", timeout: 1100 }).then(() => true).catch(() => false)) problems.push("Acquisition notice lasted longer than one second");
+          await page.reload();
+          await page.locator('[data-action="USE_LOT"]').waitFor({ state: "visible" });
+          if (await visible(acquired)) problems.push("Expired acquisition notice replayed after reconnect");
         }
       }
+      if (round > 0) { reached = Math.max(reached, round - 1); await shot(page, tag, `round-${round}`); }
       if (round === 2 && await visible(page.getByText("First lap: Bea → Kyle", { exact: true }))) sawNextRoundOrder = true;
       const decision = page.locator('[role="dialog"][aria-modal="true"]');
       if (await visible(decision)) {

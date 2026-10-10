@@ -70,12 +70,12 @@ onResume("S4_DEAL", (ctx, _window, answers) => {
   if (deal.giveItem) {
     buyer.items.splice(buyer.items.indexOf(deal.giveItem), 1);
     seller.items.push(deal.giveItem);
-    noticeAcquiredLot04(seller, deal.giveItem);
+    noticeAcquiredLot04(seller, deal.giveItem, ctx.now);
   }
   if (deal.forItem) {
     seller.items.splice(seller.items.indexOf(deal.forItem), 1);
     buyer.items.push(deal.forItem);
-    noticeAcquiredLot04(buyer, deal.forItem);
+    noticeAcquiredLot04(buyer, deal.forItem, ctx.now);
   }
   if (deal.forPass) a.passedPlayers.push(deal.to);
   a.stats.deals++;

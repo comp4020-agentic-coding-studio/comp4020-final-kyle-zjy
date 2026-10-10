@@ -8,13 +8,18 @@ export function ItemNotice04({ g }: { g: PlayerView }) {
   const [visibleSeq, setVisibleSeq] = useState<number | null>(null);
   const t = useT();
   const locale = useLocale();
+  const expiresAt = (notice?.at ?? 0) + (notice?.result === "ACQUIRED" ? 1000 : 2500);
   useEffect(() => {
-    if (!notice) return;
+    const remaining = expiresAt - Date.now();
+    if (!notice || remaining <= 0) {
+      setVisibleSeq(null);
+      return;
+    }
     setVisibleSeq(notice.seq);
-    const timer = setTimeout(() => setVisibleSeq(null), notice.result === "ACQUIRED" ? 3000 : 2500);
+    const timer = setTimeout(() => setVisibleSeq(null), remaining);
     return () => clearTimeout(timer);
-  }, [notice?.seq]);
-  if (!notice || visibleSeq !== notice.seq) return null;
+  }, [notice?.seq, expiresAt]);
+  if (!notice || visibleSeq !== notice.seq || Date.now() >= expiresAt) return null;
   const item = auctionLotText(locale, notice.lotId);
   const copied = notice.copyLotId ? auctionLotText(locale, notice.copyLotId).name : "";
   return <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-3 top-36 z-40 mx-auto max-w-lg rounded-2xl border-2 border-gold-bright bg-[#111936]/95 px-5 py-4 text-center shadow-2xl shadow-gold/20">

@@ -17,8 +17,8 @@ function earlierInstance(s: GameState, sourceLotId: LotId04 | undefined) {
   return history ? s.auction!.itemInstances[history.itemInstanceId] ?? null : null;
 }
 
-export function noticeAcquiredLot04(holder: AuctionPlayer04, lotId: LotId04): void {
-  holder.itemNotice = { seq: ++holder.itemNoticeSeq, lotId, result: "ACQUIRED" };
+export function noticeAcquiredLot04(holder: AuctionPlayer04, lotId: LotId04, at: number): void {
+  holder.itemNotice = { seq: ++holder.itemNoticeSeq, at, lotId, result: "ACQUIRED" };
 }
 
 function usable(s: GameState, playerId: string, action: Extract<GameAction, { type: "USE_LOT" }>): boolean {
@@ -86,7 +86,7 @@ export const USE_LOT04: Spec<Extract<GameAction, { type: "USE_LOT" }>> = {
       loseSanity(ctx, p, sanity, m`using the Devil's Key`);
     }
     log(ctx, m`${p.nickname} uses an auction item.`, "S4_ITEM", p.playerId);
-    holder.itemNotice = { seq: ++holder.itemNoticeSeq, lotId: action.lotId, result, copyLotId };
+    holder.itemNotice = { seq: ++holder.itemNoticeSeq, at: ctx.now, lotId: action.lotId, result, copyLotId };
     cue(ctx, "S4_ITEM_USED", { playerId: p.playerId, lotId: action.lotId });
   },
 };

@@ -242,7 +242,7 @@ leading, and passed states have text labels as well as color. On narrow
 screens the lot, table status, PlayersStrip, and Dock stack in that order.
 The item picker shows held lots and an explicit use control; Chrono Key opens
 the four earlier source choices. Acquiring a lot at auction or in a deal raises
-an owner-only inventory notice. A used item leaves the picker and raises a
+an owner-only inventory notice for one second. A used item leaves the picker and raises a
 short owner-only result notice for activation, copying, or counterfeit
 discovery. These notices use text as well as colour. Active auction effects and
 temporary penalties use the same chips as the own ability, immediately after

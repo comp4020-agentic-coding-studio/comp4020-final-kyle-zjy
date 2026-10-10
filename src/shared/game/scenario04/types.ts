@@ -22,7 +22,7 @@ export type AuctionPlayer04 = {
   activeCrown: boolean;
   sanityWard: boolean;
   itemNoticeSeq: number;
-  itemNotice: null | { seq: number; lotId: LotId04; result: "ACQUIRED" | "ACTIVATED" | "COUNTERFEIT" | "COPIED"; copyLotId?: LotId04 };
+  itemNotice: null | { seq: number; at: number; lotId: LotId04; result: "ACQUIRED" | "ACTIVATED" | "COUNTERFEIT" | "COPIED"; copyLotId?: LotId04 };
   redContractRemainingRounds: number;
   redContractStartsRound: number;
   privateIntel: IntelId04[];

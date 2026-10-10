@@ -46,7 +46,7 @@ function closeAuction04(ctx: Ctx): void {
     player.blackChips -= a.currentBidReal;
     if (s.round !== 10) {
       player.items.push(a.currentLot);
-      noticeAcquiredLot04(player, a.currentLot);
+      noticeAcquiredLot04(player, a.currentLot, ctx.now);
     }
     a.stats.highestBid = Math.max(a.stats.highestBid, a.currentBid);
     log(ctx, m`${s.players[winner].nickname} wins the lot for ${a.currentBidReal} Black Chips.`, "S4_SOLD", winner);

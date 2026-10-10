@@ -39,7 +39,7 @@ describe("Scenario 04 clockwise auction", () => {
     expect(s.auction!.auctionHistory.at(-1)).toMatchObject({ round: 1, winnerId: "a", price: 3 });
     expect(s.auction!.players.a.blackChips).toBe(5);
     expect(s.auction!.players.a.items).toContain("LOT_01");
-    expect(project(s, "a").auction!.players.a.itemNotice).toMatchObject({ lotId: "LOT_01", result: "ACQUIRED" });
+    expect(project(s, "a").auction!.players.a.itemNotice).toMatchObject({ lotId: "LOT_01", result: "ACQUIRED", at: expect.any(Number) });
     expect(project(s, "b").auction!.players.a.itemNotice).toBeNull();
     for (const id of ["b", "c", "d"]) expect(s.auction!.players[id].blackChips).toBe(8);
     expect(s.round).toBe(2);

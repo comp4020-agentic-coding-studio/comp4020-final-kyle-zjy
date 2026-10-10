@@ -270,7 +270,7 @@ describe("Scenario 04 revised rules", () => {
     expect(s.players.a.ap).toBe(1);
     s = answer(s, "ACCEPT");
     expect(s.auction!.players.a).toMatchObject({ blackChips: 6, items: ["LOT_02"] });
-    expect(project(s, "a").auction!.players.a.itemNotice).toMatchObject({ lotId: "LOT_02", result: "ACQUIRED" });
+    expect(project(s, "a").auction!.players.a.itemNotice).toMatchObject({ lotId: "LOT_02", result: "ACQUIRED", at: expect.any(Number) });
     expect(project(s, "b").auction!.players.a.itemNotice).toBeNull();
     expect(s.auction!.players.a.privateIntel).toContain("LOT_01_LIMIT");
     expect(s.auction!.players.b).toMatchObject({ blackChips: 10, items: [] });
