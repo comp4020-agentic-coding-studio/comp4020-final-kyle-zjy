@@ -17,6 +17,8 @@ import { DOCK04 } from "../game/scenario04/dock04.tsx";
 import { Objective04, PlacePanel04, TopBar04 } from "../game/scenario04/Panels04.tsx";
 import { Private04 } from "../game/scenario04/Private04.tsx";
 import { ItemNotice04 } from "../game/scenario04/ItemNotice04.tsx";
+import { FinalAuction04 } from "../game/scenario04/FinalAuction04.tsx";
+import { debtTier04 } from "../../shared/game/scenario04/debt.ts";
 import { useFormat, useT } from "../i18n/index.ts";
 import { sendGame, sendLobby, useGame, useMe } from "../store.ts";
 
@@ -45,6 +47,16 @@ export function Scenario04Game() {
   const [drawer, setDrawer] = useState<null | "log" | "secrets">(null);
   const [sheet, setSheet] = useState<PublicPlayerState | null>(null);
   if (!g?.auction) return null;
+  if (g.round === 10 && g.auction.final) return <main className="night-sky min-h-dvh pb-8 text-moon">
+    <TopBar04 g={g} onLog={() => setDrawer("log")} onSecrets={() => setDrawer("secrets")} secretsCount={g.auction.players[g.viewerId]?.privateIntel?.length ?? 0} />
+    <FinalAuction04 g={g} />
+    <ItemNotice04 g={g} />
+    <HostSkip g={g} />
+    <AnimatePresence>
+      {drawer === "log" && <LogDrawer key="log" g={g} title={t("s4.top.log")} onClose={() => setDrawer(null)} />}
+      {drawer === "secrets" && <SecretsDrawer key="secrets" g={g} sections={<Private04 g={g} />} onClose={() => setDrawer(null)} />}
+    </AnimatePresence>
+  </main>;
   const mine = g.auction.players[g.viewerId];
   return <main className="night-sky relative flex min-h-dvh flex-col">
     <TopBar04 g={g} onLog={() => setDrawer("log")} onSecrets={() => setDrawer("secrets")} secretsCount={mine?.privateIntel?.length ?? 0} />
@@ -54,7 +66,7 @@ export function Scenario04Game() {
       <AuctionTable04 g={g} />
       <PlacePanel04 g={g} />
       <EventPanel g={g} />
-      <PlayersStrip g={g} onOpen={setSheet} tag={(id) => <><span>{t("s4.table.debt", { n: g.auction!.players[id].debt })}</span>{g.auction!.players[id].passed && <span className="text-ember">{t("s4.table.passed")}</span>}</>} />
+      <PlayersStrip g={g} onOpen={setSheet} tag={(id) => <>{debtTier04(g.auction!.players[id].debt) !== "none" && <span className="text-ember">{t("s4.table.debt", { n: g.auction!.players[id].debt })} · {t(`s4.debt.${debtTier04(g.auction!.players[id].debt)}`)}</span>}{g.auction!.players[id].passed && <span className="text-ember">{t("s4.table.passed")}</span>}</>} />
     </div>
     <Dock g={g} mode={mode} setMode={setMode} extension={DOCK04} />
     <CueFeed g={g} />

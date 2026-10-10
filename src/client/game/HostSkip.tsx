@@ -23,6 +23,13 @@ function waitingOn(g: PlayerView, t: TFunction): { key: string; who: string[]; l
     const who = others(g.turnOrder.filter((id) => !g.sequence!.acks.includes(id)));
     return who.length ? { key: `s:${g.sequence.kind}`, who, label: t("host.endScene") } : null;
   }
+  if (g.auction?.final) {
+    const final = g.auction.final;
+    const waiting = (id: string) => final.stage === "SETTLEMENT" ? final.players[id].status === "SETTLING" : final.stage === "AUCTION" ? final.players[id].status !== "BID_SUBMITTED" : !final.players[id].continued;
+    if (waiting(g.viewerId)) return null;
+    const who = g.auction.seatOrder.filter((id) => id !== g.viewerId && waiting(id));
+    return who.length ? { key: `f:${final.stage}:${who.join()}`, who, label: t("host.default", { names: who.map(name).join(t("common.listSep")) }) } : null;
+  }
   const active = g.step === "PLAYER_TURNS" ? g.turnOrder[g.activeIndex] : undefined;
   if (active && others([active]).length) return { key: `t:${g.round}:${g.activeIndex}`, who: [active], label: t("host.skipTurn", { name: name(active) }) };
   return null;

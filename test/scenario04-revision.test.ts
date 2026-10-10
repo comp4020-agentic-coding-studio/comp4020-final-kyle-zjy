@@ -290,17 +290,6 @@ describe("Scenario 04 revised rules", () => {
     expect(project(s, "a").auction!.players.a.itemNotice?.result).toBe("COUNTERFEIT");
     expect(project(s, "b").auction!.players.a.itemNotice).toBeNull();
     expect(JSON.stringify(project(s, "b"))).not.toContain("LOT_05_COUNTERFEIT");
-    let final = start();
-    final.round = 10;
-    final.auction!.currentLot = "LOT_10";
-    final.auction!.players.a.blackChips = 10;
-    final = act(final, "a", { type: "BID", amount: 8 });
-    final = act(final, "a", { type: "END_TURN" });
-    final = act(final, "b", { type: "PASS" });
-    final = act(final, "b", { type: "END_TURN" });
-    final = act(final, "c", { type: "PASS" });
-    final = act(final, "c", { type: "END_TURN" });
-    expect(final.auction!.players.a.items).not.toContain("LOT_10");
   });
 
   it("pays only the effective Blackjack wager to a winning all-in target", () => {

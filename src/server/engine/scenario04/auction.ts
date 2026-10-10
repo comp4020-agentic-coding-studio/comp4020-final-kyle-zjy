@@ -6,6 +6,7 @@ import { fail, type Spec } from "../actions.ts";
 import { cue, log, type Ctx } from "../context.ts";
 import { nextTurn } from "../flow.ts";
 import { noticeAcquiredLot04 } from "./items.ts";
+import { openFinal04 } from "./final.ts";
 
 export function openAuctionRound04(ctx: Ctx): void {
   const s = ctx.s;
@@ -34,6 +35,10 @@ export function openAuctionRound04(ctx: Ctx): void {
   auction.auctionOpen = true;
   auction.deal = null;
   auction.challenge = null;
+  if (s.round === 10) {
+    openFinal04(ctx);
+    return;
+  }
   cue(ctx, "S4_ROUND", { round: s.round, lotId: auction.currentLot });
 }
 
@@ -44,10 +49,8 @@ function closeAuction04(ctx: Ctx): void {
   if (winner) {
     const player = a.players[winner];
     player.blackChips -= a.currentBidReal;
-    if (s.round !== 10) {
-      player.items.push(a.currentLot);
-      noticeAcquiredLot04(player, a.currentLot, ctx.now);
-    }
+    player.items.push(a.currentLot);
+    noticeAcquiredLot04(player, a.currentLot, ctx.now);
     a.stats.highestBid = Math.max(a.stats.highestBid, a.currentBid);
     log(ctx, m`${s.players[winner].nickname} wins the lot for ${a.currentBidReal} Black Chips.`, "S4_SOLD", winner);
   } else {
@@ -99,7 +102,7 @@ export const BID04: Spec<Extract<GameAction, { type: "BID" }>> = {
   check: (s, p, action) => {
     const a = s.auction!;
     if (!a.auctionOpen || a.passedPlayers.includes(p.playerId) || a.currentBidder === p.playerId || a.bidThisTurn === p.playerId) return fail("ILLEGAL_TARGET", m`You cannot bid on this lot now.`);
-    const bonus = s.round === 10 && a.players[p.playerId].activeCrown ? 2 : 0;
+    const bonus = 0;
     const chips = a.players[p.playerId].blackChips;
     if (chips + bonus <= a.currentBid || chips + bonus < lotForRound04(s.round).startingBid) return fail("ILLEGAL_TARGET", m`You do not have enough Black Chips to bid.`);
     if (action && (!Number.isSafeInteger(action.amount) || action.amount + bonus <= a.currentBid || action.amount + bonus < lotForRound04(s.round).startingBid)) return fail("INVALID", m`Choose a higher whole-number bid.`);
@@ -108,14 +111,14 @@ export const BID04: Spec<Extract<GameAction, { type: "BID" }>> = {
   },
   targets: (s, p) => {
     const a = s.auction!;
-    const bonus = s.round === 10 && a.players[p.playerId].activeCrown ? 2 : 0;
+    const bonus = 0;
     const limit = a.players[p.playerId].blackChips;
     const floor = Math.max(1, a.currentBid + 1 - bonus, lotForRound04(Math.max(1, s.round)).startingBid - bonus);
     return Array.from({ length: Math.max(0, limit - floor + 1) }, (_, i) => floor + i);
   },
   apply: (ctx, p, action) => {
     const a = ctx.s.auction!;
-    const bonus = ctx.s.round === 10 && a.players[p.playerId].activeCrown ? 2 : 0;
+    const bonus = 0;
     a.currentBid = action.amount + bonus;
     a.currentBidReal = action.amount;
     a.currentBidder = p.playerId;

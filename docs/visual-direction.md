@@ -247,3 +247,12 @@ short owner-only result notice for activation, copying, or counterfeit
 discovery. These notices use text as well as colour. Active auction effects and
 temporary penalties use the same chips as the own ability, immediately after
 it; chips disappear when the server state says the effect ended.
+
+Round 10 replaces the round table and turn dock with a mobile-first Final
+Settlement board. The owner's Debt tier and starting negative Final Chips are
+shown above individually clickable resource rows and per-item USE/CONVERT
+choices. The Final Chips number remains visible while scrolling and animates
+after every investment. Public player cards show only settlement or bid
+submission status; amounts and choices stay private. Once everyone is READY,
+the board takes sealed Final Bids and then displays every bid, modifier,
+effective bid, and winner in one reveal.

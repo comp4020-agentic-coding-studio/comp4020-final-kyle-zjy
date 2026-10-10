@@ -365,9 +365,24 @@ the same turn until END_TURN; one bid is allowed per turn.
 
 A winner pays only at settlement. The winner opens next round immediately
 after their seat; an unsold round opens after its previous opening seat.
-Round 10 still uses BID/PASS. The crown can cover two chips of its holder's
-final bid after activation while its holder pays the real amount; high Debt changes a winning
-ending into the debt ending. Each lot starts at one Black Chip. Exactly two
+Round 10 has no clockwise turns. Each player independently invests Black Chips,
+current Sanity, Fate, remaining AP, and individual unused items into Final Chips.
+Invested resources are reserved immediately; item effects can only spend the
+uninvested remainder during Settlement.
+Other players continue to see each player's start-of-round public resources
+and Debt during Settlement, so private item use does not reveal a conversion.
+Each resource point adds one; an authentic item adds two and a counterfeit adds
+zero. Abilities add nothing. The starting balance is negative one per two Debt,
+capped at negative four, and stays negative until investment raises it. READY
+locks the settlement and clamps only the usable amount to zero. After everyone
+is READY, each player secretly submits a Final Bid no greater than their usable
+Final Chips. All bids reveal together. An activated Black Crown adds two to its
+holder's effective bid, while the winner pays only the submitted bid. A tie
+goes to the earliest seat. A zero effective high bid leaves Exit Rights unsold;
+high Debt still changes a winning ending into the debt ending. Debt of 2–3,
+4–5, 6–7, or 8+ also adds a persistent -1, -2, -3, or -4 modifier to every
+Scenario 04 Dice Resolution; the raw seeded die is unchanged, and Blackjack
+does not use that pipeline. Each lot starts at one Black Chip. Exactly two
 of Lots 1–9 are chosen as counterfeits by the seeded RNG at game creation;
 their identities remain server secret until discovered. Lot 10 is the final
 objective and does not enter inventory. Won items remain inert until the holder

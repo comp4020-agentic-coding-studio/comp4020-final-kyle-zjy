@@ -7,6 +7,7 @@ import { s04Actions } from "./actions.ts";
 import { openAuctionRound04 } from "./auction.ts";
 import { skipAuctionTurn04 } from "./auction.ts";
 import { createScenario04 } from "./create.ts";
+import { startFinalSettlement04 } from "./final.ts";
 
 registerScenario({
   id: "S04_UNDERGROUND_AUCTION",
@@ -22,7 +23,7 @@ registerScenario({
       if (ctx.s.round >= player.redContractStartsRound && player.redContractRemainingRounds > 0) player.redContractRemainingRounds--;
     }
   },
-  onRoundStart: () => {},
+  onRoundStart: (ctx) => { if (ctx.s.round === 10) startFinalSettlement04(ctx); },
   afterTurns: () => "WORLD",
   worldStep: () => {},
   roundEvent: () => {},

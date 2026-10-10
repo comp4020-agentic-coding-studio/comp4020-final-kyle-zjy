@@ -4,6 +4,7 @@ import type { PlayerView } from "../../../shared/game/state.ts";
 import { auctionIntelText, auctionLotText } from "../../../shared/i18n/scenario04.ts";
 import { Avatar } from "../../components/Avatar.tsx";
 import { useLocale, useT } from "../../i18n/index.ts";
+import { debtTier04 } from "../../../shared/game/scenario04/debt.ts";
 
 export function AuctionTable04({ g }: { g: PlayerView }) {
   const a = g.auction!;
@@ -41,7 +42,7 @@ export function AuctionTable04({ g }: { g: PlayerView }) {
           return <li key={id} className={`min-w-0 rounded-xl border p-2 lg:min-w-40 ${active ? "border-signal bg-signal/10" : leading ? "border-gold bg-gold/10" : "border-indigo bg-night/80"} ${active && leading ? "ring-1 ring-gold" : ""}`}>
             <div className="flex min-w-0 items-center gap-2">
               <Avatar zodiac={getCharacterById(p.characterId).zodiac} mbti={getCharacterById(p.characterId).mbti} size={28} />
-              <span className="min-w-0"><span className="block truncate text-xs font-bold">{index + 1}. {p.nickname}</span><span className="block text-[10px] text-mist">{t("s4.table.debt", { n: player.debt })}</span></span>
+              <span className="min-w-0"><span className="block truncate text-xs font-bold">{index + 1}. {p.nickname}</span>{debtTier04(player.debt) !== "none" && <span className="block text-[10px] text-ember">{t("s4.table.debt", { n: player.debt })} · {t(`s4.debt.${debtTier04(player.debt)}`)}</span>}</span>
             </div>
             {(player.passed || leading || active) && <p className="mt-1 flex gap-1 font-mono text-[10px] text-signal">{player.passed ? t("s4.table.passed") : <>{active && <span>{t("s4.table.turn")}</span>}{leading && <span className="text-gold">{t("s4.table.leading")}</span>}</>}</p>}
           </li>;

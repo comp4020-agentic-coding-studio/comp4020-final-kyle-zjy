@@ -76,6 +76,7 @@ function stepOnce(ctx: Ctx): boolean {
       beginRound(ctx);
       return true;
     case "PLAYER_TURNS": {
+      if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && s.round === 10 && s.auction?.final) return false;
       const id = activePlayerId(s);
       if (!id) {
         s.step = rulesFor(s).afterTurns(s);
@@ -146,8 +147,13 @@ function beginRound(ctx: Ctx): void {
   rules.onRoundStart(ctx);
   roundTriggers(ctx, "ROUND_START");
   s.step = "PLAYER_TURNS";
-  s.activeIndex = -1;
-  nextTurn(ctx);
+  if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && s.round === 10) {
+    s.activeIndex = s.turnOrder.length;
+    s.turnDeadline = null;
+  } else {
+    s.activeIndex = -1;
+    nextTurn(ctx);
+  }
 }
 
 export function nextTurn(ctx: Ctx): void {

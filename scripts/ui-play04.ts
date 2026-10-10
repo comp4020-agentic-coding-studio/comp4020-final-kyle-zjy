@@ -69,12 +69,12 @@ let acceptedChallenge = false;
 let acceptedDeal = false;
 let bidKeptTurn = false;
 let usedCredit = false;
-let usedDevil = false;
+let usedFinalItem = false;
 let usedChrono = false;
 let usedCopy = false;
 let sawAcquiredNotice = false;
 let sawExpiredBlackDie = false;
-let sawClearedLost = false;
+let sawFinalBalanceChange = false;
 let sawNextRoundOrder = false;
 let sawChronoItem = false;
 try {
@@ -117,6 +117,50 @@ try {
         }
       }
       if (round > 0) { reached = Math.max(reached, round - 1); await shot(page, tag, `round-${round}`); }
+      if (round === 10) {
+        if (await visible(page.locator('[data-final-balance]'))) {
+          await shot(page, tag, "final-settlement");
+          const item = page.locator('[data-final-item]').first();
+          if (await visible(item)) {
+            acted = await tap(item.getByRole("button", { name: /CONVERT/ }));
+            if (acted) usedFinalItem = true;
+            continue;
+          }
+          for (const resource of ["SANITY", "BLACK_CHIPS", "FATE", "AP"]) {
+            const button = page.locator(`[data-final-resource="${resource}"]`);
+            if (!await visible(button) || !await button.isEnabled()) continue;
+            const before = Number(await page.locator('[data-final-balance]').innerText());
+            acted = await tap(button);
+            if (acted) {
+              await page.waitForFunction((previous) => Number(document.querySelector('[data-final-balance]')?.textContent) > previous, before, { timeout: 3000 }).catch(() => null);
+              const after = Number(await page.locator('[data-final-balance]').innerText());
+              if (after <= before) problems.push(`${tag}: ${resource} did not increase Final Chips`);
+              else sawFinalBalanceChange = true;
+              await shot(page, tag, "final-invested");
+            }
+            break;
+          }
+          if (acted) continue;
+          if (await visible(page.locator('[data-final-ready]'))) { acted = await tap(page.locator('[data-final-ready]')); continue; }
+          continue;
+        }
+        if (await visible(page.locator('[data-final-usable]'))) {
+          await shot(page, tag, "final-bid");
+          if (await visible(page.locator('[data-final-submit]'))) {
+            const usable = Number(await page.locator('[data-final-usable]').innerText());
+            await page.locator('[data-final-bid]').fill(String(tag === "phone" ? usable : 0));
+            acted = await tap(page.locator('[data-final-submit]'));
+            if (acted) { done.add(`${tag}:finalBid`); await shot(page, tag, "final-sealed"); }
+          }
+          continue;
+        }
+        if (await visible(page.locator('[data-final-continue]'))) {
+          await shot(page, tag, "final-reveal");
+          acted = await tap(page.locator('[data-final-continue]'));
+          continue;
+        }
+        continue;
+      }
       if (round === 2 && await visible(page.getByText("First lap: Bea → Kyle", { exact: true }))) sawNextRoundOrder = true;
       const decision = page.locator('[role="dialog"][aria-modal="true"]');
       if (await visible(decision)) {
@@ -155,8 +199,6 @@ try {
           ? page.locator('[data-s4-copy="LOT_01"]')
           : round === 6 && tag === "desktop"
           ? page.locator('[data-s4-item^="LOT_05_COPY_01_"]')
-          : round === 10 && tag === "desktop"
-          ? page.locator('[data-s4-picker="USE_LOT"] button').filter({ hasText: "The Devil's Key" })
           : page.locator('[data-s4-picker="USE_LOT"] button:not([disabled])');
         acted = await tap(item);
         if (acted) {
@@ -165,7 +207,6 @@ try {
           else {
             await shot(page, tag, round === 6 && tag === "desktop" && usedChrono ? "copy-notice" : "item-notice");
             if (round === 7 && tag === "phone" && !await visible(page.locator('[data-s4-effect="black-die"]'))) problems.push("activated Black Die effect chip is missing");
-            if (round === 10 && tag === "desktop" && !await visible(page.locator('[data-s4-effect="lost"]'))) problems.push("Lost debuff chip is missing");
             if (!await notice.waitFor({ state: "hidden", timeout: 3500 }).then(() => true).catch(() => false)) problems.push(`${tag}: used item notice lasted too long`);
           }
         }
@@ -174,7 +215,6 @@ try {
           if (usedChrono) usedCopy = true;
           else usedChrono = true;
         }
-        if (acted && round === 10 && tag === "desktop") usedDevil = true;
         continue;
       }
       if (await visible(page.locator('[data-skill-confirm]'))) { acted = await tap(page.locator('[data-skill-confirm]')); continue; }
@@ -210,7 +250,7 @@ try {
       }
       if (round === 2 && tag === "desktop" && !done.has(key("investigate")) && await enabled(action("INVESTIGATE"))) { acted = await tap(action("INVESTIGATE")); if (acted) done.add(key("investigate")); continue; }
       if (round === 2 && tag === "phone" && !done.has(key("read")) && await enabled(action("READ"))) { acted = await tap(action("READ")); if (acted) { done.add(key("read")); await page.locator('[data-s4-picker="READ"]').waitFor(); } continue; }
-      if ((tag === "phone" && [2, 3, 8, 10].includes(round) || tag === "desktop" && [3, 9].includes(round)) && !done.has(key("borrow")) && await enabled(action("BORROW"))) { acted = await tap(action("BORROW")); if (acted) done.add(key("borrow")); continue; }
+      if ((tag === "phone" && [2, 3, 8].includes(round) || tag === "desktop" && [3, 9].includes(round)) && !done.has(key("borrow")) && await enabled(action("BORROW"))) { acted = await tap(action("BORROW")); if (acted) done.add(key("borrow")); continue; }
       if ((round === 3 || round === 5 && tag === "phone") && !done.has(key("challenge")) && await enabled(action("CHALLENGE"))) { acted = await tap(action("CHALLENGE")); if (acted) { done.add(key("challenge")); await page.locator('[data-s4-picker="CHALLENGE"]').waitFor(); } continue; }
       if (round === 4 && !done.has(key("deal")) && await enabled(action("DEAL"))) { acted = await tap(action("DEAL")); if (acted) { done.add(key("deal")); await page.locator('[data-s4-picker="DEAL"]').waitFor(); } continue; }
       if (round === 7 && tag === "phone" && !done.has(key("item")) && await enabled(action("USE_LOT"))) { acted = await tap(action("USE_LOT")); if (acted) { done.add(key("item")); await page.locator('[data-s4-picker="USE_LOT"]').waitFor(); } continue; }
@@ -224,14 +264,6 @@ try {
           done.add(key("sabotage"));
           if (tag === "phone") sawExpiredBlackDie = await page.locator('[data-s4-effect="black-die"]').waitFor({ state: "hidden", timeout: 3000 }).then(() => true).catch(() => false);
         }
-        continue;
-      }
-      if (round === 10 && tag === "desktop" && !done.has(key("devil")) && await enabled(action("USE_LOT"))) { acted = await tap(action("USE_LOT")); if (acted) { done.add(key("devil")); await page.locator('[data-s4-picker="USE_LOT"]').waitFor(); } continue; }
-      if (round === 10 && tag === "desktop" && done.has(key("devil")) && !done.has(key("recover")) && await enabled(action("RECOVER"))) { acted = await tap(action("RECOVER")); if (acted) { done.add(key("recover")); sawClearedLost = await page.locator('[data-s4-effect="lost"]').waitFor({ state: "hidden", timeout: 3000 }).then(() => true).catch(() => false); } continue; }
-      if (round === 10 && tag === "phone" && !done.has("finalBid") && await enabled(action("BID"))) {
-        if (!await tap(action("BID"))) continue;
-        acted = await tap(page.locator('[data-s4-picker="BID"] button').first());
-        if (acted) done.add("finalBid");
         continue;
       }
       if (round === 2 && tag === "desktop" && !done.has(key("bid")) && await enabled(action("BID"))) {
@@ -279,18 +311,18 @@ if (!seen.has("decision-phone") && !seen.has("decision-desktop")) problems.push(
 if (!done.has("phone:1:rebid")) problems.push("round one never made a second bidding lap");
 if (!declinedChallenge || !acceptedChallenge) problems.push("Blackjack accept and decline were not both exercised");
 if (!acceptedDeal) problems.push("Deal was never accepted");
-if (!done.has("finalBid")) problems.push("Exit Rights were never bid on");
+if (!done.has("phone:finalBid") || !done.has("desktop:finalBid")) problems.push("Both sealed Final Bids were not submitted");
 if (!seen.has("item-picker-phone") || !seen.has("item-picker-desktop")) problems.push("an owned item was not inspected in both contexts");
 if (!bidKeptTurn) problems.push("BID did not keep the bidder's turn");
 if (!sawNextRoundOrder) problems.push("the winner was not last in the next round's first lap");
 if (!sawChronoItem) problems.push("Prototype Chrono Key was not seen in inventory");
-if (!usedCredit || !usedDevil) problems.push("Bottomless Credit or Devil's Key was not used");
+if (!usedCredit || !usedFinalItem) problems.push("An ordinary item use or final item conversion was not exercised");
 if (!usedChrono) problems.push("Prototype Chrono Key was not used through the source picker");
 if (!usedCopy) problems.push("The new copied item instance was not used through inventory");
 if (!sawAcquiredNotice) problems.push("Winning a lot showed no acquisition notice");
 if (!sawExpiredBlackDie) problems.push("Black Die effect chip remained after its next roll");
-if (!sawClearedLost) problems.push("Lost debuff chip remained after recovery");
-if (!done.has("desktop:10:recover")) problems.push("RECOVER was not exercised after Devil's Key");
+if (!sawFinalBalanceChange) problems.push("Final Chips never increased from a clicked resource");
+if (!seen.has("final-reveal-phone") || !seen.has("final-reveal-desktop")) problems.push("Final Reveal was not visible to both players");
 if (!armedRollPerfect) problems.push("Activated Black Die did not resolve the next Sabotage as Perfect");
 if (problems.length) console.error(problems.join("\n"));
 if (errors.length) console.error(errors.join("\n"));

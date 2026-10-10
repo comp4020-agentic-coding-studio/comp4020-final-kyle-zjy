@@ -22,7 +22,7 @@ export type AuctionPlayer04 = {
   activeCrown: boolean;
   sanityWard: boolean;
   itemNoticeSeq: number;
-  itemNotice: null | { seq: number; at: number; lotId: LotId04; result: "ACQUIRED" | "ACTIVATED" | "COUNTERFEIT" | "COPIED"; copyLotId?: LotId04 };
+  itemNotice: null | { seq: number; at: number; lotId: LotId04; result: "ACQUIRED" | "ACTIVATED" | "COUNTERFEIT" | "COPIED" | "CONVERTED" | "CONVERTED_COUNTERFEIT"; copyLotId?: LotId04 };
   redContractRemainingRounds: number;
   redContractStartsRound: number;
   privateIntel: IntelId04[];
@@ -41,6 +41,23 @@ export type AuctionHistory04 = {
   openingPlayerId: PlayerId;
 };
 
+export type FinalPlayer04 = {
+  balance: number;
+  converted: { blackChips: number; sanity: number; fate: number; ap: number; items: { id: LotId04; gain: number }[] };
+  ready: boolean;
+  usable: number | null;
+  bid: number | null;
+  revealReady: boolean;
+  initial: { sanity: number; fate: number; ap: number; lost: boolean; debt: number };
+};
+
+export type FinalState04 = {
+  stage: "SETTLEMENT" | "AUCTION" | "REVEAL";
+  logStartSeq: number;
+  players: Record<PlayerId, FinalPlayer04>;
+  winnerId: PlayerId | null;
+};
+
 export type AuctionState04 = {
   seatOrder: PlayerId[];
   currentLot: LotId04;
@@ -53,6 +70,7 @@ export type AuctionState04 = {
   roundStartPlayerId: PlayerId;
   passedPlayers: PlayerId[];
   auctionOpen: boolean;
+  final: FinalState04 | null;
   auctionHistory: AuctionHistory04[];
   /** Server-only identity, authenticity, and use state of offered lots and copies. */
   itemInstances: Record<string, AuctionItemInstance04>;
@@ -97,8 +115,26 @@ export type PublicAuctionPlayer04 = {
   glassEyeSnapshots: AuctionPlayer04["glassEyeSnapshots"] | null;
 };
 
-export type PublicAuction04 = Omit<AuctionState04, "players" | "challenge" | "deal" | "counterfeitLots" | "itemInstances" | "nextItemInstanceNumber"> & {
+export type PublicFinalPlayer04 = {
+  status: "SETTLING" | "READY" | "BID_SUBMITTED" | "REVEALED";
+  continued: boolean;
+  balance: number | null;
+  converted: FinalPlayer04["converted"] | null;
+  usable: number | null;
+  bid: number | null;
+  modifier: number | null;
+  effectiveBid: number | null;
+};
+
+export type PublicFinal04 = {
+  stage: FinalState04["stage"];
+  players: Record<PlayerId, PublicFinalPlayer04>;
+  winnerId: PlayerId | null;
+};
+
+export type PublicAuction04 = Omit<AuctionState04, "players" | "challenge" | "deal" | "final" | "counterfeitLots" | "itemInstances" | "nextItemInstanceNumber"> & {
   players: Record<PlayerId, PublicAuctionPlayer04>;
+  final: PublicFinal04 | null;
   deal: AuctionState04["deal"];
   challenge: null | Omit<NonNullable<AuctionState04["challenge"]>, "deck">;
 };

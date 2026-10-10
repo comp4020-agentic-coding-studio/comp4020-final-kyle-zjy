@@ -14,6 +14,7 @@ import { consumeStatus, gainFate, hasStatus, payBonds, removeStatus, spendFate, 
 import { applyEffects } from "./effects.ts";
 import { onResume, openWindow } from "./windows.ts";
 import { m, ref } from "../../shared/i18n/msg.ts";
+import { debtPenalty04 } from "../../shared/game/scenario04/debt.ts";
 import type { Msg } from "../../shared/i18n/types.ts";
 
 export const tierOf = (n: number): RollTier => (n <= 1 ? "DISASTER" : n <= 3 ? "FAIL" : n <= 5 ? "SUCCESS" : "PERFECT");
@@ -79,6 +80,8 @@ export function startRoll(ctx: Ctx, p: PlayerGameState, purpose: RollPurpose, la
   let blackDie04 = false;
   if (purpose.startsWith("S4_") && ctx.s.auction) {
     const auctionPlayer = ctx.s.auction.players[p.playerId];
+    const debtModifier = debtPenalty04(auctionPlayer?.debt ?? 0);
+    if (debtModifier) modifiers.push({ source: m`Debt`, delta: -debtModifier });
     if (["S4_INVESTIGATE", "S4_READ", "S4_SABOTAGE"].includes(purpose) && auctionPlayer?.armedBlackDie > 0) {
       blackDie04 = true;
       auctionPlayer.armedBlackDie--;

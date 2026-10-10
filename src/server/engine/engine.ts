@@ -13,6 +13,7 @@ import "./inspector.ts";
 import "./skill-effects.ts";
 import "./event-effects.ts";
 import { list, m } from "../../shared/i18n/msg.ts";
+import { FINAL_BID04, FINAL_CONTINUE04, FINAL_READY04 } from "./scenario04/final.ts";
 
 export type Step = { state: GameState; events: GameEvent[] };
 
@@ -74,6 +75,14 @@ export function hostSkip(state: GameState, now: number): Step {
     } else if (s.sequence) {
       log(ctx, m`The host moves things along: the scene ends.`, "HOST");
       s.sequence.acks = s.turnOrder.slice();
+    } else if (s.auction?.final && s.round === 10) {
+      const final = s.auction.final;
+      const waiting = s.auction.seatOrder.find((id) => final.stage === "SETTLEMENT" ? !final.players[id].ready : final.stage === "AUCTION" ? final.players[id].bid === null : !final.players[id].revealReady);
+      if (!waiting) throw new RuleError("INVALID", m`Nobody is being waited for.`);
+      log(ctx, m`The host moves things along for ${names([waiting])} in the final auction.`, "HOST", waiting);
+      if (final.stage === "SETTLEMENT") FINAL_READY04.apply(ctx, s.players[waiting], { type: "FINAL_READY" });
+      else if (final.stage === "AUCTION") FINAL_BID04.apply(ctx, s.players[waiting], { type: "FINAL_BID", amount: 0 });
+      else FINAL_CONTINUE04.apply(ctx, s.players[waiting], { type: "FINAL_CONTINUE" });
     } else if (active) {
       log(ctx, m`The host moves things along: ${names([active])}'s turn passes.`, "HOST", active);
       endTurn(ctx);

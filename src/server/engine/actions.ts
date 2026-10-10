@@ -29,11 +29,19 @@ export const fail = (code: RejectCode, reason: Msg): Fail => ({ code, reason });
 const IN_RUN = new Set(["ACT_1", "ACT_2", "ACT_3", "ACT_4"]);
 
 /** Shared gate for anything done on your own turn. */
-function turnGate(s: GameState, actorId: PlayerId, cost: number): Fail | null {
+function turnGate(s: GameState, actorId: PlayerId, cost: number, type: GameActionType): Fail | null {
   if (s.phase === "ENDING" || s.phase === "RESULTS") return fail("GAME_OVER", m`The run is over.`);
   if (!IN_RUN.has(s.phase)) return fail("WRONG_PHASE", m`The run hasn't started yet.`);
   if (s.sequence) return fail("WRONG_PHASE", m`Wait for the scene to finish.`);
   if (s.pending.some((w) => w.blocksTable) || (s.roll && !s.roll.done)) return fail("WINDOW_OPEN", m`Wait for the current decision to finish.`);
+  if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && s.round === 10 && s.auction?.final) {
+    const final = s.auction.final;
+    const mine = final.players[actorId];
+    const allowed = final.stage === "SETTLEMENT" && !mine.ready && ["FINAL_CONVERT", "FINAL_READY", "USE_LOT"].includes(type)
+      || final.stage === "AUCTION" && mine.bid === null && type === "FINAL_BID"
+      || final.stage === "REVEAL" && !mine.revealReady && type === "FINAL_CONTINUE";
+    return allowed ? null : fail("WRONG_PHASE", m`That action is unavailable in the final auction.`);
+  }
   const active = activePlayerId(s);
   if (active !== actorId) return fail("NOT_YOUR_TURN", active ? m`It's ${s.players[active].nickname}'s turn.` : m`Nobody is acting right now.`);
   if (s.players[actorId].ap < cost) return fail("NO_AP", cost === 2 ? m`Needs 2 action points.` : m`No action points left.`);
@@ -373,7 +381,7 @@ export function applyAction(ctx: Ctx, actorId: PlayerId, action: GameAction): vo
   const spec = set.specs[action.type] as Spec<GameAction> | undefined;
   if (!spec) throw new RuleError("INVALID", m`Unknown action.`);
   const cost = set.costFor?.(s, p, action.type) ?? set.apCost[action.type] ?? 0;
-  const gate = turnGate(s, actorId, cost) ?? spec.check(s, p, action);
+  const gate = turnGate(s, actorId, cost, action.type) ?? spec.check(s, p, action);
   if (gate) throw new RuleError(gate.code, gate.reason);
   p.ap -= cost;
   spec.apply(ctx, p, action);
@@ -387,7 +395,7 @@ export function availableActions(s: GameState, viewerId: PlayerId): ActionAvaila
   return set.turnActions.map((type) => {
     const spec = set.specs[type] as Spec<GameAction>;
     const apCost = set.costFor?.(s, p, type) ?? set.apCost[type] ?? 0;
-    const gate = turnGate(s, viewerId, apCost) ?? spec.check(s, p);
+    const gate = turnGate(s, viewerId, apCost, type) ?? spec.check(s, p);
     return {
       type,
       apCost,

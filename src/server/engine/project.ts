@@ -35,6 +35,12 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
     const { storedResult, counters: _counters, statuses, ...rest } = p;
     publicPlayers[id] = {
       ...rest,
+      ...(s.auction?.final && id !== viewerId ? {
+        sanity: s.auction.final.players[id].initial.sanity,
+        fate: s.auction.final.players[id].initial.fate,
+        ap: s.auction.final.players[id].initial.ap,
+        lost: s.auction.final.players[id].initial.lost,
+      } : {}),
       statuses: id === viewerId || over ? statuses : statuses.filter((st) => !st.hidden),
       hasStoredResult: storedResult !== null,
     };
@@ -48,6 +54,7 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
 
   return {
     ...shared,
+    ...(s.auction?.final ? { log: s.log.filter((line) => line.seq < s.auction!.final!.logStartSeq || !["S4_ITEM", "SANITY", "LOST", "FATE"].includes(line.kind) || line.actorId === viewerId) } : {}),
     viewerId,
     mySecrets: secrets[viewerId] ? ownSecrets(secrets[viewerId], over) : null,
     players: publicPlayers,
@@ -71,14 +78,34 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
       auctionHistory: [...s.auction.auctionHistory],
       publicIntel: [...s.auction.publicIntel],
       stats: s.auction.stats,
+      final: s.auction.final ? {
+        stage: s.auction.final.stage,
+        winnerId: s.auction.final.stage === "REVEAL" ? s.auction.final.winnerId : null,
+        players: Object.fromEntries(Object.entries(s.auction.final.players).map(([id, entry]) => {
+          const own = id === viewerId;
+          const revealed = s.auction!.final!.stage === "REVEAL";
+          const bid = revealed || own ? entry.bid : null;
+          const modifier = revealed ? (s.auction!.players[id].activeCrown ? 2 : 0) : null;
+          return [id, {
+            status: revealed ? "REVEALED" : entry.bid !== null ? "BID_SUBMITTED" : entry.ready ? "READY" : "SETTLING",
+            continued: revealed && entry.revealReady,
+            balance: own ? entry.balance : null,
+            converted: own ? { ...entry.converted, items: [...entry.converted.items] } : null,
+            usable: own ? entry.usable : null,
+            bid,
+            modifier,
+            effectiveBid: revealed ? entry.bid! + modifier! : null,
+          }];
+        })),
+      } : null,
       players: Object.fromEntries(Object.entries(s.auction.players).map(([id, p]) => [id, {
-        debt: p.debt,
-        items: [...p.items],
-        usedLotEffects: [...p.usedLotEffects],
-        armedBlackDie: p.armedBlackDie,
-        armedCoin: p.armedCoin,
-        activeCrown: p.activeCrown,
-        sanityWard: p.sanityWard,
+        debt: s.auction!.final && id !== viewerId ? s.auction!.final.players[id].initial.debt : p.debt,
+        items: s.auction!.final && id !== viewerId ? [] : [...p.items],
+        usedLotEffects: s.auction!.final && id !== viewerId ? [] : [...p.usedLotEffects],
+        armedBlackDie: s.auction!.final && id !== viewerId ? 0 : p.armedBlackDie,
+        armedCoin: s.auction!.final && id !== viewerId ? 0 : p.armedCoin,
+        activeCrown: s.auction!.final && id !== viewerId && s.auction!.final.stage !== "REVEAL" ? false : p.activeCrown,
+        sanityWard: s.auction!.final && id !== viewerId ? false : p.sanityWard,
         itemNotice: id === viewerId ? p.itemNotice : null,
         redContractRemainingRounds: p.redContractRemainingRounds,
         redContractStartsRound: id === viewerId ? p.redContractStartsRound : null,

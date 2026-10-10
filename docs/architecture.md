@@ -99,6 +99,12 @@ monotonic `version` column is a second guard and lets clients detect gaps.
 SQLite writes are synchronous (`DatabaseSync`) inside the actor, so the in-memory
 state and the DB can never diverge mid-action.
 
+Scenario 04's tenth round uses a scenario-scoped simultaneous action gate instead
+of the turn gate. Its settlement, sealed bids, and reveal acknowledgements are
+server state in the same serialized and persisted action pipeline. The server
+projection withholds opponents' balances, conversions, item changes, and bids
+until the reveal, and settlement animation cues are not broadcast to opponents.
+
 ## 5. Identity, sessions, reconnect
 
 - No accounts. On create/join the server issues `playerId` (public, random) and

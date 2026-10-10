@@ -30,7 +30,8 @@ function usable(s: GameState, playerId: string, action: Extract<GameAction, { ty
   if (base === "LOT_05") return !!earlierInstance(s, action.sourceLotId);
   if (action.sourceLotId !== undefined) return false;
   if (base === "LOT_06" && holder.debt === 0) return false;
-  if (base === "LOT_09" && (s.players[playerId].sanity === 0 || holder.sanityWard)) return false;
+  const investedSanity = s.auction!.final?.players[playerId]?.converted.sanity ?? 0;
+  if (base === "LOT_09" && (s.players[playerId].sanity <= investedSanity || holder.sanityWard)) return false;
   return base !== "LOT_10";
 }
 
@@ -81,12 +82,12 @@ export const USE_LOT04: Spec<Extract<GameAction, { type: "USE_LOT" }>> = {
     } else if (base === "LOT_08") {
       holder.activeCrown = true;
     } else if (base === "LOT_09") {
-      const sanity = p.sanity;
+      const sanity = p.sanity - (a.final?.players[p.playerId]?.converted.sanity ?? 0);
       holder.blackChips += sanity;
       loseSanity(ctx, p, sanity, m`using the Devil's Key`);
     }
-    log(ctx, m`${p.nickname} uses an auction item.`, "S4_ITEM", p.playerId);
+    if (ctx.s.round !== 10) log(ctx, m`${p.nickname} uses an auction item.`, "S4_ITEM", p.playerId);
     holder.itemNotice = { seq: ++holder.itemNoticeSeq, at: ctx.now, lotId: action.lotId, result, copyLotId };
-    cue(ctx, "S4_ITEM_USED", { playerId: p.playerId, lotId: action.lotId });
+    if (ctx.s.round !== 10) cue(ctx, "S4_ITEM_USED", { playerId: p.playerId, lotId: action.lotId });
   },
 };

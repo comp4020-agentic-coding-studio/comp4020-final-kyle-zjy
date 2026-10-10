@@ -41,9 +41,9 @@ describe("Scenario 04 content and abilities", () => {
     }
   });
 
-  it("plays all ten lots through the same auction loop and reaches the unsold ending", () => {
+  it("plays nine ordinary lots, then enters simultaneous final settlement and can end unsold", () => {
     let s = start();
-    for (let round = 1; round <= 10; round++) {
+    for (let round = 1; round <= 9; round++) {
       expect(s.round).toBe(round);
       expect(s.auction!.currentLot).toBe(LOTS04[round - 1].id);
       for (let i = 0; i < 3; i++) {
@@ -53,6 +53,14 @@ describe("Scenario 04 content and abilities", () => {
       }
       expect(s.auction!.auctionHistory.at(-1)).toMatchObject({ round, winnerId: null });
     }
+    expect(s.round).toBe(10);
+    expect(s.auction!.final?.stage).toBe("SETTLEMENT");
+    for (const id of s.auction!.seatOrder) s = act(s, id, { type: "FINAL_READY" });
+    for (const id of s.auction!.seatOrder) s = act(s, id, { type: "FINAL_BID", amount: 0 });
+    expect(s.auction!.final?.stage).toBe("REVEAL");
+    expect(s.auction!.auctionHistory.at(-1)).toMatchObject({ round: 10, winnerId: null });
+    for (const id of s.auction!.seatOrder) s = act(s, id, { type: "FINAL_CONTINUE" });
+    expect(Object.values(s.auction!.players).every((player) => !player.items.includes("LOT_10"))).toBe(true);
     expect(s.outcome).toBe("S04_UNSOLD");
     expect(s.phase).toBe("ENDING");
   });
@@ -103,27 +111,6 @@ describe("Scenario 04 content and abilities", () => {
     expect(s.auction!.players.a.blackChips).toBe(6);
     expect(s.auction!.players.b.blackChips).toBe(10);
     expect(s.auction!.passedPlayers).toContain("b");
-  });
-
-  it("lets the Black Crown cover exactly two chips of a winning final bid", () => {
-    let s = start();
-    s.round = 10;
-    s.auction!.currentLot = "LOT_10";
-    s.auction!.currentBid = 7;
-    expect(() => act(s, "a", { type: "BID", amount: 10 })).toThrow();
-    grant(s, "a", "LOT_08");
-    s = act(s, "a", { type: "USE_LOT", lotId: "LOT_08" });
-    s = act(s, "a", { type: "BID", amount: 8 });
-    expect(s.auction!.currentBid).toBe(10);
-    expect(s.auction!.currentBidReal).toBe(8);
-    s = act(s, "a", { type: "END_TURN" });
-    s = act(s, "b", { type: "PASS" });
-    s = act(s, "b", { type: "END_TURN" });
-    s = act(s, "c", { type: "PASS" });
-    s = act(s, "c", { type: "END_TURN" });
-    expect(s.auction!.auctionHistory.at(-1)).toMatchObject({ winnerId: "a", price: 8 });
-    expect(s.auction!.players.a.blackChips).toBe(0);
-    expect(s.outcome).toBe("S04_EXIT");
   });
 
   it("uses Bottomless Credit once to clear Debt", () => {

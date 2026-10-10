@@ -132,7 +132,7 @@ export class Hub {
     if (!room) return void this.games.evictIfIdle(code);
     for (const [playerId, ws] of room) {
       const snapshot = this.snapshot(code, playerId);
-      if (snapshot) send(ws, { t: "STATE", snapshot, events });
+      if (snapshot) send(ws, { t: "STATE", snapshot, events: snapshot.game?.auction?.final?.stage === "SETTLEMENT" ? [] : events });
     }
   }
 
