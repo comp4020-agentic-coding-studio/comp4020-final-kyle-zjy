@@ -6,6 +6,8 @@ import { m } from "../../../shared/i18n/msg.ts";
 import { log } from "../context.ts";
 import { createScenario01, type Seat } from "../create.ts";
 import { START_FATE, START_SANITY } from "../../../shared/game/scenario01/content.ts";
+import { shuffle } from "../rng.ts";
+import { LOTS04 } from "../../../shared/game/scenario04/lots.ts";
 
 export function createScenario04(sessionId: string, seats: Seat[], seed: string, now: number): GameState {
   const s = createScenario01(sessionId, seats, seed, now);
@@ -40,8 +42,11 @@ export function createScenario04(sessionId: string, seats: Seat[], seed: string,
     passedPlayers: [],
     auctionOpen: false,
     auctionHistory: [],
-    players: Object.fromEntries(ordered.map((id) => [id, { blackChips: AUCTION_CONFIG04.startingBlackChips, debt: 0, items: [], usedLotEffects: [], redContractRemainingRounds: 0, redContractStartsRound: 0, privateIntel: [], reads: [], glassEyeSnapshots: [], nextRollPenalty: 0 }])),
+    itemInstances: {},
+    nextItemInstanceNumber: 1,
+    players: Object.fromEntries(ordered.map((id) => [id, { blackChips: AUCTION_CONFIG04.startingBlackChips, debt: 0, items: [], usedLotEffects: [], armedBlackDie: 0, armedCoin: 0, activeCrown: false, sanityWard: false, itemNotice: null, redContractRemainingRounds: 0, redContractStartsRound: 0, privateIntel: [], reads: [], glassEyeSnapshots: [], nextRollPenalty: 0 }])),
     publicIntel: [],
+    counterfeitLots: shuffle(s, LOTS04.slice(0, 9).map((lot) => lot.id)).slice(0, 2),
     deal: null,
     challenge: null,
     stats: { highestBid: 0, challengesWon: {}, investigations: {}, deals: 0, borrows: {} },

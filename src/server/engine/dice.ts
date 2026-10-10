@@ -79,9 +79,9 @@ export function startRoll(ctx: Ctx, p: PlayerGameState, purpose: RollPurpose, la
   let blackDie04 = false;
   if (purpose.startsWith("S4_") && ctx.s.auction) {
     const auctionPlayer = ctx.s.auction.players[p.playerId];
-    if (["S4_INVESTIGATE", "S4_READ", "S4_SABOTAGE"].includes(purpose) && auctionPlayer?.items.includes("LOT_01") && !Object.values(ctx.s.auction.players).some((holder) => holder.usedLotEffects.includes("LOT_01"))) {
+    if (["S4_INVESTIGATE", "S4_READ", "S4_SABOTAGE"].includes(purpose) && auctionPlayer?.armedBlackDie > 0) {
       blackDie04 = true;
-      auctionPlayer.usedLotEffects.push("LOT_01");
+      auctionPlayer.armedBlackDie--;
     }
     if (auctionPlayer?.nextRollPenalty) {
       modifiers.push({ source: m`Auction ability or sabotage`, delta: auctionPlayer.nextRollPenalty });

@@ -240,3 +240,7 @@ Core BID/PASS actions, tactical actions, and the shared ability/item/end-turn
 row have distinct levels. Turn,
 leading, and passed states have text labels as well as color. On narrow
 screens the lot, table status, PlayersStrip, and Dock stack in that order.
+The item picker shows held lots and an explicit use control; Chrono Key opens
+the four earlier source choices. A used item leaves the picker and raises a
+prominent, owner-only result notice for activation, copying, or counterfeit
+discovery. The notice uses text as well as colour.

@@ -84,7 +84,13 @@ onRollOutcome("S4_INVESTIGATE", (ctx, p, roll) => {
     const lot = lotForRound04(ctx.s.round);
     const intel = a.players[p.playerId].privateIntel;
     if (!intel.includes(lot.hiddenInfo)) intel.push(lot.hiddenInfo);
-    if (roll.tier === "PERFECT" && !intel.includes(lot.perfectInfo)) intel.push(lot.perfectInfo);
+    if (roll.tier === "PERFECT") {
+      if (!intel.includes(lot.perfectInfo)) intel.push(lot.perfectInfo);
+      if (ctx.s.round <= 9) {
+        const authenticity = `${lot.id}_${a.counterfeitLots.includes(lot.id) ? "COUNTERFEIT" : "AUTHENTIC"}` as IntelId04;
+        if (!intel.includes(authenticity)) intel.push(authenticity);
+      }
+    }
     cue(ctx, "S4_PRIVATE_INTEL", { playerId: p.playerId });
   }
 });

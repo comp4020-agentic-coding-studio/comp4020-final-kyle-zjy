@@ -8,21 +8,28 @@ import { activePlayerId } from "../src/server/engine/context.ts";
 import { applyGameAction, startGame } from "../src/server/engine/engine.ts";
 import { project } from "../src/server/engine/project.ts";
 import type { GameState } from "../src/shared/game/state.ts";
+import type { LotId04 } from "../src/shared/game/scenario04/types.ts";
 import { rigNextDie, SEED, seatsFor, T0 } from "./helpers.ts";
 
 function start(): GameState {
   let s = startGame(createGame("s4-content", seatsFor(3), SEED, T0, "S04_UNDERGROUND_AUCTION"), T0).state;
   for (const id of s.turnOrder) s = applyGameAction(s, id, { type: "ACK_SEQUENCE" }, T0 + 1).state;
+  s.auction!.counterfeitLots = [];
   return s;
 }
 
 const act = (s: GameState, id: string, action: Parameters<typeof applyGameAction>[2]): GameState => applyGameAction(s, id, action, T0 + s.version + 2).state;
+function grant(s: GameState, playerId: string, lotId: LotId04) {
+  s.auction!.players[playerId].items.push(lotId);
+  s.auction!.itemInstances[lotId] = { itemInstanceId: lotId, lotId, offeredRound: Number(lotId.slice(4, 6)), counterfeit: false, sourceItemInstanceId: null, consumed: false };
+}
 
 describe("Scenario 04 content and abilities", () => {
   it("registers ten ordered lots and gives every character an auction ability without changing earlier scenarios", () => {
     expect(LOTS04).toHaveLength(10);
     expect(LOTS04.map((lot) => lot.id)).toEqual(Array.from({ length: 10 }, (_, i) => `LOT_${String(i + 1).padStart(2, "0")}`));
-    expect(LOTS04[4]).toMatchObject({ effect: "NONE", perfectInfo: "LOT_05_COUNTERFEIT" });
+    expect(LOTS04[4]).toMatchObject({ effect: "COPY" });
+    expect(LOTS04.every((lot) => lot.startingBid === 1)).toBe(true);
     expect(LOTS04[7].finalAuctionModifier).toBe(2);
     expect(ROSTER).toHaveLength(192);
     for (const character of ROSTER) {
@@ -52,7 +59,9 @@ describe("Scenario 04 content and abilities", () => {
 
   it("uses the Black Die once and preserves exact private chip counts", () => {
     let s = start();
-    s.auction!.players.a.items.push("LOT_01");
+    grant(s, "a", "LOT_01");
+    s = act(s, "a", { type: "USE_LOT", lotId: "LOT_01" });
+    expect(s.auction!.players.a.items).not.toContain("LOT_01");
     s.auction!.players.a.nextRollPenalty = -2;
     rigNextDie(s, 1);
     s = act(s, "a", { type: "INVESTIGATE" });
@@ -86,7 +95,7 @@ describe("Scenario 04 content and abilities", () => {
 
   it("settles a deal at its stated terms without a Red Contract discount", () => {
     let s = start();
-    s.auction!.players.a.items.push("LOT_04");
+    grant(s, "a", "LOT_04");
     s = act(s, "a", { type: "DEAL", targetId: "b", chips: 2, forPass: true });
     expect(project(s, "b").auction!.deal).toMatchObject({ chips: 2 });
     const w = s.pending.at(-1)!;
@@ -102,7 +111,8 @@ describe("Scenario 04 content and abilities", () => {
     s.auction!.currentLot = "LOT_10";
     s.auction!.currentBid = 7;
     expect(() => act(s, "a", { type: "BID", amount: 10 })).toThrow();
-    s.auction!.players.a.items.push("LOT_08");
+    grant(s, "a", "LOT_08");
+    s = act(s, "a", { type: "USE_LOT", lotId: "LOT_08" });
     s = act(s, "a", { type: "BID", amount: 8 });
     expect(s.auction!.currentBid).toBe(10);
     expect(s.auction!.currentBidReal).toBe(8);
@@ -118,7 +128,7 @@ describe("Scenario 04 content and abilities", () => {
 
   it("uses Bottomless Credit once to clear Debt", () => {
     let s = start();
-    s.auction!.players.a.items.push("LOT_06");
+    grant(s, "a", "LOT_06");
     s.auction!.players.a.debt = 3;
     s = act(s, "a", { type: "USE_LOT", lotId: "LOT_06" });
     expect(s.auction!.players.a).toMatchObject({ blackChips: 8, debt: 0 });

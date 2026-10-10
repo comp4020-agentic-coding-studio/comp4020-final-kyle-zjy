@@ -359,14 +359,23 @@ opening seat, settlement history, player Black Chips, Debt, won lots,
 certified private intel, READ results, and Glass Eye snapshots. Black Chips and intel are private;
 Debt and won lots are public. Fate, Sanity, AP, Lost, and the seeded die use
 the shared player and roll structures. AP refreshes to 1 each round, or 2
-for the three full rounds after acquiring Red Contract (1 when Lost). It never
+for the three full rounds after activating Red Contract (1 when Lost). It never
 refreshes on an additional bidding lap. Successful bids and passes remain on
 the same turn until END_TURN; one bid is allowed per turn.
 
 A winner pays only at settlement. The winner opens next round immediately
 after their seat; an unsold round opens after its previous opening seat.
 Round 10 still uses BID/PASS. The crown can cover two chips of its holder's
-final bid while its holder pays the real amount; high Debt changes a winning
-ending into the debt ending. Lots 5 and 7 are counterfeit, while Lot 10 is the
-final objective and does not enter inventory. The active items are Glass Eye,
-Bottomless Credit, and Devil's Key; Gambler's Coin is chosen during Blackjack.
+final bid after activation while its holder pays the real amount; high Debt changes a winning
+ending into the debt ending. Each lot starts at one Black Chip. Exactly two
+of Lots 1–9 are chosen as counterfeits by the seeded RNG at game creation;
+their identities remain server secret until discovered. Lot 10 is the final
+objective and does not enter inventory. Won items remain inert until the holder
+uses them, then leave inventory and produce a private activation notice.
+Prototype Chrono Key selects an instance recorded in this run's earlier
+auction history (Lots 1–4). It creates a new item instance with the source's
+recorded authenticity and independent consumed state, even if the source was
+already used. Nameless File restores Sanity to 3/3 and
+prevents every later Sanity loss. Black Die and Gambler's Coin arm their next
+eligible roll or Blackjack hand, while Red Contract and Black Crown take effect
+from activation.

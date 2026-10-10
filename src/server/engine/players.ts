@@ -119,6 +119,7 @@ export function gainSanity(ctx: Ctx, p: PlayerGameState, amount: number, why?: M
 }
 
 export function loseSanity(ctx: Ctx, p: PlayerGameState, amount: number, why?: Msg): number {
+  if (ctx.s.scenarioId === "S04_UNDERGROUND_AUCTION" && ctx.s.auction?.players[p.playerId]?.sanityWard) return 0;
   const lost = Math.min(p.sanity, Math.max(0, amount));
   if (lost === 0) return 0;
   p.sanity -= lost;

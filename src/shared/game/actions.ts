@@ -64,7 +64,7 @@ export type GameAction =
   | { type: "BORROW" }
   | { type: "EXPOSE"; intelId: string }
   | { type: "RECOVER" }
-  | { type: "USE_LOT"; lotId: LotId04 };
+  | { type: "USE_LOT"; lotId: LotId04; sourceLotId?: LotId04 };
 
 export type GameActionType = GameAction["type"];
 

@@ -16,6 +16,7 @@ import { AuctionTable04 } from "../game/scenario04/AuctionTable04.tsx";
 import { DOCK04 } from "../game/scenario04/dock04.tsx";
 import { Objective04, PlacePanel04, TopBar04 } from "../game/scenario04/Panels04.tsx";
 import { Private04 } from "../game/scenario04/Private04.tsx";
+import { ItemNotice04 } from "../game/scenario04/ItemNotice04.tsx";
 import { useFormat, useT } from "../i18n/index.ts";
 import { sendGame, sendLobby, useGame, useMe } from "../store.ts";
 
@@ -57,6 +58,7 @@ export function Scenario04Game() {
     </div>
     <Dock g={g} mode={mode} setMode={setMode} extension={DOCK04} />
     <CueFeed g={g} />
+    <ItemNotice04 g={g} />
     <DiceOverlay g={g} />
     <DecisionLayer g={g} />
     <HostSkip g={g} />

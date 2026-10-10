@@ -33,7 +33,7 @@ describe("Scenario 04 tactical actions", () => {
     let s = start();
     rigNextDie(s, 6);
     s = settleRoll(act(s, "a", { type: "INVESTIGATE" }));
-    expect(s.auction!.players.a.privateIntel).toEqual(["LOT_01_LIMIT", "LOT_01_PERFECT"]);
+    expect(s.auction!.players.a.privateIntel).toEqual(expect.arrayContaining(["LOT_01_LIMIT", "LOT_01_PERFECT"]));
     expect(project(s, "b").auction!.players.a.privateIntel).toBeNull();
     expect(s.players.a.ap).toBe(0);
     s.players.a.ap = 1; // Red Contract permits a second tactical action in a turn.

@@ -48,8 +48,7 @@ function turnWindow(ctx: Ctx, challenge: Challenge): void {
 function coinStage(ctx: Ctx, challenge: Challenge): void {
   const a = ctx.s.auction!;
   const id = [challenge.target, challenge.challenger].find((playerId) =>
-    !challenge.coinAsked.includes(playerId) && a.players[playerId].items.includes("LOT_03") &&
-    !Object.values(a.players).some((holder) => holder.usedLotEffects.includes("LOT_03")));
+    !challenge.coinAsked.includes(playerId) && a.players[playerId].armedCoin > 0);
   if (!id) return turnWindow(ctx, challenge);
   challenge.coinAsked.push(id);
   const hand = id === challenge.target ? challenge.targetHand : challenge.challengerHand;
@@ -110,6 +109,7 @@ onResume("S4_COIN", (ctx, window, answers) => {
   const challenge = ctx.s.auction!.challenge;
   if (!challenge) return;
   const id = window.addressees[0];
+  ctx.s.auction!.players[id].armedCoin--;
   const choice = answers[id];
   if (choice !== "KEEP") {
     const [index, value] = choice.split(":").map(Number);
@@ -117,7 +117,6 @@ onResume("S4_COIN", (ctx, window, answers) => {
     const base = Math.min(hand[index], 10);
     if (index >= 0 && index < 2 && Math.abs(value - base) === AUCTION_CONFIG04.coinCardAdjustment && value >= AUCTION_CONFIG04.coinMinValue && value <= AUCTION_CONFIG04.coinMaxValue) {
       hand[index] = value;
-      ctx.s.auction!.players[id].usedLotEffects.push("LOT_03");
       cue(ctx, "S4_COIN_USED", { playerId: id, cardIndex: index });
     }
   }

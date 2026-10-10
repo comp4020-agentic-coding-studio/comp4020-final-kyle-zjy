@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { GameAction } from "../../../shared/game/actions.ts";
-import { LOTS04 } from "../../../shared/game/scenario04/lots.ts";
+import { itemLotId04, LOTS04 } from "../../../shared/game/scenario04/lots.ts";
 import type { LotId04 } from "../../../shared/game/scenario04/types.ts";
 import type { PlayerView } from "../../../shared/game/state.ts";
 import { auctionIntelText, auctionLotText } from "../../../shared/i18n/scenario04.ts";
@@ -38,20 +38,21 @@ function ItemChoices({ g, send }: { g: PlayerView; send: (action: GameAction) =>
   const a = g.auction!;
   const mine = a.players[g.viewerId];
   const known = [...(mine.privateIntel ?? []), ...a.publicIntel];
-  const used = (id: LotId04) => Object.values(a.players).some((p) => p.usedLotEffects.includes(id));
   return <div data-s4-picker="USE_LOT" className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto">
     {mine.items.map((id) => {
-      const lot = LOTS04.find((entry) => entry.id === id)!;
-      const counterfeit = lot.tags.includes("COUNTERFEIT");
-      const status = counterfeit ? known.includes(lot.hiddenInfo) || known.includes(lot.perfectInfo) ? "counterfeit" : "unverified"
-        : used(id) || id === "LOT_04" && mine.redContractRemainingRounds === 0 ? "used"
-        : ["LOT_04", "LOT_08"].includes(id) ? "passive" : "available";
-      const actionable = ["LOT_02", "LOT_06", "LOT_09"].includes(id) && !used(id) && (id !== "LOT_06" || mine.debt > 0) && (id !== "LOT_09" || g.players[g.viewerId].sanity > 0);
+      const base = itemLotId04(id);
+      const status = known.includes(`${base}_COUNTERFEIT` as `${`LOT_${string}`}_${string}`) ? "counterfeit" : "available";
+      const actionable = (base !== "LOT_06" || mine.debt > 0) && (base !== "LOT_09" || g.players[g.viewerId].sanity > 0 && !mine.sanityWard);
       const text = auctionLotText(locale, id);
-      return <button key={id} className="btn btn-ghost min-h-12 h-auto min-w-0 flex-col items-start whitespace-normal text-left" disabled={!actionable} onClick={() => send({ type: "USE_LOT", lotId: id })}>
-        <span className="font-semibold">{text.name} · {t(`s4.item.${status}`)}</span>
-        <span className="text-xs text-mist">{text.description}</span>
-      </button>;
+      return base === "LOT_05" ? <div key={id} className="min-w-0 rounded-xl border border-gold/30 p-2">
+        <p className="text-sm font-semibold">{text.name} · {t(`s4.item.${status}`)}</p>
+        <p className="text-xs text-mist">{text.description}</p>
+        <p className="label mt-2">{t("s4.item.copySource")}</p>
+        <div className="mt-1 grid grid-cols-2 gap-2">{LOTS04.slice(0, 4).map((source) => <button key={source.id} data-s4-copy={source.id} className="btn btn-ghost min-h-12 h-auto min-w-0 whitespace-normal text-xs" onClick={() => send({ type: "USE_LOT", lotId: id, sourceLotId: source.id })}>{auctionLotText(locale, source.id).name}</button>)}</div>
+      </div> : <button key={id} data-s4-item={id} className="btn btn-ghost min-h-12 h-auto min-w-0 flex-col items-start whitespace-normal text-left" disabled={!actionable} onClick={() => send({ type: "USE_LOT", lotId: id })}>
+          <span className="font-semibold">{text.name} · {t(`s4.item.${status}`)}</span>
+          <span className="text-xs text-mist">{text.description}</span>
+        </button>;
     })}
   </div>;
 }
@@ -88,8 +89,8 @@ function DealBuilder({ g, send }: { g: PlayerView; send: (action: GameAction) =>
   const mine = g.auction!.players[g.viewerId];
   const target = targetId ? g.auction!.players[targetId] : null;
   const ownIntel = mine.privateIntel ?? [];
-  const ownItems = mine.items.filter((id) => LOTS04.find((lot) => lot.id === id)?.transferable);
-  const theirItems = (target?.items ?? []).filter((id) => LOTS04.find((lot) => lot.id === id)?.transferable);
+  const ownItems = mine.items.filter((id) => LOTS04.find((lot) => lot.id === itemLotId04(id))?.transferable);
+  const theirItems = (target?.items ?? []).filter((id) => LOTS04.find((lot) => lot.id === itemLotId04(id))?.transferable);
   const items = kind === "INTEL" ? ownIntel : kind === "SELL_ITEM" ? ownItems : kind === "BUY_ITEM" ? theirItems : [];
   const pay = kind === "PASS" || kind === "BUY_ITEM" ? amount : 0;
   const receive = kind === "INTEL" || kind === "SELL_ITEM" ? amount : 0;

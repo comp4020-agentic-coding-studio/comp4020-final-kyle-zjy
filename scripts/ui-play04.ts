@@ -17,7 +17,7 @@ let server: ChildProcess | null = null;
 const problems: string[] = [];
 const errors: string[] = [];
 const seen = new Set<string>();
-let readPerfect = false;
+let armedRollPerfect = false;
 async function shot(page: Page, tag: string, name: string) {
   const key = `${name}-${tag}`;
   if (seen.has(key)) return;
@@ -58,7 +58,7 @@ for (const page of [phone, desk]) {
   page.on("websocket", (socket) => socket.on("framereceived", (frame) => {
     try {
       const roll = JSON.parse(String(frame.payload)).snapshot?.game?.roll;
-      if (roll?.purpose === "S4_READ" && roll.done && roll.tier === "PERFECT") readPerfect = true;
+      if (roll?.purpose === "S4_SABOTAGE" && roll.done && roll.tier === "PERFECT") armedRollPerfect = true;
     } catch { /* Ignore protocol frames without a game snapshot. */ }
   }));
 }
@@ -70,6 +70,8 @@ let acceptedDeal = false;
 let bidKeptTurn = false;
 let usedCredit = false;
 let usedDevil = false;
+let usedChrono = false;
+let usedCopy = false;
 let sawNextRoundOrder = false;
 let sawFakeItem = false;
 try {
@@ -135,11 +137,24 @@ try {
       if (await visible(page.locator('[data-s4-picker="USE_LOT"]'))) {
         await shot(page, tag, "item-picker");
         if (tag === "desktop" && await visible(page.getByText(/Prototype Chrono Key/))) sawFakeItem = true;
-        const item = round === 10 && tag === "desktop"
+        const item = round === 6 && tag === "desktop" && !usedChrono
+          ? page.locator('[data-s4-copy="LOT_01"]')
+          : round === 6 && tag === "desktop"
+          ? page.locator('[data-s4-item^="LOT_05_COPY_01_"]')
+          : round === 10 && tag === "desktop"
           ? page.locator('[data-s4-picker="USE_LOT"] button').filter({ hasText: "The Devil's Key" })
           : page.locator('[data-s4-picker="USE_LOT"] button:not([disabled])');
         acted = await tap(item);
+        if (acted) {
+          const notice = page.getByRole("status").filter({ hasText: /auction item used/i });
+          if (!await notice.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) problems.push(`${tag}: item use showed no result notice`);
+          else await shot(page, tag, round === 6 && tag === "desktop" && usedChrono ? "copy-notice" : "item-notice");
+        }
         if (acted && round === 7 && tag === "phone") usedCredit = true;
+        if (acted && round === 6 && tag === "desktop") {
+          if (usedChrono) usedCopy = true;
+          else usedChrono = true;
+        }
         if (acted && round === 10 && tag === "desktop") usedDevil = true;
         continue;
       }
@@ -203,6 +218,12 @@ try {
       if (round === 5 && tag === "desktop" && !done.has(key("bid")) && await enabled(action("BID"))) {
         await tap(action("BID")); acted = await tap(page.locator('[data-s4-picker="BID"] button').first()); if (acted) done.add(key("bid")); continue;
       }
+      if (round === 6 && tag === "desktop" && !done.has(key("chrono")) && await enabled(action("USE_LOT"))) {
+        acted = await tap(action("USE_LOT")); if (acted) { done.add(key("chrono")); await page.locator('[data-s4-picker="USE_LOT"]').waitFor(); } continue;
+      }
+      if (round === 6 && tag === "desktop" && usedChrono && !done.has(key("copy")) && await enabled(action("USE_LOT"))) {
+        acted = await tap(action("USE_LOT")); if (acted) { done.add(key("copy")); await page.locator('[data-s4-picker="USE_LOT"]').waitFor(); } continue;
+      }
       if (round === 6 && tag === "phone" && !done.has(key("bid")) && await enabled(action("BID"))) {
         await tap(action("BID")); acted = await tap(page.locator('[data-s4-picker="BID"] button').first()); if (acted) done.add(key("bid")); continue;
       }
@@ -242,8 +263,10 @@ if (!bidKeptTurn) problems.push("BID did not keep the bidder's turn");
 if (!sawNextRoundOrder) problems.push("the winner was not last in the next round's first lap");
 if (!sawFakeItem) problems.push("the counterfeit lot was not seen in inventory");
 if (!usedCredit || !usedDevil) problems.push("Bottomless Credit or Devil's Key was not used");
+if (!usedChrono) problems.push("Prototype Chrono Key was not used through the source picker");
+if (!usedCopy) problems.push("The new copied item instance was not used through inventory");
 if (!done.has("desktop:10:recover")) problems.push("RECOVER was not exercised after Devil's Key");
-if (!readPerfect) problems.push("Black Die did not resolve READ as Perfect");
+if (!armedRollPerfect) problems.push("Activated Black Die did not resolve the next Sabotage as Perfect");
 if (problems.length) console.error(problems.join("\n"));
 if (errors.length) console.error(errors.join("\n"));
 if (reached < 10 || problems.length || errors.length) process.exit(1);

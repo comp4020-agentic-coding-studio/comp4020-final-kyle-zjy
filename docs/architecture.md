@@ -328,3 +328,12 @@ Black Chips and certified intel stay in authoritative `auction` state. The
 projection emits exact chips, intel, READ results, and Glass Eye snapshots only to their owner;
 Debt, items, bids, turn order, and the record statistics are public. Deal and
 Blackjack windows settle inside the serialized action transaction.
+The seeded server state chooses two counterfeit lots among rounds 1–9; the
+projection never exposes that list. Every lot starts at one Black Chip. Won
+items require an explicit USE_LOT intent, and each use removes the item from
+inventory and sends an owner-only effect notice. Chrono Key resolves its source
+through this run's settled auction history and server-only instance registry;
+the copy receives a new instance ID, inherited authenticity, and its own
+consumed state. Nameless File installs permanent Sanity protection through the
+shared loss handler. Exit Rights is a final objective, not an inventory item:
+the final auction settles directly into the ending.

@@ -6,14 +6,22 @@ import { project } from "../src/server/engine/project.ts";
 import { blackjackTotal04 } from "../src/server/engine/scenario04/blackjack.ts";
 import type { GameAction } from "../src/shared/game/actions.ts";
 import type { GameState } from "../src/shared/game/state.ts";
+import type { LotId04 } from "../src/shared/game/scenario04/types.ts";
 import { rigNextDie, SEED, seatsFor, T0 } from "./helpers.ts";
 
 function start(): GameState {
   let s = startGame(createGame("s4-revision", seatsFor(3), SEED, T0, "S04_UNDERGROUND_AUCTION"), T0).state;
   for (const id of s.turnOrder) s = applyGameAction(s, id, { type: "ACK_SEQUENCE" }, T0 + 1).state;
+  s.auction!.counterfeitLots = [];
   return s;
 }
 const act = (s: GameState, id: string, action: GameAction) => applyGameAction(s, id, action, T0 + s.version + 2).state;
+function grant(s: GameState, playerId: string, ...lotIds: LotId04[]) {
+  for (const lotId of lotIds) {
+    s.auction!.players[playerId].items.push(lotId);
+    s.auction!.itemInstances[lotId] = { itemInstanceId: lotId, lotId, offeredRound: Number(lotId.slice(4, 6)), counterfeit: s.auction!.counterfeitLots.includes(lotId), sourceItemInstanceId: null, consumed: false };
+  }
+}
 function answer(s: GameState, choice: string) {
   const w = s.pending.at(-1)!;
   return act(s, w.addressees[0], { type: "RESPOND", windowId: w.id, optionId: choice });
@@ -33,6 +41,96 @@ function passRound(s: GameState) {
 }
 
 describe("Scenario 04 revised rules", () => {
+  it("chooses exactly two seeded counterfeit lots from rounds one through nine and keeps them secret", () => {
+    const first = startGame(createGame("random-a", seatsFor(3), SEED, T0, "S04_UNDERGROUND_AUCTION"), T0).state;
+    const again = startGame(createGame("random-b", seatsFor(3), SEED, T0, "S04_UNDERGROUND_AUCTION"), T0).state;
+    expect(first.auction!.counterfeitLots).toEqual(again.auction!.counterfeitLots);
+    expect(new Set(first.auction!.counterfeitLots).size).toBe(2);
+    expect(first.auction!.counterfeitLots.every((id) => Number(id.slice(4)) >= 1 && Number(id.slice(4)) <= 9)).toBe(true);
+    expect(JSON.stringify(project(first, "a"))).not.toContain("counterfeitLots");
+    expect(JSON.stringify(project(first, "a"))).not.toContain("itemInstances");
+    const layouts = new Set(Array.from({ length: 12 }, (_, i) => {
+      const variedSeed = `${(i + 1).toString(16).padStart(8, "0")}${SEED.slice(8)}`;
+      const state = startGame(createGame(`random-${i}`, seatsFor(3), variedSeed, T0, "S04_UNDERGROUND_AUCTION"), T0).state;
+      return [...state.auction!.counterfeitLots].sort().join(",");
+    }));
+    expect(layouts.size).toBeGreaterThan(1);
+  });
+
+  it("copies an earlier lot and preserves its counterfeit identity until used", () => {
+    let s = start();
+    s.auction!.counterfeitLots = ["LOT_02", "LOT_08"];
+    for (let i = 0; i < 4; i++) s = passRound(s);
+    s.auction!.itemInstances.LOT_02.counterfeit = true;
+    grant(s, "a", "LOT_05");
+    while (activePlayerId(s) !== "a") { const id = activePlayerId(s)!; s = act(s, id, { type: "PASS" }); s = act(s, id, { type: "END_TURN" }); }
+    s.auction!.counterfeitLots = [];
+    expect(() => act(s, "a", { type: "USE_LOT", lotId: "LOT_05", sourceLotId: "LOT_06" })).toThrow();
+    s = act(s, "a", { type: "USE_LOT", lotId: "LOT_05", sourceLotId: "LOT_02" });
+    const copyId = s.auction!.players.a.items[0];
+    expect(copyId).toMatch(/^LOT_05_COPY_02_\d+$/);
+    expect(s.auction!.itemInstances[copyId]).toMatchObject({ sourceItemInstanceId: "LOT_02", counterfeit: true, consumed: false });
+    expect(s.auction!.players.a.itemNotice).toMatchObject({ result: "COPIED", copyLotId: "LOT_02" });
+    expect(() => act(s, "a", { type: "USE_LOT", lotId: "LOT_05" })).toThrow();
+    s = act(s, "a", { type: "USE_LOT", lotId: copyId });
+    expect(s.auction!.players.a.items).toEqual([]);
+    expect(s.auction!.players.a.glassEyeSnapshots).toEqual([]);
+    expect(s.auction!.players.a.itemNotice?.result).toBe("COUNTERFEIT");
+  });
+
+  it("keeps an authentic copied item inert until its holder uses it", () => {
+    let s = start();
+    for (let i = 0; i < 4; i++) s = passRound(s);
+    s.auction!.itemInstances.LOT_01.counterfeit = false;
+    s.auction!.itemInstances.LOT_01.consumed = true;
+    grant(s, "a", "LOT_05");
+    while (activePlayerId(s) !== "a") { const id = activePlayerId(s)!; s = act(s, id, { type: "PASS" }); s = act(s, id, { type: "END_TURN" }); }
+    s = act(s, "a", { type: "USE_LOT", lotId: "LOT_05", sourceLotId: "LOT_01" });
+    const copyId = s.auction!.players.a.items[0];
+    expect(s.auction!.players.a.armedBlackDie).toBe(0);
+    expect(s.auction!.itemInstances[copyId]).toMatchObject({ sourceItemInstanceId: "LOT_01", counterfeit: false, consumed: false });
+    s = act(s, "a", { type: "USE_LOT", lotId: copyId });
+    expect(s.auction!.players.a).toMatchObject({ items: [], armedBlackDie: 1 });
+    expect(s.auction!.itemInstances[copyId].consumed).toBe(true);
+    expect(s.auction!.itemInstances.LOT_01.consumed).toBe(true);
+    expect(s.auction!.players.a.itemNotice?.result).toBe("ACTIVATED");
+  });
+
+  it("copies an earlier item even after the original was actually used", () => {
+    let s = start();
+    s = passRound(s);
+    s.auction!.itemInstances.LOT_02.counterfeit = false;
+    grant(s, "a", "LOT_02");
+    while (activePlayerId(s) !== "a") { const id = activePlayerId(s)!; s = act(s, id, { type: "PASS" }); s = act(s, id, { type: "END_TURN" }); }
+    s = act(s, "a", { type: "USE_LOT", lotId: "LOT_02" });
+    expect(s.auction!.itemInstances.LOT_02.consumed).toBe(true);
+    expect(s.auction!.players.a.glassEyeSnapshots).toHaveLength(1);
+    for (let i = 0; i < 3; i++) s = passRound(s);
+    grant(s, "a", "LOT_05");
+    while (activePlayerId(s) !== "a") { const id = activePlayerId(s)!; s = act(s, id, { type: "PASS" }); s = act(s, id, { type: "END_TURN" }); }
+    s = act(s, "a", { type: "USE_LOT", lotId: "LOT_05", sourceLotId: "LOT_02" });
+    const copyId = s.auction!.players.a.items[0];
+    expect(s.auction!.itemInstances[copyId]).toMatchObject({ sourceItemInstanceId: "LOT_02", consumed: false });
+    expect(s.auction!.players.a.glassEyeSnapshots).toHaveLength(1);
+    s = act(s, "a", { type: "USE_LOT", lotId: copyId });
+    expect(s.auction!.players.a.glassEyeSnapshots).toHaveLength(2);
+    expect(s.auction!.itemInstances[copyId].consumed).toBe(true);
+  });
+
+  it("keeps Sanity at three after the Nameless File is used", () => {
+    let s = start();
+    s.players.a.sanity = 1;
+    grant(s, "a", "LOT_07");
+    s = act(s, "a", { type: "USE_LOT", lotId: "LOT_07" });
+    expect(s.players.a.sanity).toBe(3);
+    expect(s.auction!.players.a).toMatchObject({ sanityWard: true, items: [] });
+    rigNextDie(s, 1);
+    s = roll(act(s, "a", { type: "INVESTIGATE" }));
+    expect(s.players.a.sanity).toBe(3);
+    grant(s, "a", "LOT_09");
+    expect(() => act(s, "a", { type: "USE_LOT", lotId: "LOT_09" })).toThrow();
+  });
+
   it("gives Red Contract two AP for three full rounds, then one again", () => {
     let s = start();
     expect(s.players.a.ap).toBe(1);
@@ -45,12 +143,21 @@ describe("Scenario 04 revised rules", () => {
       s = act(s, id, { type: "END_TURN" });
     }
     expect(s.round).toBe(5);
+    expect(s.auction!.players.a.redContractRemainingRounds).toBe(0);
+    while (activePlayerId(s) !== "a") {
+      const id = activePlayerId(s)!;
+      s = act(s, id, { type: "PASS" });
+      s = act(s, id, { type: "END_TURN" });
+    }
+    s = act(s, "a", { type: "USE_LOT", lotId: "LOT_04" });
     expect(s.auction!.players.a.redContractRemainingRounds).toBe(3);
+    s = passRound(s);
+    expect(s.round).toBe(6);
     for (const expected of [2, 2, 2]) {
       expect(s.players.a.ap).toBe(expected);
       s = passRound(s);
     }
-    expect(s.round).toBe(8);
+    expect(s.round).toBe(9);
     expect(s.players.a.ap).toBe(1);
   });
 
@@ -66,7 +173,7 @@ describe("Scenario 04 revised rules", () => {
 
   it("keeps Glass Eye snapshots private, clears Debt, and converts Sanity with Devil's Key", () => {
     let s = start();
-    s.auction!.players.a.items.push("LOT_02", "LOT_06", "LOT_09");
+    grant(s, "a", "LOT_02", "LOT_06", "LOT_09");
     s.auction!.players.a.debt = 3;
     s.auction!.players.b.blackChips = 4;
     s = act(s, "a", { type: "USE_LOT", lotId: "LOT_02" });
@@ -84,7 +191,8 @@ describe("Scenario 04 revised rules", () => {
 
   it("lets Gambler's Coin alter one dealt card before the target acts", () => {
     let s = start();
-    s.auction!.players.b.items.push("LOT_03");
+    grant(s, "b", "LOT_03");
+    s.auction!.players.b.armedCoin = 1;
     s = act(s, "a", { type: "CHALLENGE", targetId: "b", wager: 2 });
     s = answer(s, "ACCEPT");
     expect(s.pending.at(-1)?.kind).toBe("S4_COIN");
@@ -94,7 +202,7 @@ describe("Scenario 04 revised rules", () => {
     const [index, value] = choice.split(":").map(Number);
     expect(s.auction!.challenge!.targetHand[index]).toBe(value);
     expect(Math.abs(Math.min(hand[index], 10) - value)).toBe(1);
-    expect(s.auction!.players.b.usedLotEffects).toContain("LOT_03");
+    expect(s.auction!.players.b.armedCoin).toBe(0);
     expect(s.pending.at(-1)?.kind).toBe("S4_BLACKJACK");
     expect(s.pending.at(-1)?.addressees).toEqual(["b"]);
   });
@@ -154,7 +262,7 @@ describe("Scenario 04 revised rules", () => {
 
   it("settles transferable items and private intel together with chips", () => {
     let s = start();
-    s.auction!.players.b.items.push("LOT_02");
+    grant(s, "b", "LOT_02");
     s.auction!.players.b.privateIntel.push("LOT_01_LIMIT");
     s = act(s, "a", { type: "DEAL", targetId: "b", chips: 2, forItem: "LOT_02", forIntel: "LOT_01_LIMIT" });
     expect(s.players.a.ap).toBe(1);
@@ -165,21 +273,30 @@ describe("Scenario 04 revised rules", () => {
     expect(project(s, "c").auction!.players.a.privateIntel).toBeNull();
   });
 
-  it("never activates counterfeit items or places Exit Rights in inventory", () => {
+  it("consumes counterfeit items and never places Exit Rights in inventory", () => {
     let s = start();
-    s.auction!.players.a.items.push("LOT_05", "LOT_07");
-    expect(() => act(s, "a", { type: "USE_LOT", lotId: "LOT_05" })).toThrow();
-    expect(() => act(s, "a", { type: "USE_LOT", lotId: "LOT_07" })).toThrow();
-    s.round = 10;
-    s.auction!.currentLot = "LOT_10";
-    s.auction!.players.a.blackChips = 10;
-    s = act(s, "a", { type: "BID", amount: 8 });
-    s = act(s, "a", { type: "END_TURN" });
-    s = act(s, "b", { type: "PASS" });
-    s = act(s, "b", { type: "END_TURN" });
-    s = act(s, "c", { type: "PASS" });
-    s = act(s, "c", { type: "END_TURN" });
-    expect(s.auction!.players.a.items).not.toContain("LOT_10");
+    s.auction!.counterfeitLots = ["LOT_05", "LOT_07"];
+    for (let i = 0; i < 4; i++) s = passRound(s);
+    grant(s, "a", "LOT_05", "LOT_07");
+    while (activePlayerId(s) !== "a") { const id = activePlayerId(s)!; s = act(s, id, { type: "PASS" }); s = act(s, id, { type: "END_TURN" }); }
+    s = act(s, "a", { type: "USE_LOT", lotId: "LOT_05", sourceLotId: "LOT_01" });
+    s = act(s, "a", { type: "USE_LOT", lotId: "LOT_07" });
+    expect(s.auction!.players.a.items).toEqual([]);
+    expect(s.auction!.players.a.sanityWard).toBe(false);
+    expect(project(s, "a").auction!.players.a.itemNotice?.result).toBe("COUNTERFEIT");
+    expect(project(s, "b").auction!.players.a.itemNotice).toBeNull();
+    expect(JSON.stringify(project(s, "b"))).not.toContain("LOT_05_COUNTERFEIT");
+    let final = start();
+    final.round = 10;
+    final.auction!.currentLot = "LOT_10";
+    final.auction!.players.a.blackChips = 10;
+    final = act(final, "a", { type: "BID", amount: 8 });
+    final = act(final, "a", { type: "END_TURN" });
+    final = act(final, "b", { type: "PASS" });
+    final = act(final, "b", { type: "END_TURN" });
+    final = act(final, "c", { type: "PASS" });
+    final = act(final, "c", { type: "END_TURN" });
+    expect(final.auction!.players.a.items).not.toContain("LOT_10");
   });
 
   it("pays only the effective Blackjack wager to a winning all-in target", () => {

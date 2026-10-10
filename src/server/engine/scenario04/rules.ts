@@ -15,11 +15,11 @@ registerScenario({
   itemPools: { any: [], buff: [] },
   roundOpens: openAuctionRound04,
   roundHeader: (s) => m`— Auction ${s.round} of 10 —`,
-  apFor: (s, p) => p.lost ? 1 : s.auction!.players[p.playerId].items.includes("LOT_04") && s.round >= s.auction!.players[p.playerId].redContractStartsRound && s.auction!.players[p.playerId].redContractRemainingRounds > 0 ? 2 : 1,
+  apFor: (s, p) => p.lost ? 1 : s.round >= s.auction!.players[p.playerId].redContractStartsRound && s.auction!.players[p.playerId].redContractRemainingRounds > 0 ? 2 : 1,
   skipTurn: skipAuctionTurn04,
   roundCloses: (ctx) => {
     for (const player of Object.values(ctx.s.auction!.players)) {
-      if (player.items.includes("LOT_04") && ctx.s.round >= player.redContractStartsRound && player.redContractRemainingRounds > 0) player.redContractRemainingRounds--;
+      if (ctx.s.round >= player.redContractStartsRound && player.redContractRemainingRounds > 0) player.redContractRemainingRounds--;
     }
   },
   onRoundStart: () => {},
