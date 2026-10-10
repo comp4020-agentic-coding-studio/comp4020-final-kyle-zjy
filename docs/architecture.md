@@ -343,3 +343,7 @@ the copy receives a new instance ID, inherited authenticity, and its own
 consumed state. Nameless File installs permanent Sanity protection through the
 shared loss handler. Exit Rights is a final objective, not an inventory item:
 the final auction settles directly into the ending.
+Scenario 04's round-close hook advances its own ten-step Collapse clock;
+the tenth close reaches 10 without changing the existing Exit Rights and Debt
+outcome calculation. Round-specific auctioneer copy, the final warning, and
+personal fate summaries live in the Scenario 04 client localization catalogs.

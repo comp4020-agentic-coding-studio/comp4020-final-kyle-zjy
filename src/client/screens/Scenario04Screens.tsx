@@ -14,7 +14,7 @@ import { PlayersStrip } from "../game/PlayersStrip.tsx";
 import { SecretsDrawer } from "../game/SecretsDrawer.tsx";
 import { AuctionTable04 } from "../game/scenario04/AuctionTable04.tsx";
 import { DOCK04 } from "../game/scenario04/dock04.tsx";
-import { Objective04, PlacePanel04, TopBar04 } from "../game/scenario04/Panels04.tsx";
+import { CollapseMeter04, Objective04, PlacePanel04, TopBar04 } from "../game/scenario04/Panels04.tsx";
 import { Private04 } from "../game/scenario04/Private04.tsx";
 import { ItemNotice04 } from "../game/scenario04/ItemNotice04.tsx";
 import { FinalAuction04 } from "../game/scenario04/FinalAuction04.tsx";
@@ -36,6 +36,11 @@ export function Scenario04Intro() {
     <h1 className="mt-4 font-display text-4xl text-gold-bright">{t("s4.title")}</h1>
     <p className="mt-3 text-mist italic">{t("s4.subtitle")}</p>
     <p className="mt-8 text-lg">{t("s4.intro")}</p>
+    <div className="mt-5 rounded-xl border-l-2 border-gold/70 bg-night/70 p-4 text-left text-sm leading-relaxed text-moon">
+      <p className="label mb-2 text-gold-bright">{t("s4.host.label")}</p>
+      <p>{t("s4.intro.host")}</p>
+      <p className="mt-2 text-mist">{t("s4.intro.warning")}</p>
+    </div>
     <button className="btn btn-gold mt-8 w-full" disabled={acked} onClick={() => void sendGame({ type: "ACK_SEQUENCE" })}>{acked ? t("s4.waiting") : t("s4.begin")}</button>
   </section><HostSkip g={g} /></Frame>;
 }
@@ -62,6 +67,7 @@ export function Scenario04Game() {
     <TopBar04 g={g} onLog={() => setDrawer("log")} onSecrets={() => setDrawer("secrets")} secretsCount={mine?.privateIntel?.length ?? 0} />
     <Banner g={g} />
     <Objective04 />
+    <CollapseMeter04 g={g} />
     <div className="flex min-h-0 flex-1 flex-col justify-center gap-1 py-1">
       <AuctionTable04 g={g} />
       <PlacePanel04 g={g} />
@@ -87,10 +93,15 @@ export function Scenario04Ending() {
   const t = useT();
   if (!g) return null;
   const type = g.outcome === "S04_EXIT" ? "exit" : g.outcome === "S04_DEBT" ? "debt" : "unsold";
+  const winner = g.auction?.final?.winnerId;
+  const own = g.players[g.viewerId];
+  const personal = !winner ? "unclaimed" : winner !== g.viewerId ? "trapped" : type === "debt" ? "winnerDebt" : own.lost || own.sanity <= 1 ? "winnerFrayed" : "winner";
   const acked = g.sequence?.acks.includes(g.viewerId) ?? false;
   return <Frame><section className="tarot mx-auto mt-16 max-w-xl p-6 text-center">
     <h1 className="font-display text-4xl text-gold-bright">{t(`s4.ending.${type}.title`)}</h1>
     <p className="mt-4 text-mist">{t(`s4.ending.${type}.body`)}</p>
+    <p className="mt-4 font-mono text-sm text-ember">{t("s4.ending.collapse", { n: g.collapse, max: g.collapseMax })}</p>
+    <div className="mt-6 rounded-xl border border-gold/30 bg-night/70 p-4 text-left"><p className="label text-gold">{t("s4.ending.personal.label")}</p><p className="mt-2 leading-relaxed text-moon">{t(`s4.ending.personal.${personal}`)}</p></div>
     <button className="btn btn-gold mt-8 w-full" disabled={acked} onClick={() => void sendGame({ type: "ACK_SEQUENCE" })}>{acked ? t("s4.waiting") : t("s4.results")}</button>
   </section><HostSkip g={g} /></Frame>;
 }
@@ -101,9 +112,15 @@ export function Scenario04Results() {
   const t = useT();
   const fmt = useFormat();
   if (!g?.auction) return null;
+  const winner = g.auction.final?.winnerId;
+  const summary = !winner ? t("s4.results.storyUnclaimed") : t(g.outcome === "S04_DEBT" ? "s4.results.storyDebt" : "s4.results.storyExit", { name: g.players[winner].nickname });
   return <Frame><section className="tarot mx-auto mt-16 max-w-xl p-6 text-center">
     <h1 className="font-display text-4xl text-gold-bright">{t("s4.results")}</h1>
-    <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{g.results?.map((result) => <div key={result.playerId} className="min-w-0 rounded-xl border border-gold/20 p-3 text-left text-sm"><p className="text-gold-bright">{g.players[result.playerId].nickname} · {fmt(result.title)}</p>{result.highlights.map((line, index) => <p key={index} className="mt-1 text-mist">{fmt(line)}</p>)}</div>)}</div>
+    <div className="mt-5 rounded-xl border border-gold/30 bg-night/70 p-4 text-left"><p className="label text-gold">{t("s4.results.storyTitle")}</p><p className="mt-2 leading-relaxed">{summary}</p>{winner && <p className="mt-2 font-mono text-xs text-gold-bright">{t("s4.results.winningBid", { bid: g.auction.final?.players[winner].bid ?? 0, effective: g.auction.final?.players[winner].effectiveBid ?? 0 })}</p>}</div>
+    <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{g.results?.map((result) => {
+      const fate = !winner ? "unclaimed" : winner !== result.playerId ? "trapped" : g.outcome === "S04_DEBT" ? "winnerDebt" : "winner";
+      return <div key={result.playerId} className="min-w-0 rounded-xl border border-gold/20 p-3 text-left text-sm"><p className="text-gold-bright">{g.players[result.playerId].nickname} · {fmt(result.title)}</p><p className="mt-2 text-moon">{t(`s4.results.fate.${fate}`)}</p>{result.highlights.map((line, index) => <p key={index} className="mt-1 text-mist">{fmt(line)}</p>)}</div>;
+    })}</div>
     {me?.isHost ? <button className="btn btn-gold mt-8 w-full" onClick={() => void sendLobby({ type: "RESTART" })}>{t("s4.results.back")}</button> : <p className="mt-8 text-sm text-mist">{t("s4.results.wait")}</p>}
   </section></Frame>;
 }

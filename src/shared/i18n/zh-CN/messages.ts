@@ -940,6 +940,7 @@ export const ZH_MESSAGES: Record<string, string> = {
   "the sea wall giving way": "海堤崩塌",
   "The Black Die": "黑色骰子",
   "Debt": "负债",
+  "the black round table sinking deeper": "黑色圆桌继续下沉",
   "That action is unavailable in the final auction.": "最终拍卖阶段无法执行该行动。",
   "Final Settlement is closed for you.": "你的最终清算已结束。",
   "That resource cannot be converted now.": "现在无法转换该资源。",

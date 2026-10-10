@@ -365,6 +365,11 @@ the same turn until END_TURN; one bid is allowed per turn.
 
 A winner pays only at settlement. The winner opens next round immediately
 after their seat; an unsold round opens after its previous opening seat.
+Scenario 04 Collapse starts at 0 / 10 and rises by exactly one when each
+auction round closes. No Scenario 04 action or item lowers it. Round 10 opens
+at 9 / 10; the final auction closes at 10 / 10, when the hall collapses. The
+existing Exit Rights winner is the only bidder with a way out, and a winning
+bidder's heavy Debt still determines the debt ending.
 Round 10 has no clockwise turns. Each player independently invests Black Chips,
 current Sanity, Fate, remaining AP, and individual unused items into Final Chips.
 Invested resources are reserved immediately; item effects can only spend the

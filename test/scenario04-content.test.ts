@@ -45,6 +45,8 @@ describe("Scenario 04 content and abilities", () => {
     let s = start();
     for (let round = 1; round <= 9; round++) {
       expect(s.round).toBe(round);
+      expect(s.collapse).toBe(round - 1);
+      expect(s.collapseMax).toBe(10);
       expect(s.auction!.currentLot).toBe(LOTS04[round - 1].id);
       for (let i = 0; i < 3; i++) {
         const id = activePlayerId(s)!;
@@ -54,6 +56,7 @@ describe("Scenario 04 content and abilities", () => {
       expect(s.auction!.auctionHistory.at(-1)).toMatchObject({ round, winnerId: null });
     }
     expect(s.round).toBe(10);
+    expect(s.collapse).toBe(9);
     expect(s.auction!.final?.stage).toBe("SETTLEMENT");
     for (const id of s.auction!.seatOrder) s = act(s, id, { type: "FINAL_READY" });
     for (const id of s.auction!.seatOrder) s = act(s, id, { type: "FINAL_BID", amount: 0 });
@@ -62,6 +65,7 @@ describe("Scenario 04 content and abilities", () => {
     for (const id of s.auction!.seatOrder) s = act(s, id, { type: "FINAL_CONTINUE" });
     expect(Object.values(s.auction!.players).every((player) => !player.items.includes("LOT_10"))).toBe(true);
     expect(s.outcome).toBe("S04_UNSOLD");
+    expect(s.collapse).toBe(10);
     expect(s.phase).toBe("ENDING");
   });
 

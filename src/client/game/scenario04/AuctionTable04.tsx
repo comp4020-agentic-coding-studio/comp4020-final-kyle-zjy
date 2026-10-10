@@ -15,10 +15,16 @@ export function AuctionTable04({ g }: { g: PlayerView }) {
   const state = a.auctionOpen ? "open" : last?.winnerId ? "sold" : "unsold";
   const who = (id: string | null) => id ? g.players[id]?.nickname ?? t("s4.table.none") : t("s4.table.none");
   const startingBid = lotForRound04(Math.max(1, g.round)).startingBid;
+  const hostLines = ["s4.host.round1", "s4.host.round2", "s4.host.round3", "s4.host.round4", "s4.host.round5", "s4.host.round6", "s4.host.round7", "s4.host.round8", "s4.host.round9"] as const;
   return <section aria-label={t("s4.table.aria")} className="mx-auto w-full max-w-6xl min-w-0 px-3 sm:px-4">
     <div className="relative overflow-hidden rounded-3xl border border-gold/30 bg-[#0b1028]/90 px-4 py-5 shadow-[inset_0_0_60px_#05060d] sm:px-8">
       <div className="pointer-events-none absolute inset-x-[14%] top-8 bottom-5 hidden rounded-[50%] border border-gold/15 lg:block" aria-hidden="true" />
       <div className="relative mx-auto max-w-xl rounded-2xl border border-gold/30 bg-[#05060d]/80 p-4 text-center">
+        <div data-s4-transition={g.round} className="mb-3 border-b border-gold/20 pb-3 text-left" aria-live="polite">
+          <p className="label text-[10px] text-gold">{t("s4.host.label")}</p>
+          {last?.round === g.round - 1 && <p className="mt-1 text-xs text-mist">{t(last.winnerId ? "s4.host.lastSold" : "s4.host.lastUnsold")}</p>}
+          <p className="mt-1 text-sm text-moon">{t(hostLines[Math.min(8, Math.max(0, g.round - 1))])}</p>
+        </div>
         <p className="label text-signal">{t("s4.top.round", { n: Math.max(1, g.round) })} · {t("s4.table.lot")}</p>
         <h1 className="mt-1 font-display text-3xl text-gold-bright sm:text-4xl">{lot.name}</h1>
         <p className="mt-2 text-sm text-mist">{lot.description}</p>

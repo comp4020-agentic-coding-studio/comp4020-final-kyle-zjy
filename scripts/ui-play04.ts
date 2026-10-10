@@ -77,6 +77,9 @@ let sawExpiredBlackDie = false;
 let sawFinalBalanceChange = false;
 let sawNextRoundOrder = false;
 let sawChronoItem = false;
+let sawFinalOverture = false;
+let sawEndingStory = false;
+let sawResultsStory = false;
 try {
   await phone.goto(base);
   await phone.getByRole("button", { name: "Create room" }).click();
@@ -92,6 +95,7 @@ try {
   await phone.getByRole("button", { name: "Take your seats" }).click();
   await shot(phone, "phone", "intro");
   await shot(desk, "desktop", "intro");
+  if (!await visible(phone.getByText(/There are lots here, but no way back/))) problems.push("auctioneer opening was not visible");
   await phone.getByRole("button", { name: "Enter the auction" }).click();
   await desk.getByRole("button", { name: "Enter the auction" }).click();
   await phone.locator('[data-action="USE_LOT"]').waitFor({ state: "visible" });
@@ -117,7 +121,13 @@ try {
         }
       }
       if (round > 0) { reached = Math.max(reached, round - 1); await shot(page, tag, `round-${round}`); }
+      if (round >= 1 && round <= 9) {
+        if (!await visible(page.locator(`[data-s4-transition="${round}"]`))) problems.push(`${tag}: round ${round} auctioneer transition missing`);
+        const meter = page.locator("[data-s4-collapse]");
+        if (!await visible(meter) || await meter.getAttribute("aria-valuenow") !== String(round - 1)) problems.push(`${tag}: round ${round} Collapse meter did not advance to ${round - 1} / 10`);
+      }
       if (round === 10) {
+        if (await visible(page.locator('[data-s4-final-overture]'))) sawFinalOverture = true;
         if (await visible(page.locator('[data-final-balance]'))) {
           await shot(page, tag, "final-settlement");
           const item = page.locator('[data-final-item]').first();
@@ -292,11 +302,13 @@ try {
   console.log(`attempted actions: ${[...done].join(", ")}`);
   await shot(phone, "phone", "last");
   await shot(desk, "desktop", "last");
+  sawEndingStory = await visible(phone.getByText("YOUR FATE")) && await visible(desk.getByText("YOUR FATE"));
   if (reached === 10) {
     await phone.getByRole("button", { name: "Results" }).click();
     await desk.getByRole("button", { name: "Results" }).click();
     await shot(phone, "phone", "results");
     await shot(desk, "desktop", "results");
+    sawResultsStory = await visible(phone.getByText("THE AUCTION'S LAST RECORD")) && await visible(desk.getByText("THE AUCTION'S LAST RECORD")) && await visible(phone.getByText(/Final bid \d+ · effective bid \d+/));
   }
 } finally {
   await browser.close();
@@ -322,6 +334,9 @@ if (!usedCopy) problems.push("The new copied item instance was not used through 
 if (!sawAcquiredNotice) problems.push("Winning a lot showed no acquisition notice");
 if (!sawExpiredBlackDie) problems.push("Black Die effect chip remained after its next roll");
 if (!sawFinalBalanceChange) problems.push("Final Chips never increased from a clicked resource");
+if (!sawFinalOverture) problems.push("Final Auction collapse warning was not visible");
+if (!sawEndingStory) problems.push("Ending lacked the personal fate story");
+if (!sawResultsStory) problems.push("Results lacked the auction story summary");
 if (!seen.has("final-reveal-phone") || !seen.has("final-reveal-desktop")) problems.push("Final Reveal was not visible to both players");
 if (!armedRollPerfect) problems.push("Activated Black Die did not resolve the next Sabotage as Perfect");
 if (problems.length) console.error(problems.join("\n"));

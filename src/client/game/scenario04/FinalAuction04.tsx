@@ -32,6 +32,11 @@ export function FinalAuction04({ g }: { g: PlayerView }) {
   const legalBid = Number.isSafeInteger(bid) && bid >= 0 && bid <= (own.usable ?? 0);
 
   return <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-4 px-3 py-4 sm:px-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,340px)]">
+    <div data-s4-final-overture className="min-w-0 rounded-2xl border border-ember/50 bg-[#1d1020]/90 px-4 py-3 lg:col-span-2">
+      <p className="label text-ember">{t("s4.final.overture.title")}</p>
+      <p className="mt-1 font-mono text-xs text-gold-bright">{t("s4.final.overture.pressure", { n: g.collapse, max: g.collapseMax })}</p>
+      <p className="mt-2 text-sm leading-relaxed text-moon">{t(`s4.final.overture.${final.stage === "SETTLEMENT" ? "settlement" : final.stage === "AUCTION" ? "auction" : "reveal"}`)}</p>
+    </div>
     <section className="min-w-0 rounded-3xl border-2 border-gold/60 bg-[#0b1028]/95 p-4 text-center shadow-[0_0_44px_#d7ae5130] sm:p-7" aria-label={t("s4.final.title")}>
       {final.stage !== "SETTLEMENT" && <><p className="label text-signal">{t(final.stage === "AUCTION" ? "s4.final.auction" : "s4.final.reveal")}</p><h1 className="mt-2 font-display text-3xl text-gold-bright sm:text-5xl">{t("s4.final.title")}</h1></>}
       {final.stage === "SETTLEMENT" && <>

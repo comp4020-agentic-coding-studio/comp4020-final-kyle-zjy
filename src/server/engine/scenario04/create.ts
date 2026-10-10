@@ -21,7 +21,7 @@ export function createScenario04(sessionId: string, seats: Seat[], seed: string,
   s.act = 1;
   s.step = "ROUND_START";
   s.collapse = 0;
-  s.collapseMax = 12;
+  s.collapseMax = 10;
   s.carriages = [];
   s.nightRule = null;
   s.currentEvent = null;

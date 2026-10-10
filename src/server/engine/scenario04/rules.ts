@@ -8,6 +8,7 @@ import { openAuctionRound04 } from "./auction.ts";
 import { skipAuctionTurn04 } from "./auction.ts";
 import { createScenario04 } from "./create.ts";
 import { startFinalSettlement04 } from "./final.ts";
+import { changeCollapse } from "../effects.ts";
 
 registerScenario({
   id: "S04_UNDERGROUND_AUCTION",
@@ -27,7 +28,7 @@ registerScenario({
   afterTurns: () => "WORLD",
   worldStep: () => {},
   roundEvent: () => {},
-  roundCollapse: () => {},
+  roundCollapse: (ctx) => changeCollapse(ctx, 1, m`the black round table sinking deeper`),
   afterRound: (ctx) => {
     if (ctx.s.round < 10) return false;
     const winner = ctx.s.auction!.auctionHistory.at(-1)?.winnerId;

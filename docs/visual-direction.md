@@ -236,6 +236,17 @@ The auction retains the Scenario 03 screen structure and shared HUD. The
 central panel is a dark, gold-edged table: lot and price in the middle, fixed
 clockwise seats nearby on wide screens (opposed for two players), and a simple
 grid on phones. The own player HUD is centered within the Scenario 04 dock.
+The original auction progress bar remains in the shared top bar. A separate
+Scenario 04 meter under the objective gauges irreversible hall Collapse from
+0 to 10, with its number and a short explanation. The auction header uses two
+compact rows on phones so the original auction progress and
+round remain legible beside the separate Collapse meter. The table
+adds an auctioneer line for each lot and a short response to the previous
+sale or withdrawal. The introductory card keeps its original title and entry
+button while adding a compact auctioneer proclamation. Final Settlement opens
+with a distinct Exit Rights warning at 9 / 10; Ending and Results keep their
+original controls and statistics while adding collapse, personal fate, and the
+winning Final Bid to the results recap.
 Core BID/PASS actions, tactical actions, and the shared ability/item/end-turn
 row have distinct levels. Turn,
 leading, and passed states have text labels as well as color. On narrow
