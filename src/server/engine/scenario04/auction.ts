@@ -5,6 +5,7 @@ import { m } from "../../../shared/i18n/msg.ts";
 import { fail, type Spec } from "../actions.ts";
 import { cue, log, type Ctx } from "../context.ts";
 import { nextTurn } from "../flow.ts";
+import { noticeAcquiredLot04 } from "./items.ts";
 
 export function openAuctionRound04(ctx: Ctx): void {
   const s = ctx.s;
@@ -43,7 +44,10 @@ function closeAuction04(ctx: Ctx): void {
   if (winner) {
     const player = a.players[winner];
     player.blackChips -= a.currentBidReal;
-    if (s.round !== 10) player.items.push(a.currentLot);
+    if (s.round !== 10) {
+      player.items.push(a.currentLot);
+      noticeAcquiredLot04(player, a.currentLot);
+    }
     a.stats.highestBid = Math.max(a.stats.highestBid, a.currentBid);
     log(ctx, m`${s.players[winner].nickname} wins the lot for ${a.currentBidReal} Black Chips.`, "S4_SOLD", winner);
   } else {

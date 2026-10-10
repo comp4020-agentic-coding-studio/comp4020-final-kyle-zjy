@@ -40,6 +40,7 @@ export type DockExtension = {
   showSharedActions?: boolean;
   itemAction?: GameActionType;
   hudClassName?: string;
+  effectChips?: (g: PlayerView, me: PublicPlayerState) => React.ReactNode;
   /** The picker's title (a catalog key) and choices for one of its actions, or null for the shared picker. */
   picker: (p: { g: PlayerView; me: PublicPlayerState; mode: GameActionType; availability: ActionAvailability; send: (a: GameAction) => void }) => { title: MessageKey; body: React.ReactNode } | null;
 };
@@ -75,7 +76,7 @@ export function Dock({ g, mode, setMode, extension }: { g: PlayerView; mode: Mod
   return (
     <div className="safe-bottom relative z-20 border-t border-gold/15 bg-[#05060d]/92 px-3 pt-2 backdrop-blur-md sm:px-4">
       <div className="mx-auto grid max-w-6xl gap-2 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:gap-4">
-        {extension?.hudClassName ? <div className={extension.hudClassName}><Hud g={g} me={me} /></div> : <Hud g={g} me={me} />}
+        {extension?.hudClassName ? <div className={extension.hudClassName}><Hud g={g} me={me} extension={extension} /></div> : <Hud g={g} me={me} extension={extension} />}
         <div className="min-w-0">
           <AnimatePresence mode="wait">
             {mode ? (
@@ -136,7 +137,7 @@ function ActionButton({ a, onPress, wide = false, compact = false, wrap = false,
   );
 }
 
-function Hud({ g, me }: { g: PlayerView; me: PublicPlayerState }) {
+function Hud({ g, me, extension }: { g: PlayerView; me: PublicPlayerState; extension?: DockExtension }) {
   const ch = getCharacterById(me.characterId);
   const t = useT();
   const charText = useCharacterText();
@@ -180,6 +181,7 @@ function Hud({ g, me }: { g: PlayerView; me: PublicPlayerState }) {
           >
             {t("dock.skillChip", { skill: skill.skillName, state: t(`skill.state.${me.skill.state}`) })}
           </span>
+          {extension?.effectChips?.(g, me)}
           {me.items.filter(isKeyItem).map((k) => (
             <motion.span key={k} initial={{ scale: 1.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex items-center gap-1 rounded-full border border-gold-bright/70 bg-gold/15 px-2 py-0.5 text-[10px] font-bold text-gold-bright">
               <Icon name="KEY" size={11} />

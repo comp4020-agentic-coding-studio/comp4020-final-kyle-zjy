@@ -42,7 +42,7 @@ async function pick(page: Page, sign: string, mbti: RegExp) {
   await page.getByRole("button", { name: "I'm ready" }).click();
 }
 
-server = spawn(process.execPath, ["src/server/index.ts"], { env: { ...process.env, NODE_ENV: "test", SCENARIO04_TEST_SEED: "00000000000000000000000000000001", DATA_DIR: dataDir, PORT: String(port) }, stdio: "inherit" });
+server = spawn(process.execPath, ["src/server/index.ts"], { env: { ...process.env, NODE_ENV: "test", SCENARIO04_TEST_SEED: "00000000000000000000000000000005", DATA_DIR: dataDir, PORT: String(port) }, stdio: "inherit" });
 for (let i = 0; i < 100; i++) {
   if (server.exitCode !== null) throw new Error(`server exited: ${server.exitCode}`);
   if (await fetch(base).then((res) => res.ok).catch(() => false)) break;
@@ -72,8 +72,11 @@ let usedCredit = false;
 let usedDevil = false;
 let usedChrono = false;
 let usedCopy = false;
+let sawAcquiredNotice = false;
+let sawExpiredBlackDie = false;
+let sawClearedLost = false;
 let sawNextRoundOrder = false;
-let sawFakeItem = false;
+let sawChronoItem = false;
 try {
   await phone.goto(base);
   await phone.getByRole("button", { name: "Create room" }).click();
@@ -103,6 +106,13 @@ try {
       const text = await page.locator("header").first().innerText().catch(() => "");
       const round = Number(text.match(/ROUND\s+(\d+)\s*\/\s*10/i)?.[1] ?? 0);
       if (round > 0) { reached = Math.max(reached, round - 1); await shot(page, tag, `round-${round}`); }
+      if (round === 2 && tag === "phone" && !sawAcquiredNotice) {
+        const acquired = page.getByRole("status").filter({ hasText: /auction item acquired/i });
+        if (await visible(acquired)) {
+          sawAcquiredNotice = true;
+          await shot(page, tag, "item-acquired");
+        }
+      }
       if (round === 2 && await visible(page.getByText("First lap: Bea → Kyle", { exact: true }))) sawNextRoundOrder = true;
       const decision = page.locator('[role="dialog"][aria-modal="true"]');
       if (await visible(decision)) {
@@ -136,7 +146,7 @@ try {
       }
       if (await visible(page.locator('[data-s4-picker="USE_LOT"]'))) {
         await shot(page, tag, "item-picker");
-        if (tag === "desktop" && await visible(page.getByText(/Prototype Chrono Key/))) sawFakeItem = true;
+        if (tag === "desktop" && await visible(page.getByText(/Prototype Chrono Key/))) sawChronoItem = true;
         const item = round === 6 && tag === "desktop" && !usedChrono
           ? page.locator('[data-s4-copy="LOT_01"]')
           : round === 6 && tag === "desktop"
@@ -148,7 +158,12 @@ try {
         if (acted) {
           const notice = page.getByRole("status").filter({ hasText: /auction item used/i });
           if (!await notice.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) problems.push(`${tag}: item use showed no result notice`);
-          else await shot(page, tag, round === 6 && tag === "desktop" && usedChrono ? "copy-notice" : "item-notice");
+          else {
+            await shot(page, tag, round === 6 && tag === "desktop" && usedChrono ? "copy-notice" : "item-notice");
+            if (round === 7 && tag === "phone" && !await visible(page.locator('[data-s4-effect="black-die"]'))) problems.push("activated Black Die effect chip is missing");
+            if (round === 10 && tag === "desktop" && !await visible(page.locator('[data-s4-effect="lost"]'))) problems.push("Lost debuff chip is missing");
+            if (!await notice.waitFor({ state: "hidden", timeout: 3500 }).then(() => true).catch(() => false)) problems.push(`${tag}: used item notice lasted too long`);
+          }
         }
         if (acted && round === 7 && tag === "phone") usedCredit = true;
         if (acted && round === 6 && tag === "desktop") {
@@ -201,11 +216,14 @@ try {
         if (!await tap(action("SABOTAGE"))) continue;
         await page.locator('[data-s4-picker="SABOTAGE"]').waitFor();
         acted = await tap(page.locator('[data-s4-picker="SABOTAGE"] button'));
-        if (acted) done.add(key("sabotage"));
+        if (acted) {
+          done.add(key("sabotage"));
+          if (tag === "phone") sawExpiredBlackDie = await page.locator('[data-s4-effect="black-die"]').waitFor({ state: "hidden", timeout: 3000 }).then(() => true).catch(() => false);
+        }
         continue;
       }
       if (round === 10 && tag === "desktop" && !done.has(key("devil")) && await enabled(action("USE_LOT"))) { acted = await tap(action("USE_LOT")); if (acted) { done.add(key("devil")); await page.locator('[data-s4-picker="USE_LOT"]').waitFor(); } continue; }
-      if (round === 10 && tag === "desktop" && done.has(key("devil")) && !done.has(key("recover")) && await enabled(action("RECOVER"))) { acted = await tap(action("RECOVER")); if (acted) done.add(key("recover")); continue; }
+      if (round === 10 && tag === "desktop" && done.has(key("devil")) && !done.has(key("recover")) && await enabled(action("RECOVER"))) { acted = await tap(action("RECOVER")); if (acted) { done.add(key("recover")); sawClearedLost = await page.locator('[data-s4-effect="lost"]').waitFor({ state: "hidden", timeout: 3000 }).then(() => true).catch(() => false); } continue; }
       if (round === 10 && tag === "phone" && !done.has("finalBid") && await enabled(action("BID"))) {
         if (!await tap(action("BID"))) continue;
         acted = await tap(page.locator('[data-s4-picker="BID"] button').first());
@@ -261,10 +279,13 @@ if (!done.has("finalBid")) problems.push("Exit Rights were never bid on");
 if (!seen.has("item-picker-phone") || !seen.has("item-picker-desktop")) problems.push("an owned item was not inspected in both contexts");
 if (!bidKeptTurn) problems.push("BID did not keep the bidder's turn");
 if (!sawNextRoundOrder) problems.push("the winner was not last in the next round's first lap");
-if (!sawFakeItem) problems.push("the counterfeit lot was not seen in inventory");
+if (!sawChronoItem) problems.push("Prototype Chrono Key was not seen in inventory");
 if (!usedCredit || !usedDevil) problems.push("Bottomless Credit or Devil's Key was not used");
 if (!usedChrono) problems.push("Prototype Chrono Key was not used through the source picker");
 if (!usedCopy) problems.push("The new copied item instance was not used through inventory");
+if (!sawAcquiredNotice) problems.push("Winning a lot showed no acquisition notice");
+if (!sawExpiredBlackDie) problems.push("Black Die effect chip remained after its next roll");
+if (!sawClearedLost) problems.push("Lost debuff chip remained after recovery");
 if (!done.has("desktop:10:recover")) problems.push("RECOVER was not exercised after Devil's Key");
 if (!armedRollPerfect) problems.push("Activated Black Die did not resolve the next Sabotage as Perfect");
 if (problems.length) console.error(problems.join("\n"));

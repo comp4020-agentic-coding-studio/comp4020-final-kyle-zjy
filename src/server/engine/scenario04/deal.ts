@@ -7,6 +7,7 @@ import { m } from "../../../shared/i18n/msg.ts";
 import { fail, type Spec } from "../actions.ts";
 import { cue, log } from "../context.ts";
 import { onResume, openWindow } from "../windows.ts";
+import { noticeAcquiredLot04 } from "./items.ts";
 
 type Offer = Extract<GameAction, { type: "DEAL" }>;
 
@@ -69,10 +70,12 @@ onResume("S4_DEAL", (ctx, _window, answers) => {
   if (deal.giveItem) {
     buyer.items.splice(buyer.items.indexOf(deal.giveItem), 1);
     seller.items.push(deal.giveItem);
+    noticeAcquiredLot04(seller, deal.giveItem);
   }
   if (deal.forItem) {
     seller.items.splice(seller.items.indexOf(deal.forItem), 1);
     buyer.items.push(deal.forItem);
+    noticeAcquiredLot04(buyer, deal.forItem);
   }
   if (deal.forPass) a.passedPlayers.push(deal.to);
   a.stats.deals++;

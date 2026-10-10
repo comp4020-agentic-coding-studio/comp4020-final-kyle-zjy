@@ -6,6 +6,7 @@ import type { PlayerView } from "../../../shared/game/state.ts";
 import { auctionIntelText, auctionLotText } from "../../../shared/i18n/scenario04.ts";
 import { useLocale, useT } from "../../i18n/index.ts";
 import { PeopleRow, type DockExtension } from "../Dock.tsx";
+import { Effects04 } from "./Effects04.tsx";
 
 function BidChoices({ bids, send }: { bids: number[]; send: (action: GameAction) => void }) {
   const t = useT();
@@ -21,6 +22,7 @@ export const DOCK04: DockExtension = {
   columns: "lg:grid-cols-5",
   itemAction: "USE_LOT",
   hudClassName: "flex min-w-0 justify-center lg:justify-self-center",
+  effectChips: (g, me) => <Effects04 g={g} me={me} />,
   picker: ({ g, mode, availability, send }) => {
     if (mode === "BID") return { title: "s4.dock.pickBid", body: <BidChoices bids={(availability.targets ?? []).map(Number)} send={send} /> };
     if (mode === "READ" || mode === "SABOTAGE") return { title: mode === "READ" ? "s4.dock.read" : "s4.dock.sabotage", body: <TargetChoice g={g} ids={(availability.targets ?? []).map(String)} send={send} mode={mode} /> };

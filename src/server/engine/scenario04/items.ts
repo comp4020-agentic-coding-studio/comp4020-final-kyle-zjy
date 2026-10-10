@@ -1,7 +1,7 @@
 import type { GameAction } from "../../../shared/game/actions.ts";
 import { AUCTION_CONFIG04 } from "../../../shared/game/scenario04/config.ts";
 import { copyItemId04, itemLotId04 } from "../../../shared/game/scenario04/lots.ts";
-import type { LotId04 } from "../../../shared/game/scenario04/types.ts";
+import type { AuctionPlayer04, LotId04 } from "../../../shared/game/scenario04/types.ts";
 import type { GameState } from "../../../shared/game/state.ts";
 import { m } from "../../../shared/i18n/msg.ts";
 import { MAX_SANITY } from "../../../shared/game/scenario01/content.ts";
@@ -15,6 +15,10 @@ function earlierInstance(s: GameState, sourceLotId: LotId04 | undefined) {
   if (keyRound === undefined) return null;
   const history = s.auction!.auctionHistory.find((entry) => entry.lotId === sourceLotId && entry.round < keyRound);
   return history ? s.auction!.itemInstances[history.itemInstanceId] ?? null : null;
+}
+
+export function noticeAcquiredLot04(holder: AuctionPlayer04, lotId: LotId04): void {
+  holder.itemNotice = { seq: ++holder.itemNoticeSeq, lotId, result: "ACQUIRED" };
 }
 
 function usable(s: GameState, playerId: string, action: Extract<GameAction, { type: "USE_LOT" }>): boolean {
@@ -82,7 +86,7 @@ export const USE_LOT04: Spec<Extract<GameAction, { type: "USE_LOT" }>> = {
       loseSanity(ctx, p, sanity, m`using the Devil's Key`);
     }
     log(ctx, m`${p.nickname} uses an auction item.`, "S4_ITEM", p.playerId);
-    holder.itemNotice = { seq: holder.usedLotEffects.length, lotId: action.lotId, result, copyLotId };
+    holder.itemNotice = { seq: ++holder.itemNoticeSeq, lotId: action.lotId, result, copyLotId };
     cue(ctx, "S4_ITEM_USED", { playerId: p.playerId, lotId: action.lotId });
   },
 };

@@ -21,7 +21,8 @@ export type AuctionPlayer04 = {
   armedCoin: number;
   activeCrown: boolean;
   sanityWard: boolean;
-  itemNotice: null | { seq: number; lotId: LotId04; result: "ACTIVATED" | "COUNTERFEIT" | "COPIED"; copyLotId?: LotId04 };
+  itemNoticeSeq: number;
+  itemNotice: null | { seq: number; lotId: LotId04; result: "ACQUIRED" | "ACTIVATED" | "COUNTERFEIT" | "COPIED"; copyLotId?: LotId04 };
   redContractRemainingRounds: number;
   redContractStartsRound: number;
   privateIntel: IntelId04[];
@@ -87,6 +88,8 @@ export type PublicAuctionPlayer04 = {
   sanityWard: boolean;
   itemNotice: AuctionPlayer04["itemNotice"] | null;
   redContractRemainingRounds: number;
+  redContractStartsRound: number | null;
+  nextRollPenalty: number | null;
   passed: boolean;
   blackChips: number | null;
   privateIntel: IntelId04[] | null;

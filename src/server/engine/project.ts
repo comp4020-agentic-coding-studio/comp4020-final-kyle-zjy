@@ -81,6 +81,8 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
         sanityWard: p.sanityWard,
         itemNotice: id === viewerId ? p.itemNotice : null,
         redContractRemainingRounds: p.redContractRemainingRounds,
+        redContractStartsRound: id === viewerId ? p.redContractStartsRound : null,
+        nextRollPenalty: id === viewerId ? p.nextRollPenalty : null,
         passed: s.auction!.passedPlayers.includes(id),
         blackChips: id === viewerId ? p.blackChips : null,
         privateIntel: id === viewerId ? [...p.privateIntel] : null,

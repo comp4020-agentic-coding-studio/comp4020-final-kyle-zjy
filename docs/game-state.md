@@ -372,6 +372,11 @@ of Lots 1–9 are chosen as counterfeits by the seeded RNG at game creation;
 their identities remain server secret until discovered. Lot 10 is the final
 objective and does not enter inventory. Won items remain inert until the holder
 uses them, then leave inventory and produce a private activation notice.
+Auction wins and accepted item transfers also produce an owner-only acquisition
+notice. The notice sequence increments on both acquisition and use, so a new
+event replaces an older one even within the same turn. The own HUD derives
+effect chips from server state (armed die and coin, contract rounds, Sanity ward,
+crown, Lost, and next-roll penalty); expiring effects need no client timer.
 Prototype Chrono Key selects an instance recorded in this run's earlier
 auction history (Lots 1–4). It creates a new item instance with the source's
 recorded authenticity and independent consumed state, even if the source was

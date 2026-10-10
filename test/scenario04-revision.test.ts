@@ -257,6 +257,8 @@ describe("Scenario 04 revised rules", () => {
       sabotage = roll(act(sabotage, "a", { type: "SABOTAGE", targetId: "b" }));
       expect(sabotage.players.a.sanity).toBe(die === 1 ? 2 : 3);
       expect(sabotage.auction!.players.b.nextRollPenalty).toBe(die === 6 ? -2 : die >= 4 ? -1 : 0);
+      expect(project(sabotage, "b").auction!.players.b.nextRollPenalty).toBe(die === 6 ? -2 : die >= 4 ? -1 : 0);
+      expect(project(sabotage, "a").auction!.players.b.nextRollPenalty).toBeNull();
     }
   });
 
@@ -268,6 +270,8 @@ describe("Scenario 04 revised rules", () => {
     expect(s.players.a.ap).toBe(1);
     s = answer(s, "ACCEPT");
     expect(s.auction!.players.a).toMatchObject({ blackChips: 6, items: ["LOT_02"] });
+    expect(project(s, "a").auction!.players.a.itemNotice).toMatchObject({ lotId: "LOT_02", result: "ACQUIRED" });
+    expect(project(s, "b").auction!.players.a.itemNotice).toBeNull();
     expect(s.auction!.players.a.privateIntel).toContain("LOT_01_LIMIT");
     expect(s.auction!.players.b).toMatchObject({ blackChips: 10, items: [] });
     expect(project(s, "c").auction!.players.a.privateIntel).toBeNull();
