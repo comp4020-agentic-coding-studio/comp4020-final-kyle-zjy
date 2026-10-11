@@ -25,7 +25,7 @@ function place(s: GameState, id: string, roomId: RoomId03, year: Year03) {
 const empty = { items: [], fate: 0 };
 
 describe("Scenario 03 numbered relic conservation", () => {
-  it("links seeded future relics to assigned 1996 placements and carries one instance through pickup, jump, store and later pickup", () => {
+  it("keeps a completed numbered relic visible in 2026 but permanently unavailable for pickup", () => {
     let s = start();
     expect(s.temporal!.bootstrap).toHaveLength(2);
     const obligation = s.temporal!.bootstrap.find((entry) => entry.storageRoom === "ARCHIVES")!;
@@ -41,15 +41,16 @@ describe("Scenario 03 numbered relic conservation", () => {
     s = applyGameAction(s, id, { type: "STORE_ITEM", instanceId: obligation.instanceId }, T0 + 5).state;
     expect(s.temporal!.storedItems[obligation.instanceId]).toMatchObject({ status: "STORED", ownerId: null, storedBy: id });
     expect(s.temporal!.bootstrap.find((entry) => entry.instanceId === obligation.instanceId)!.placedBy).toBe(id);
-    expect(project(s, id).temporal!.worldItems.some((item) => item.instanceId === obligation.instanceId)).toBe(true);
+    expect(project(s, id).temporal!.worldItems.find((item) => item.instanceId === obligation.instanceId)?.status).toBe("STORED");
     const restored = JSON.parse(JSON.stringify(s)) as GameState;
     const other = restored.turnOrder.find((playerId) => playerId !== id)!;
     place(restored, other, "ARCHIVES", "Y2026");
-    const picked = applyGameAction(restored, other, { type: "PICK_UP", instanceId: obligation.instanceId }, T0 + 6).state;
-    expect(picked.temporal!.storedItems[obligation.instanceId]).toMatchObject({ status: "HELD_2026", ownerId: other, storedBy: id });
-    expect(project(picked, other).temporal!.myItems.map((item) => item.instanceId)).toContain(obligation.instanceId);
-    expect(project(picked, id).temporal!.myItems.map((item) => item.instanceId)).not.toContain(obligation.instanceId);
-    expect(project(picked, other).temporal!.worldItems.some((item) => item.instanceId === obligation.instanceId)).toBe(false);
+    const view = project(restored, other);
+    expect(view.temporal!.worldItems.find((item) => item.instanceId === obligation.instanceId)?.status).toBe("STORED");
+    expect(view.temporal!.myItems.map((item) => item.instanceId)).not.toContain(obligation.instanceId);
+    expect(view.myActions.find((action) => action.type === "PICK_UP")).toMatchObject({ enabled: false, targets: [], reason: { k: "This numbered relic's time loop is complete. It remains visible in 2026 but cannot be picked up again." } });
+    expect(() => applyGameAction(restored, other, { type: "PICK_UP", instanceId: obligation.instanceId }, T0 + 6)).toThrow();
+    expect(restored.temporal!.storedItems[obligation.instanceId]).toMatchObject({ status: "STORED", ownerId: null, storedBy: id });
   });
 
   it("requires assigned keeper and protected storage room, and never stores an objective artifact", () => {
@@ -128,5 +129,12 @@ describe("Scenario 03 numbered relic conservation", () => {
     s = applyGameAction(s, id, { type: "PICK_UP", instanceId: "relic-badge" }, T0 + 4).state;
     expect(s.temporal!.storedItems["relic-badge"].ownerId).toBe(id);
     expect(project(s, id).temporal!.worldItems.find((item) => item.instanceId === "relic-badge")).toBeUndefined();
+    s.temporal!.storedItems["relic-badge"].status = "STORED";
+    s.temporal!.storedItems["relic-badge"].ownerId = null;
+    s.temporal!.storedItems["relic-badge"].storedBy = id;
+    s.players[id].ap = 3;
+    expect(project(s, id).myActions.find((action) => action.type === "PICK_UP")?.targets).toContain("relic-badge");
+    s = applyGameAction(s, id, { type: "PICK_UP", instanceId: "relic-badge" }, T0 + 5).state;
+    expect(s.temporal!.storedItems["relic-badge"].ownerId).toBe(id);
   });
 });

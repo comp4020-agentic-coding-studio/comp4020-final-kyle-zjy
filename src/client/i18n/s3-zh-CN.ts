@@ -138,6 +138,7 @@ export const s3zhCN: Record<S3Key, string> = {
   "s3.items.containment": "时间收容设施位于2026年的研究区内。",
   "s3.items.researchCabinet": "1996年这里已有受保护的研究柜。",
   "s3.items.sourced": "已在 1996 年封存",
+  "s3.items.loopClosedDisplay": "时间闭环已完成 · 仅供查看，不可再次拾取",
   "s3.items.unsourced": "尚未在 1996 年封存",
   "s3.items.pickup": "拾取 · 1 行动点",
   "s3.items.search": "搜索补给 · 1 行动点",

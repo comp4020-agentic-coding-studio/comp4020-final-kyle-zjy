@@ -149,11 +149,13 @@ Objective/causal artifacts, including a staged death record, live in
 random grants, theft, deletion, copying and reward doubling cannot touch
 them.
 
-An ordinary stored item has an instance ID and a conservation lifecycle:
-`HELD_1996 -> STORED -> HELD_2026` (or an explicit terminal state).
-Placement requires a designated room and protection condition. A 2026 pickup
-consumes the stored instance once; trade transfers ownership of that same
-instance under the shared co-location gate. No item is duplicated.
+An ordinary stored item has an instance ID and a conservation lifecycle.
+Placement requires a designated room and protection condition. The two
+numbered bootstrap relics end their carryable lifecycle at `STORED`: the
+same instance remains visible in its 2026 room as a completed loop, but
+`PICK_UP` excludes it permanently. Ordinary instances without a bootstrap
+obligation can still be taken from 2026 after storage. Trade transfers a
+held instance under the shared co-location gate. No item is duplicated.
 
 At creation, draw a small set of player-linked relic IDs with the run's seed,
 create visible 2026 relics, and record matching 1996 placement obligations.
@@ -351,7 +353,7 @@ seeded 2026 relics have private player-linked 1996 source obligations.
 a player's held instances to the matching year; `STORE_ITEM` requires the
 designated 1996 room, a protected fixture there, and the assigned keeper for
 a bootstrap relic. It records the actual placing actor and round, then makes
-that same instance available in 2026 as `STORED`. The 2026 Research Wing has
+that same instance visible but no longer pickable in 2026 as `STORED`. The 2026 Research Wing has
 the `TEMPORAL_CONTAINMENT` facility inside the existing room. Its 1996
 counterpart has an ordinary protected research cabinet. Saving the worker
 creates one `OLD_BADGE` instance in the 2026 wing.
@@ -541,9 +543,16 @@ two-column tree at 320 px without adding a room or page overflow.
 
 ## Player clarity pass
 
-Scenario 03 keeps the Scenario 02 screen shell. Its Objective area now reads
-the viewer's projected state and shows act-specific, optional investigation
-leads in Acts I–III. Act IV exposes one compact checklist per revealed route.
+Scenario 03 keeps the Scenario 02 screen shell. Its Objective area is
+team-shared progress in every act, with no per-player completion rows.
+The optional investigation leads in Acts I–III use `teamInvestigations`,
+eight completion booleans derived at projection time from the union of
+authoritative per-player evidence. The projection never includes another
+player's evidence, its content or the investigator's identity. Story beats,
+interventions and numbered-relic milestones supply the other shared steps.
+Story beats alone cannot prove that every investigation was completed:
+round 8 can reveal the founder clue and founding paradox automatically.
+Act IV exposes one compact checklist per revealed route.
 The checklist mirrors `routeTargets03`: the accident record, prototype core,
 staff, Ji, prototype fate and completed numbered relic loops are checked from
 public state. It never unlocks an ending; the server still validates it.

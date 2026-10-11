@@ -105,6 +105,7 @@ export const ZH_MESSAGES: Record<string, string> = {
   "That supply is unavailable.": "该补给不可用。",
   "Use one ordinary supply without spending action points.": "使用一件普通补给，不消耗行动点。",
   "No numbered relic is available here in 2026.": "2026年的这里没有可拾取的编号遗物。",
+  "This numbered relic's time loop is complete. It remains visible in 2026 but cannot be picked up again.": "这件编号遗物的时间闭环已完成。它仍在 2026 年可见，但不能再次拾取。",
   "That relic is not available here.": "该遗物不在这里。",
   "Pick up one numbered relic from this room.": "从这个房间拾取一件编号遗物。",
   "{0} picks up {1}.": "{0}拾起了{1}。",

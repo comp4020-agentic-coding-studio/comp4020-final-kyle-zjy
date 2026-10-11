@@ -69,6 +69,17 @@ the server rejects moves and jumps into the missing 2026 Power Room. Its
 round-9 `S3_THIRD_ROUTE` acknowledged scene. Available routes have no effect
 on ending state during PHASE 6.
 
+The Scenario 03 top Objective is team-shared in all four acts. Its eight
+Act I–III investigation flags are derived when projecting a view from the
+union of existing authoritative per-player `temporal.evidence` arrays.
+Only named completion booleans are sent as `teamInvestigations`; neither
+another player's evidence nor the investigator is sent. This matters for
+the founder and charter tasks: their story beats can also be revealed by
+the scheduled round-8 event, so those beats alone do not prove an
+investigation was completed. The other Objective steps read existing
+public story, intervention, relic and ending-route state. Every committed
+action broadcasts fresh viewer-specific projections to connected players.
+
 Act IV stores `temporal.finalRoute` only after a validated 1996 Archives
 resolution. Four causal nodes set the accident record, staff evacuation,
 staged founder death and hidden prototype. Stable history requires both
@@ -100,7 +111,8 @@ source obligations; only a validated storage action marks an obligation
 placed. `temporal.holdings` keeps objective artifacts outside ordinary player
 items and generic item effects. Projection exposes visible world items and the
 viewer's own relics and obligations, never the holdings or another player's
-carried relics.
+carried relics. A completed numbered relic remains a visible `STORED` world
+item in 2026; it leaves the pickup target list and cannot be carried again.
 
 ### Character selection and reveal are member stages, not room phases
 

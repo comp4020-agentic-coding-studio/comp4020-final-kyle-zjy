@@ -235,10 +235,13 @@ const USE_ITEM03: Spec<Extract<GameAction, { type: "USE_ITEM" }>> = {
 const PICK_UP03: Spec<Extract<GameAction, { type: "PICK_UP" }>> = {
   targets: (s, p) => {
     const here = s.temporal!.locations[p.playerId];
-    return here.year === "Y2026" ? Object.values(s.temporal!.storedItems).filter((item) => item.roomId === here.roomId && (item.status === "AVAILABLE_2026" || item.status === "STORED")).map((item) => item.instanceId) : [];
+    return here.year === "Y2026" ? Object.values(s.temporal!.storedItems).filter((item) => item.roomId === here.roomId && (item.status === "AVAILABLE_2026" || (item.status === "STORED" && !item.bootstrapOwnerId))).map((item) => item.instanceId) : [];
   },
   check: (s, p, action) => {
     const targets = PICK_UP03.targets!(s, p);
+    const here = s.temporal!.locations[p.playerId];
+    const closed = Object.values(s.temporal!.storedItems).some((item) => here.year === "Y2026" && item.roomId === here.roomId && item.bootstrapOwnerId && item.status === "STORED" && (!action || action.instanceId === item.instanceId));
+    if (closed && (!targets.length || (action && !targets.includes(action.instanceId)))) return fail("ILLEGAL_TARGET", m`This numbered relic's time loop is complete. It remains visible in 2026 but cannot be picked up again.`);
     if (!targets.length) return fail("ILLEGAL_TARGET", m`No numbered relic is available here in 2026.`);
     if (action && !targets.includes(action.instanceId)) return fail("ILLEGAL_TARGET", m`That relic is not available here.`);
     return null;

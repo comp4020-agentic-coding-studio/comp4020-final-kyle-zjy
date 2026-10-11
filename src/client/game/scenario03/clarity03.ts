@@ -8,23 +8,23 @@ export type GuideStep03 = { key: S3Key; done: boolean; recommended?: boolean };
 
 export function actSteps03(g: PlayerView): GuideStep03[] {
   const tp = g.temporal!;
-  const has = (id: string) => tp.myEvidence.includes(id);
+  const team = tp.teamInvestigations;
   if (g.act === 1) return [
-    { key: "s3.guide.act1.file", done: has(`CASE_FILE_${tp.present.caseFile}`), recommended: true },
+    { key: "s3.guide.act1.file", done: team.caseFile, recommended: true },
     { key: "s3.guide.act1.relic", done: tp.story.revealed.includes("BOOTSTRAP_TRACE"), recommended: true },
     { key: "s3.guide.act1.jump", done: tp.story.revealed.includes("FIRST_JUMP"), recommended: true },
     { key: "s3.guide.act1.change", done: tp.interventions.length > 0, recommended: true },
   ];
   if (g.act === 2) return [
-    { key: "s3.guide.act2.ledger", done: has("ACCESS_LEDGER"), recommended: true },
-    { key: "s3.guide.act2.prototype", done: has("PROTOTYPE_LOG"), recommended: true },
-    { key: "s3.guide.act2.tape", done: has("SURVEILLANCE_TAPE"), recommended: true },
+    { key: "s3.guide.act2.ledger", done: team.accessLedger, recommended: true },
+    { key: "s3.guide.act2.prototype", done: team.prototypeLog, recommended: true },
+    { key: "s3.guide.act2.tape", done: team.surveillanceTape, recommended: true },
   ];
   if (g.act === 3) return [
-    { key: "s3.guide.act3.founder", done: has("FOUNDER_DISCREPANCY"), recommended: true },
-    { key: "s3.guide.act3.staff", done: has("STAFF_DISCREPANCY"), recommended: true },
-    { key: "s3.guide.act3.prototype", done: has("PROTOTYPE_DISCREPANCY"), recommended: true },
-    { key: "s3.guide.act3.charter", done: has("FOUNDING_CHARTER"), recommended: true },
+    { key: "s3.guide.act3.founder", done: team.founderDeathEntry, recommended: true },
+    { key: "s3.guide.act3.staff", done: team.casualtyRegister, recommended: true },
+    { key: "s3.guide.act3.prototype", done: team.laterMachineDesigns, recommended: true },
+    { key: "s3.guide.act3.charter", done: team.foundingCharter, recommended: true },
   ];
   return [];
 }

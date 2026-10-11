@@ -117,7 +117,7 @@ export function RoomPanel03({ g, room, year, onBack }: { g: PlayerView; room: Ro
     for (const item of tp.myItems.filter((item) => year === "Y1996" && RELIC_STORAGE03[item.itemId] === room && (item.itemId === "OLD_BADGE" || tp.myObligations.some((entry) => entry.instanceId === item.instanceId)))) {
       here.push(t("s3.panel.canSeal", { name: itemText(item.itemId).name, id: item.instanceId }));
     }
-    if (year === "Y2026" && relics.some((item) => item.itemId === "TIME_MARKER" || item.itemId === "AUTHORITY_CARD")) here.push(t("s3.panel.canPickup"));
+    if (year === "Y2026" && relics.some((item) => item.status === "AVAILABLE_2026" && (item.itemId === "TIME_MARKER" || item.itemId === "AUTHORITY_CARD"))) here.push(t("s3.panel.canPickup"));
     if (year === "Y2026" && relics.some((item) => item.itemId === "OLD_BADGE")) here.push(t("s3.panel.canPickupOther"));
     if (year === "Y1996" && room === "ARCHIVES" && g.act >= 4) here.push(t("s3.panel.finalHere"));
     specialCount = here.length;
@@ -152,7 +152,7 @@ export function RoomPanel03({ g, room, year, onBack }: { g: PlayerView; room: Ro
       ))}
       {relics.map((item) => (
         <p key={item.instanceId} className="mt-0.5 text-gold">
-          {t("s3.panel.relic", { name: itemText(item.itemId).name, id: item.instanceId, source: t(item.storedBy ? "s3.items.sourced" : "s3.items.unsourced") })}
+          {t("s3.panel.relic", { name: itemText(item.itemId).name, id: item.instanceId, source: t(item.status === "STORED" && (item.itemId === "TIME_MARKER" || item.itemId === "AUTHORITY_CARD") ? "s3.items.loopClosedDisplay" : item.storedBy ? "s3.items.sourced" : "s3.items.unsourced") })}
         </p>
       ))}
       <p className="mt-0.5 text-mist">{people.length ? t("s3.panel.people", { names: people.map((p) => p.nickname).join(sep) }) : t("s3.panel.nobody")}</p>

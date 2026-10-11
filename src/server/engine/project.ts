@@ -6,6 +6,7 @@
 import type { GameState, PlayerId, PlayerSecrets, PlayerView, PublicPlayerState, PublicWindow, ViewerSecrets } from "../../shared/game/state.ts";
 import { availableActions } from "./actions.ts";
 import { publicCity } from "./scenario02/city.ts";
+import { teamInvestigations03 } from "./scenario03/progress.ts";
 
 export function project(s: GameState, viewerId: PlayerId): PlayerView {
   const {
@@ -134,6 +135,7 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
       story: { revealed: [...s.temporal.story.revealed], availableRoutes: [...s.temporal.story.availableRoutes] },
       finalRoute: s.temporal.finalRoute,
       bootstrapProgress: { placed: s.temporal.bootstrap.filter((item) => item.placedBy === item.assignedTo).length, total: s.temporal.bootstrap.length },
+      teamInvestigations: teamInvestigations03(s),
       discoveredFacts: [...s.temporal.discoveredFacts],
       locations: { ...s.temporal.locations },
       present: { ...s.temporal.present },

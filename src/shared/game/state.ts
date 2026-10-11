@@ -126,6 +126,17 @@ export type TemporalIntervention03 = {
 
 export type PublicTemporal03 = Omit<Temporal03, "baselinePresent" | "evidence" | "storedItems" | "bootstrap" | "holdings" | "sealedProfiles" | "surveillance" | "interventions"> & {
   bootstrapProgress: { placed: number; total: number };
+  /** Team-only completion flags derived from authoritative private evidence; no evidence or discoverer is exposed. */
+  teamInvestigations: {
+    caseFile: boolean;
+    accessLedger: boolean;
+    prototypeLog: boolean;
+    surveillanceTape: boolean;
+    founderDeathEntry: boolean;
+    casualtyRegister: boolean;
+    laterMachineDesigns: boolean;
+    foundingCharter: boolean;
+  };
   surveillance: PublicTemporalTrace03[];
   interventions: (Omit<TemporalIntervention03, "actorId"> & { actorId: PlayerId | null })[];
   myEvidence: string[];

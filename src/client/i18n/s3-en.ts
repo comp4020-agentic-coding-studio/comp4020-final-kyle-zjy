@@ -136,6 +136,7 @@ export const s3en = {
   "s3.items.containment": "Temporal Containment is a facility inside the 2026 Research Wing.",
   "s3.items.researchCabinet": "A protected research cabinet stood here in 1996.",
   "s3.items.sourced": "Sealed in 1996",
+  "s3.items.loopClosedDisplay": "Time loop complete · display only; cannot pick up",
   "s3.items.unsourced": "Not yet sealed in 1996",
   "s3.items.pickup": "Pick up · 1 AP",
   "s3.items.search": "Search supplies · 1 AP",

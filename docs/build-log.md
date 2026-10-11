@@ -694,3 +694,43 @@ names); each variant is now a whole template. No rule, RNG or replay changed
   clipped content or undersized touch targets. A longer 390/1280 px run
   reached Act III and then a normal ending in cycle 7. A separate four-cycle
   run at 390/1280 px passed its layout and two-browser checks.
+
+## Scenario 03: team-shared Objective completion
+
+- Corrected all eight investigation checkmarks in Acts I–III. They now read
+  `teamInvestigations` booleans derived at projection time from the existing
+  authoritative per-player evidence, rather than the viewer's `myEvidence`.
+  No new progress is persisted. The case-file flag checks the currently
+  visible 2026 file after a rewrite without exposing its contents. The other Objective rows already
+  read shared story, intervention, relic and route state; no top-level row
+  intentionally remains personal. Private drawers and investigation rewards
+  keep their prior per-player behavior.
+- Round 8 can reveal the founder clue and founding paradox without either
+  investigation, so their Objective flags use evidence completion rather
+  than Story Beat presence. The existing runner change callback broadcasts
+  a fresh projection to each connected socket after every committed action.
+- Verification: three two-viewer tests exercise real successful investigation
+  actions and the Hub's `STATE` broadcasts for Acts I, II and III, checking
+  that both views update while the other player's evidence stays private.
+  All eight investigation flags and the remaining shared Objective rows are
+  covered. A real two-browser Act I check showed both Objective lines change
+  from unchecked to checked without refreshing either page while the second
+  player's private evidence drawer stayed empty. The Scenario 03 two-browser
+  320/1280 px walkthrough passed three cycles with no layout or touch-target
+  errors. Build and `pnpm check` passed (41 test files, 1119 tests before the
+  following relic closure change).
+
+## Scenario 03: completed numbered relic display
+
+- After its assigned keeper stores a numbered relic in 1996, the same
+  `STORED` instance remains projected in its 2026 room. Its room line now
+  says the time loop is complete and the relic is for viewing only.
+  `PICK_UP` no longer offers or accepts that instance, and its disabled
+  reason explains why. The unnumbered Old Badge retains its previous
+  storage and pickup behavior. No extra item or saved state is introduced.
+- Verification: the relic conservation test now checks 2026 visibility,
+  disabled pickup, rejection of a direct pickup after restore, and the
+  unchanged Old Badge case. A two-browser run completed the Authority Card
+  loop and showed its new room text to the teammate in 2026. The 320 px
+  screen was inspected. Production build and `pnpm check` passed (41 test
+  files, 1120 tests), including localization and Scenario 01/02 regressions.
