@@ -206,7 +206,7 @@ try {
     await lobby(scenario);
     await phone.getByRole("button", { name: "Depart", exact: true }).click();
     await phone.waitForTimeout(1200);
-    assert.equal(await phone.locator(".s3-film").count(), 0, `Scenario ${scenario} must retain its own intro`);
+    assert.equal(await phone.locator(".opening-temporal").count(), 0, `Scenario ${scenario} must retain its own intro`);
   }
   assert.deepEqual(errors, []);
   console.log(`Opening walkthrough passed; screenshots: ${out}`);

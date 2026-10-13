@@ -1,3 +1,4 @@
+import { frameAt, runTimeline } from "../../opening/timeline.ts";
 import type { MessageKey } from "../../../i18n/index.ts";
 
 type Caption = readonly [number, MessageKey];
@@ -18,32 +19,6 @@ export type OpeningScene = typeof OPENING_SCENES[number]["id"];
 export const OPENING_DURATION = OPENING_SCENES.reduce((n, scene) => n + scene.duration, 0);
 
 export function openingFrame(seconds: number) {
-  let elapsed = Math.max(0, seconds);
-  for (const [index, scene] of OPENING_SCENES.entries()) {
-    if (elapsed < scene.duration) {
-      const caption = (scene.captions as readonly Caption[]).findLast(([at]) => elapsed >= at)?.[1];
-      return { id: scene.id, index, elapsed, caption, done: false };
-    }
-    elapsed -= scene.duration;
-  }
-  return { id: "handoff" as const, index: OPENING_SCENES.length - 1, elapsed: 2, caption: undefined, done: true };
+  return frameAt(OPENING_SCENES, seconds) as { id: OpeningScene; index: number; elapsed: number; caption: MessageKey | undefined; done: boolean };
 }
-
-/** One clock owns every scene/caption. Stop before delivering completion. */
-export function runOpening(update: (seconds: number) => void, complete: () => void) {
-  const started = performance.now();
-  let stopped = false;
-  const timer = setInterval(() => {
-    if (stopped) return;
-    const seconds = (performance.now() - started) / 1000;
-    if (seconds >= OPENING_DURATION) {
-      stop();
-      complete();
-    } else update(seconds);
-  }, 100);
-  function stop() {
-    stopped = true;
-    clearInterval(timer);
-  }
-  return stop;
-}
+export const runOpening = (update: (seconds: number) => void, complete: () => void) => runTimeline(OPENING_DURATION, update, complete);

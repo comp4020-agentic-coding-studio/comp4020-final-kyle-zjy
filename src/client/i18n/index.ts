@@ -12,7 +12,9 @@ import { format } from "../../shared/i18n/format.ts";
 import { DEFAULT_LOCALE, isLocale, type Locale, type Msg } from "../../shared/i18n/types.ts";
 import { useStore } from "../store.ts";
 import { en } from "./en.ts";
-import type { Catalog, MessageKey, Params, S2Key, S3Key, S4Key } from "./types.ts";
+import type { Catalog, MessageKey, Params, S2Key, S3Key, S4Key, OpeningKey } from "./types.ts";
+import { openingEn } from "./opening-en.ts";
+import { openingZhCN } from "./opening-zh-CN.ts";
 import { s2en } from "./s2-en.ts";
 import { s2zhCN } from "./s2-zh-CN.ts";
 import { s3en } from "./s3-en.ts";
@@ -26,9 +28,9 @@ export type { MessageKey, Params } from "./types.ts";
 
 export const STORAGE_KEY = "fate:locale";
 
-export const CATALOGS: Record<Locale, Catalog & Record<S2Key | S3Key | S4Key, string>> = {
-  en: { ...en, ...s2en, ...s3en, ...s4en },
-  "zh-CN": { ...zhCN, ...s2zhCN, ...s3zhCN, ...s4zhCN },
+export const CATALOGS: Record<Locale, Catalog & Record<S2Key | S3Key | S4Key | OpeningKey, string>> = {
+  en: { ...en, ...s2en, ...s3en, ...s4en, ...openingEn },
+  "zh-CN": { ...zhCN, ...s2zhCN, ...s3zhCN, ...s4zhCN, ...openingZhCN },
 };
 
 /** Fills {name} placeholders; unknown placeholders are left as written. */

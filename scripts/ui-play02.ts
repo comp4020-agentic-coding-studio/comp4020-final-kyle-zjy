@@ -81,10 +81,10 @@ await shotOnce(desk, "desktop", "lobby-02");
 await pick(phone, "Scorpio", /ENTP/);
 await pick(desk, "Pisces", /ISFJ/);
 await phone.getByRole("button", { name: "Depart" }).click();
-await Promise.all(pages.map(([p]) => p.getByRole("button", { name: "Into the water" }).waitFor({ timeout: 20_000 })));
+await Promise.all(pages.map(([p]) => p.getByRole("button", { name: "Skip", exact: true }).waitFor({ timeout: 20_000 })));
 await phone.waitForTimeout(6000);
 for (const [p, tag] of pages) await shotOnce(p, tag, "intro");
-for (const [p] of pages) await tap(p.getByRole("button", { name: "Into the water" }));
+for (const [p] of pages) await tap(p.getByRole("button", { name: "Skip", exact: true }));
 
 const done = async (p: Page) => (await p.getByRole("button", { name: "Leave for the platform" }).count()) > 0;
 const turnDone = new Map<string, string>();

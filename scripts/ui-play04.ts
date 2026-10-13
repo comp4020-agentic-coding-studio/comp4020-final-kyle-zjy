@@ -98,11 +98,12 @@ try {
   await pick(phone, "Aries", /INFJ/);
   await pick(desk, "Pisces", /ISFJ/);
   await phone.getByRole("button", { name: "Take your seats" }).click();
+  for (const p of [phone, desk]) await p.locator(".opening-auction").waitFor();
   await shot(phone, "phone", "intro");
   await shot(desk, "desktop", "intro");
-  if (!await visible(phone.getByText(/There are lots here, but no way back/))) problems.push("auctioneer opening was not visible");
-  await phone.getByRole("button", { name: "Enter the auction" }).click();
-  await desk.getByRole("button", { name: "Enter the auction" }).click();
+  if (!await visible(phone.locator(".opening-auction"))) problems.push("auction opening was not visible");
+  await phone.getByRole("button", { name: "Skip", exact: true }).click();
+  await desk.getByRole("button", { name: "Skip", exact: true }).click();
   await phone.locator('[data-action="USE_LOT"]').waitFor({ state: "visible" });
   if (!await visible(phone.getByText(/1 AP/).first())) problems.push("Scenario 04 did not start with 1 AP");
   if (!await visible(phone.locator('[data-action="USE_LOT"]'))) problems.push("the shared item entry is missing");

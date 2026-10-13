@@ -772,3 +772,47 @@ names); each variant is now a whole template. No rule, RNG or replay changed
   temporary test-environment paths only; no system/project dependency change
   or font asset was added. No engine rule, balance, replay or hidden-information
   projection changed.
+
+## Shared openings for Scenario 01, 02 and 04
+
+- Extracted the existing Scenario 03 clock, captions, Skip/focus/scroll cleanup,
+  seen state, audio ownership and HUD handoff into one shared opening layer.
+  RoomGate keeps it mounted across INTRO/act changes for all four scenarios,
+  automatically acknowledges existing readiness and leaves each viewer's
+  playback/Skip independent. Existing Scenario 03 scene timing and legacy
+  localStorage markers remain compatible.
+- Added separate world renderers and title treatments: N13's 68-second quiet
+  station/phone/train/ticket/manifest/memory film; the city's 60-second
+  siren/map/boat/distress/water/unknown-capacity film; and the auction's
+  61-second envelope/door/catalogue/chips/lots/seats/hammer film. The city
+  reuses the existing map geometry/topology. Auction silhouettes reuse the
+  actual table icons and read only localized lot names. Starting chips come
+  from the current shared configuration.
+- Preserved spoiler boundaries: no train identity/ending answer, no numeric
+  boat capacity or contribution ranking, and no lot effects, counterfeit
+  identity, final sealed bid or blind-card details. The manifest and flood
+  forecast are explicitly illustrative. Opening renderers receive no game
+  state; public auction nicknames are the only dynamic presentation input.
+- Extended the one AudioManager with deterministic rain/noise and original
+  piano/bass/brush synthesis, distinct world themes and short procedural cues.
+  The train begins without BGM, the auction starts with paper before music,
+  and each film crossfades into its game's ambient score. Muted or blocked
+  effects are discarded. Initial ownership precedes the first sound cue.
+  No downloaded music, new package or audio asset URL was added.
+- Added 120 English/Chinese UI keys, separate mobile arrangements, safe-area
+  controls and reduced-motion behavior. New scenarios show one short entry
+  hint. Updated standard walkthrough entry controls and design documentation.
+- Validation: production build and pnpm check passed (44 files, 1142 tests),
+  including replay/engine/spec regressions and 22 focused opening/audio/content
+  tests. A real-time two-viewer walkthrough passed all four full films at
+  1280/390/320px, with English/sound and Chinese/reduced-motion/muted viewers,
+  independent Skip, refresh, new-session playback and navigation cleanup.
+  It verified unknown capacity, eight chips, Lot 01 arrival and no live
+  cinematic sources after handoff/unmount, console errors or failed requests.
+  Final N13 and flood paths were rerun after sound-startup and road-visibility
+  refinements. Screenshots were inspected, including long ticket copy,
+  passenger records, invitation, lot previews, titles and the final city map.
+- Working audio is procedural: production foley, richer authored scores and
+  optional recorded narration remain optional asset upgrades. Core scenario
+  rules, win conditions, persistence and hidden-information projection did not
+  change. The unrelated pre-existing Scenario 02 translation-file edit was kept.

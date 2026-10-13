@@ -570,7 +570,7 @@ phase transitions, map, dice and ending requirements remain unchanged.
 
 ## Client opening cinematic
 
-`RoomGate` mounts one `Experience03`, keyed by the server session ID, across
+`RoomGate` mounts one shared `ScenarioExperience`, keyed by the server session ID, across
 INTRO and all four acts. It immediately sends the existing INTRO
 `ACK_SEQUENCE` independently of playback, so an 81-second presentation does
 not hold the server's readiness barrier. Every viewer watches/skips locally;
@@ -585,8 +585,9 @@ intervention or disclosing a late-game consequence. All captions and display
 labels use bilingual `s3.open.*` client keys. No sealed profile or ending data
 is read by the cinematic.
 
-The bounded `fate:s03:openings` localStorage list records `[sessionId,
-viewerId]` at playback entry. Refresh during or after the film resumes the
+The bounded `fate:openings` localStorage list records `[scenarioId, sessionId,
+viewerId]` at playback entry and still honors the original `fate:s03:openings`
+markers. Refresh during or after the film resumes the
 current game; a new session/player has its own entry. Guarded storage and
 in-memory fallback keep private-mode playback usable. An unseen reconnect
 after cycle 1 skips the opening rather than obscuring an ongoing run.
@@ -600,7 +601,7 @@ the film and restored to the game afterwards; the optional twelve-second
 location hint reads the actual projected location rather than asserting 2026
 if teammates have already moved the viewer.
 
-`src/client/audio/manager.ts` is the first implemented audio owner in the
+`src/client/audio/manager.ts` is the implemented shared audio owner in the
 project (the earlier sound section was a design-only interface). One shared
 Web Audio context generates restrained harmonic pads and nine cue types.
 Themes are `scenario03_intro`, `scenario03_2026_ambient` and

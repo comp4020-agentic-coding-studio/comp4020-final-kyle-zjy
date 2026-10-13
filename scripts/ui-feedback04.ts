@@ -58,8 +58,8 @@ try {
   await choose(phone, "Aries", /INFJ/);
   await choose(desk, "Pisces", /ISFJ/);
   await phone.getByRole("button", { name: "Take your seats" }).click();
-  await phone.getByRole("button", { name: "Enter the auction" }).click();
-  await desk.getByRole("button", { name: "Enter the auction" }).click();
+  await phone.getByRole("button", { name: "Skip", exact: true }).click();
+  await desk.getByRole("button", { name: "Skip", exact: true }).click();
   const lotCard = phone.getByRole("heading", { name: "The Black Die" }).locator("..");
   await lotCard.waitFor();
   if (!await lotCard.locator("svg").count()) errors.push("current lot has no symbol");

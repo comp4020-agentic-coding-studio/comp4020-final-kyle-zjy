@@ -1,3 +1,4 @@
+import { R, center, corners, bounds } from "./geometry.ts";
 // Scenario 02's map: the city as hexes, north (the hills) at the top. Height
 // shades each zone; water lies over flooded zones and swallows drowned ones;
 // a zone that goes under at the next rise pulses red; roads join the centres
@@ -12,20 +13,9 @@ import { ZONES, type FacilityId } from "../../../shared/game/scenario02/map.ts";
 import type { PlayerView, PublicZone } from "../../../shared/game/state.ts";
 import { useScenario02Text, useT } from "../../i18n/index.ts";
 
-const R = 30;
-const W = Math.sqrt(3) * R;
-const center = (i: number) => ({ x: W * (ZONES[i].q + ZONES[i].r / 2), y: 1.5 * R * ZONES[i].r });
-const corners = (cx: number, cy: number, r = R) => Array.from({ length: 6 }, (_, k) => `${cx + r * Math.cos(((60 * k - 30) * Math.PI) / 180)},${cy + r * Math.sin(((60 * k - 30) * Math.PI) / 180)}`).join(" ");
-
 const GROUND = { HIGH: "#3b4a3a", MEDIUM: "#2c3546", LOW: "#232838" } as const;
 // plain marks every font has (no emoji)
 const FACILITY_MARK: Partial<Record<FacilityId, string>> = { POWER_STATION: "⚡", PUMP_STATION: "≈", HARBOUR: "⚓", BROADCAST_TOWER: "Ψ", HOSPITAL: "✚", FIRE_STATION: "▲", CONTROL_CENTRE: "◉", SHIPYARD: "⚙" };
-
-const bounds = (() => {
-  const pts = ZONES.map((_, i) => center(i));
-  const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
-  return { x: Math.min(...xs) - W / 2 - 4, y: Math.min(...ys) - R - 4, w: Math.max(...xs) - Math.min(...xs) + W + 8, h: Math.max(...ys) - Math.min(...ys) + 2 * R + 8 };
-})();
 
 type Props = { g: PlayerView; selected: number; onSelect: (zone: number) => void; moveTargets?: number[]; onMove?: (zone: number) => void };
 

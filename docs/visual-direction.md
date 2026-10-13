@@ -250,9 +250,24 @@ retains the full story, replaces distortion/pulses with short opacity changes
 and preserves independent Skip. Narrative information is fully subtitled in
 English and Chinese. One persistent mute control serves both film and game.
 
-Audio now has a shared Web Audio implementation for Scenario 03: procedural
-low pads, nine lightweight cue types and pad crossfades. Other scenarios keep
-their existing presentation; no unlicensed music or external audio is loaded.
+Audio has one shared Web Audio owner: procedural pads, world-specific textures,
+short cues and crossfades. No unlicensed music or external audio is loaded.
+
+## Four opening languages
+
+| Scenario | Materials and motion | Sound and handoff |
+| --- | --- | --- |
+| 01 · N13 | Station clock, staggered phones, a quiet black train, perforated tickets turning over, an anonymous manifest, incomplete memory objects. Pale fluorescent green and aged paper. | Broadcast/rail hum first, no music until the tickets; door silence, soft record errors and a ticket punch. Fluorescent rail title dissolves into the actual current carriage. |
+| 02 · Sunken City | Rain, emergency radio, the existing 31-zone hex topology, interrupted roads, boat diagnostics, rescue signals, a rising gauge and blurred cabin. Blue-grey with muted amber warnings. | Rain/wind-like noise, interrupted siren, radio static and distant horn. Water-reflection title fades to the authoritative city map. Capacity remains PENDING. |
+| 03 · Incident Zero | Existing CRT/archive/dual-year film and chronology contradiction. | Existing temporal cues and ambient crossfade; 81-second story retained. |
+| 04 · Auction | Black envelope, unmarked door, velvet elliptical table, eight black chips, covered lot silhouettes, public seats and a white-gloved hammer. Black, wine red and gold. | Paper first, original sparse lounge synthesis with bass/piano/brush texture, chips/cards/hammer. Spotlight title recedes into the real Lot 01 table. |
+
+The controller and accessible controls are common; world art and title motion
+are separate. All new scenes stack their own content at 320/390 px rather than
+shrinking a desktop composition. The flood forecast is explicitly illustrative;
+the manifest error is anonymous and illustrative. Reduced motion removes travel,
+flips, pulses and scale changes while preserving the story and short fades.
+After entry there is one brief contextual hint, with no extra tutorial wall.
 
 ## Scenario 04 table
 

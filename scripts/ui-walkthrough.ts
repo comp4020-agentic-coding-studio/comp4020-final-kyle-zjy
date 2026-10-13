@@ -117,10 +117,10 @@ await c.waitForURL(base + "/");
 
 // A (host) departs → both see the intro, both board
 await a.getByRole("button", { name: "Depart" }).click();
-await b.getByText("Scenario 01 · Route N13").waitFor({ timeout: 3000 });
+await b.locator(".opening-train").waitFor({ timeout: 5000 });
 await a.waitForTimeout(8000);
 await shot(a, "12-intro-phone");
-for (const p of [a, b]) await p.getByRole("button", { name: "Board the train" }).click();
+for (const p of [a, b]) await p.getByRole("button", { name: "Skip", exact: true }).click();
 
 // the run: both see round 1 on the train
 for (const p of [a, b]) await p.getByRole("region", { name: "The train" }).waitFor({ timeout: 5000 });

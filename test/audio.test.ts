@@ -19,12 +19,15 @@ class TestOscillator {
 class TestContext {
   static instances: TestContext[] = [];
   currentTime = 1;
+  sampleRate = 1000;
   state = "running";
   destination = {};
   oscillators: TestOscillator[] = [];
   constructor() { TestContext.instances.push(this); }
   createGain = () => ({ gain: param(), connect: vi.fn(), disconnect: vi.fn() });
   createOscillator = () => { const node = new TestOscillator(); this.oscillators.push(node); return node; };
+  createBuffer = (_channels: number, length: number) => ({ getChannelData: () => new Float32Array(length) });
+  createBufferSource = () => this.createOscillator();
   suspend = vi.fn(async () => { this.state = "suspended"; });
   resume = vi.fn(async () => { this.state = "running"; });
 }
@@ -82,4 +85,17 @@ it("keeps the complete presentation usable when Web Audio is unavailable", async
   const release = audio.acquire();
   expect(() => { audio.setTheme("scenario03_intro"); audio.play("low_impact"); audio.toggleMute(); }).not.toThrow();
   release();
+});
+
+it("gives the new worlds distinct textures and releases every synthesized source", async () => {
+  const { audio, SFX } = await import("../src/client/audio/manager.ts");
+  const release = audio.acquire();
+  audio.setTheme("silence");
+  const ctx = TestContext.instances[0];
+  expect(ctx.oscillators).toHaveLength(0);
+  for (const theme of ["intro_train", "s01_ambient", "intro_flood", "s02_city_ambient", "intro_auction", "s04_auction_ambient"] as const) expect(() => audio.setTheme(theme)).not.toThrow();
+  for (const cue of Object.keys(SFX) as (keyof typeof SFX)[]) expect(() => audio.play(cue)).not.toThrow();
+  release();
+  expect(ctx.oscillators.length).toBeGreaterThan(20);
+  for (const voice of ctx.oscillators) expect(voice.disconnect).toHaveBeenCalled();
 });

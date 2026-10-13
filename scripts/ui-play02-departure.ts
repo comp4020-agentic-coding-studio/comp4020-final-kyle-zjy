@@ -134,9 +134,9 @@ try {
   await pick(phone, "Scorpio", /ENTP/);
   await pick(desk, "Pisces", /ISFJ/);
   await phone.getByRole("button", { name: "Depart" }).click();
-  for (const [p] of pages) await p.getByRole("button", { name: "Into the water" }).waitFor({ timeout: 20_000 });
+  for (const [p] of pages) await p.getByRole("button", { name: "Skip", exact: true }).waitFor({ timeout: 20_000 });
   await phone.waitForTimeout(6000);
-  for (const [p] of pages) await tap(p.getByRole("button", { name: "Into the water" }));
+  for (const [p] of pages) await tap(p.getByRole("button", { name: "Skip", exact: true }));
   await Promise.race(pages.map(([p]) => p.getByText("Your turn", { exact: true }).waitFor({ timeout: 20_000 })));
 
   // the scattered start, as each screen shows it: two different zones, neither the pier

@@ -11,6 +11,7 @@ read the same state in different languages.
 | What | Where | Key |
 | --- | --- | --- |
 | Client UI copy (buttons, labels, notices) | `src/client/i18n/{en,zh-CN}.ts`, `t("lobby.ready")` | dotted key; `en.ts` is the source |
+| Shared opening and S01/S02/S04 cinematic copy | `src/client/i18n/opening-{en,zh-CN}.ts` | `opening.*`, `o1.*`, `o2.*`, `o4.*`; typed alongside scenario catalogs |
 | Scenario and character text (rooms, items, events, endings, 192 titles / skills…) | English from game data and `src/shared/i18n/`; Chinese in `src/shared/i18n/zh-CN/` | the content's stable id |
 | Engine messages in game state (log lines, decision windows, results, secrets, rejections) | `m` tag at the call site (`src/shared/i18n/msg.ts`); `src/shared/i18n/zh-CN/messages.ts` | the English template, e.g. `"{0} gains {1} Fate ({2})."` |
 
@@ -101,6 +102,14 @@ whole subtitle sentences, file/monitor labels, tasks, audio controls and the
 post-opening location hint. Numbers and year tokens remain numeric. Its
 anonymous visitor display never reads server-only identities. The opening
 contains no game-state messages and does not alter the engine catalogs.
+
+The shared opening controller serves all four scenarios. New opening copy is
+English-first in `opening-en.ts`, with complete Chinese translations and
+placeholder parity in `opening-zh-CN.ts`. Scenario 03 retains its previous keys.
+The flood renderer uses the existing localized zone names, and auction previews
+read only existing localized lot names. Capacity, rankings, lot effects and
+authenticity are never used in cinematic copy. All narrative cues have captions;
+procedural audio contains no spoken language required to understand the story.
 
 Act I and II story text uses stable `s3.story.<ID>` UI keys in both locales, with
 matching engine log templates in the shared message catalog. Archivist 00's

@@ -96,10 +96,10 @@ await pick(desk, "desktop", beaSign, new RegExp(beaType));
 await shotOnce(phone, "phone", "lobby-ready");
 await phone.getByRole("button", { name: "Depart" }).click();
 // the broadcast types itself out, then both board (it ends on its own after 14 s)
-await Promise.all(pages.map(([p]) => p.getByRole("button", { name: "Board the train" }).waitFor({ timeout: 15_000 })));
+await Promise.all(pages.map(([p]) => p.getByRole("button", { name: "Skip", exact: true }).waitFor({ timeout: 15_000 })));
 await phone.waitForTimeout(6000);
 await Promise.all(pages.map(([p, tag]) => shotOnce(p, tag, "intro")));
-for (const [p] of pages) await tap(p.getByRole("button", { name: "Board the train" }));
+for (const [p] of pages) await tap(p.getByRole("button", { name: "Skip", exact: true }));
 // the drawers and a passenger's sheet, once, on the first quiet moment
 for (const [p, tag] of pages) {
   await p.getByRole("button", { name: "Train log" }).click({ timeout: 15_000 });

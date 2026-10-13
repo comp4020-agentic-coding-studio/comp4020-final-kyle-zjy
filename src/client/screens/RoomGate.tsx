@@ -14,15 +14,13 @@ import { Lobby } from "./Lobby.tsx";
 
 // The run's screens load on demand: the landing page and lobby stay light.
 const named = <K extends string>(load: () => Promise<Record<K, ComponentType>>, key: K) => lazy(() => load().then((m) => ({ default: m[key] })));
-const Intro = named(() => import("./Intro.tsx"), "Intro");
 const Game = named(() => import("./Game.tsx"), "Game");
 const CityGame = named(() => import("./CityGame.tsx"), "CityGame");
 const Scenario03Game = named(() => import("./Scenario03Screens.tsx"), "Scenario03Game");
-const Experience03 = named(() => import("../game/scenario03/opening/Experience03.tsx"), "Experience03");
+const ScenarioExperience = lazy(() => import("../game/opening/ScenarioExperience.tsx").then((m) => ({ default: m.ScenarioExperience })));
 const Scenario03Ending = named(() => import("./Scenario03Screens.tsx"), "Scenario03Ending");
 const Scenario03Results = named(() => import("./Scenario03Screens.tsx"), "Scenario03Results");
 const Scenario04Game = named(() => import("./Scenario04Screens.tsx"), "Scenario04Game");
-const Scenario04Intro = named(() => import("./Scenario04Screens.tsx"), "Scenario04Intro");
 const Scenario04Ending = named(() => import("./Scenario04Screens.tsx"), "Scenario04Ending");
 const Scenario04Results = named(() => import("./Scenario04Screens.tsx"), "Scenario04Results");
 const Ending = named(() => import("./Ending.tsx"), "Ending");
@@ -34,10 +32,6 @@ function Run() {
   return scenario === "S04_UNDERGROUND_AUCTION" ? <Scenario04Game /> : scenario === "S03_INCIDENT_ZERO" ? <Scenario03Game /> : scenario === "S02_SUNKEN_CITY" ? <CityGame /> : <Game />;
 }
 
-function ScenarioIntro() {
-  const scenario = useStore((s) => s.snapshot?.game?.scenarioId);
-  return scenario === "S04_UNDERGROUND_AUCTION" ? <Scenario04Intro /> : <Intro />;
-}
 function ScenarioEnding() {
   const scenario = useStore((s) => s.snapshot?.game?.scenarioId);
   return scenario === "S04_UNDERGROUND_AUCTION" ? <Scenario04Ending /> : scenario === "S03_INCIDENT_ZERO" ? <Scenario03Ending /> : <Ending />;
@@ -50,7 +44,7 @@ function ScenarioResults() {
 // One screen per phase.
 const SCREENS: Record<GamePhase, ComponentType> = {
   LOBBY: Lobby,
-  INTRO: ScenarioIntro,
+  INTRO: Run,
   ACT_1: Run,
   ACT_2: Run,
   ACT_3: Run,
@@ -98,12 +92,12 @@ export function RoomGate({ code }: { code: string }) {
   if (snapshot.room.phase !== "LOBBY" && !snapshot.game) return <Boarding reconnecting={false} />;
   const Screen = SCREENS[snapshot.game?.phase ?? snapshot.room.phase];
   const g = snapshot.game;
-  const temporalRun = g?.scenarioId === "S03_INCIDENT_ZERO" && (g.phase === "INTRO" || g.phase.startsWith("ACT_"));
+  const openingRun = g && (g.phase === "INTRO" || g.phase.startsWith("ACT_"));
   return (
     <>
       <ConnectionBanner />
       <Suspense fallback={<Boarding reconnecting={false} />}>
-        {temporalRun ? <Experience03 key={g.sessionId} /> : <Screen />}
+        {openingRun ? <ScenarioExperience key={g.sessionId}><Run /></ScenarioExperience> : <Screen />}
       </Suspense>
     </>
   );

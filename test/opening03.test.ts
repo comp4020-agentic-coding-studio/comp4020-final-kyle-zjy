@@ -7,6 +7,9 @@ import { project } from "../src/server/engine/project.ts";
 import { openingFrame, OPENING_DURATION, runOpening } from "../src/client/game/scenario03/opening/timeline.ts";
 import { openingKey, openingSeen, rememberOpening, shouldOpen } from "../src/client/game/scenario03/opening/memory.ts";
 import { seatsFor, SEED, T0 } from "./helpers.ts";
+import type { ScenarioId } from "../src/shared/game/state.ts";
+import { OPENINGS } from "../src/client/game/opening/definitions.ts";
+import { durationOf } from "../src/client/game/opening/timeline.ts";
 
 const mocks = vi.hoisted(() => ({
   game: null as unknown,
@@ -33,10 +36,14 @@ vi.mock("../src/client/store.ts", () => ({
 }));
 vi.mock("../src/client/i18n/index.ts", () => ({ useT: () => (key: string) => key }));
 vi.mock("../src/client/screens/Scenario03Screens.tsx", () => ({ Scenario03Game: () => createElement("button", { "data-game": true }, "game") }));
+vi.mock("../src/client/game/opening/TrainOpening.tsx", () => ({ TrainOpening: () => createElement("div", null, "train") }));
+vi.mock("../src/client/game/opening/FloodOpening.tsx", () => ({ FloodOpening: () => createElement("div", null, "flood") }));
+vi.mock("../src/client/game/opening/AuctionOpening.tsx", () => ({ AuctionOpening: () => createElement("div", null, "auction") }));
 import { Experience03 } from "../src/client/game/scenario03/opening/Experience03.tsx";
+import { ScenarioExperience } from "../src/client/game/opening/ScenarioExperience.tsx";
 
 let serial = 0;
-const fixture = () => project(createGame(`opening-${++serial}`, seatsFor(2), SEED, T0, "S03_INCIDENT_ZERO"), "a");
+const fixture = (scenario: ScenarioId = "S03_INCIDENT_ZERO") => project(createGame(`opening-${++serial}`, seatsFor(2), SEED, T0, scenario), "a");
 let root: Root;
 let host: HTMLDivElement;
 beforeEach(() => {
@@ -155,4 +162,56 @@ describe("per-player/run memory and centralized timeline", () => {
     stop();
     expect(vi.getTimerCount()).toBe(0);
   });
+});
+
+describe.each(["S01_LAST_TRAIN", "S02_SUNKEN_CITY", "S04_UNDERGROUND_AUCTION"] as const)("shared presentation in %s", (scenario) => {
+  const renderExperience = () => root.render(createElement(ScenarioExperience, { children: createElement("button", { "data-game": true }, "game") }));
+  it("starts once in StrictMode, survives the server phase change and naturally releases input", async () => {
+    const g = fixture(scenario);
+    mocks.game = g;
+    await act(async () => root.render(createElement(StrictMode, null, createElement(ScenarioExperience, { children: createElement("button", { "data-game": true }, "game") }))));
+    expect(mocks.send).toHaveBeenCalledTimes(1);
+    await act(async () => vi.advanceTimersByTime(17000));
+    const scene = host.querySelector("[data-scene]")?.getAttribute("data-scene");
+    mocks.game = { ...g, phase: "ACT_1", round: 1, version: 2, sequence: null };
+    await act(async () => root.render(createElement(StrictMode, null, createElement(ScenarioExperience, { children: createElement("button", { "data-game": true }, "game") }))));
+    expect(host.querySelector("[data-scene]")?.getAttribute("data-scene")).toBe(scene);
+    await act(async () => vi.advanceTimersByTime((durationOf(OPENINGS[scenario].scenes) - 17) * 1000));
+    expect(host.querySelector("[role=dialog]")).toBeNull();
+    expect(host.querySelector("[inert]")).toBeNull();
+    expect(mocks.audio.setTheme).toHaveBeenLastCalledWith(OPENINGS[scenario].ambientTheme);
+  });
+  it("Skip cancels playback and unmounting releases resources; the next session plays again", async () => {
+    mocks.game = fixture(scenario);
+    await act(async () => renderExperience());
+    await act(async () => vi.advanceTimersByTime(20000));
+    await act(async () => host.querySelector<HTMLButtonElement>(".s3-film-skip")!.click());
+    expect(mocks.audio.setTheme).toHaveBeenLastCalledWith(OPENINGS[scenario].ambientTheme);
+    await act(async () => host.querySelector(".s3-film")!.dispatchEvent(new Event("animationend", { bubbles: true })));
+    expect(host.querySelector("[inert]")).toBeNull();
+    await act(async () => root.unmount());
+    await act(async () => vi.advanceTimersByTime(0));
+    expect(vi.getTimerCount()).toBe(0);
+    expect(mocks.release).toHaveBeenCalledTimes(1);
+    root = createRoot(host);
+    await act(async () => renderExperience());
+    expect(host.querySelector(".s3-film")).toBeNull();
+    await act(async () => root.unmount());
+    mocks.game = fixture(scenario);
+    root = createRoot(host);
+    await act(async () => renderExperience());
+    expect(host.querySelector(".s3-film")).not.toBeNull();
+  });
+});
+
+it("acquires audio before the first emergency cue, with no missing initial owner", async () => {
+  const order: string[] = [];
+  mocks.audio.acquire.mockImplementation(() => { order.push("acquire"); return mocks.release; });
+  mocks.audio.play.mockImplementation(() => { order.push("sound"); });
+  mocks.game = fixture("S02_SUNKEN_CITY");
+  await act(async () => root.render(createElement(ScenarioExperience, { children: createElement("button", null, "game") })));
+  await act(async () => vi.advanceTimersByTime(300));
+  expect(order).toEqual(["acquire", "sound"]);
+  expect(mocks.audio.play).toHaveBeenCalledWith("emergency_broadcast");
+  mocks.audio.play.mockReset();
 });
