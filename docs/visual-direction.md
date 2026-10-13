@@ -320,3 +320,15 @@ spectators see only selection progress. A locked choice stays face down until
 all tied bidders choose, then the selected ranks flip together. Further ties
 repeat within this board; a unique winner receives the Exit Rights announcement
 and only then the outcome control appears.
+
+## Developer / Assignment Check
+
+The home entry is a muted two-line secondary action below Create/Join, with a
+thin divider, smaller type and no gold fill. `/developer` uses the same night
+sky, tarot surfaces, typography and signal/gold tokens. Four independent cards
+use grouped checkpoint selectors and one launch button each; opening replays
+and UI checks occupy a separate section. A prominent developer label and usage
+notice identify the page. Test rooms have a compact persistent return/seat bar
+and a collapsible tool panel. The existing game and opening remain visible;
+the film is inset below the measured bar only in developer rooms. Cards stack
+at phone widths, use zero-minimum grid tracks, and keep 48px controls.

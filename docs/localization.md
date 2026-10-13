@@ -159,3 +159,14 @@ of locale.
 | Phase Battery / Sedative | 相位电池 / 镇静剂 | ordinary consumables in the Scenario 03 pool |
 | Archive / Field / Stabilization scan | 档案扫描 / 现场扫描 / 稳定扫描 | one ordinary server roll per cycle, with distinct success-kind bits |
 | public anomaly | 公共异常事件 | Scenario 03's own five-card event deck |
+
+## Developer-check copy
+
+`developer-en.ts` and `developer-zh-CN.ts` supply all index, toolbar, preset,
+usage, progress and error copy. English derives the shared key union as usual.
+`CHECK_PRESETS` contains only closed IDs/scenario IDs/group IDs; labels are
+localized whole sentences in the client catalogs. The required uppercase
+DEVELOPER / ASSIGNMENT CHECK marker is a localized catalog value in both
+languages. Scenario titles, recap, private cards, decisions, dice and endings
+reuse existing localized content. New server rejection templates have entries
+in the shared Chinese message catalog.

@@ -865,3 +865,49 @@ names); each variant is now a whole template. No rule, RNG or replay changed
   teardown. Scenario 03 was rerun after the mobile year-column correction.
   No console/page errors, failed asset responses, clipping or undersized touch
   targets remained. New controls and corrected mobile screens were inspected.
+
+## Developer / Assignment Check entry and playable checkpoints
+
+- Added a muted secondary home action and independent `/developer` page with
+  four scenario cards, grouped selectors and 36 real checkpoints. Opening/UI
+  controls reuse all four existing films, phase transitions, endings, Story
+  Recap, private cards, dice and trade UI. The required developer marker and
+  usage notice are visible; every new instruction has English/Chinese copy.
+- Added closed preset IDs and a server-owned fixture factory. Preparation
+  starts real seeded games and uses actual round, repair, voting, boat,
+  temporal intervention/source/history, auction, settlement, bid/reveal and
+  Blackjack handlers. Preloaded placements/resources are documented explicitly;
+  no front-end round/phase patch is used. Counterfeit items are won through an
+  actual auction; boat parts remain unique across caches, holdings and fitting.
+- Prepared snapshots persist as the existing session's initial/replay state
+  in SQLite. Later input still follows ordinary validation, reduction,
+  transaction and projected broadcast. Invalid preset/state/seed requests,
+  normal-room advancement and unowned tokens are rejected. Failed preparation
+  rolls back the session and cleans only the newly created test identities.
+- Test rooms have three genuine manually controlled seats, no automated players,
+  separate bounded credentials and a persistent return/seat toolbar with a
+  collapsible tool panel. An additional tab can control the next seat. Normal
+  identity/nickname/rejoin are preserved. Snapshot/cue clearing, stale-socket
+  rejection and explicit viewer checks prevent a prior seat's private view
+  appearing during a switch. Refresh reconnects the selected identity.
+- Marked test rooms retain manual logical seat presence without pretending that
+  disconnected sockets are connected. Disconnect timers/host transfer pause
+  only there; idle and cold-start test checkpoints stay in SQLite until viewed
+  instead of accumulating in memory. Returning/restarting/leaving a test goes
+  back to the check page. The index still returns to the actual home page.
+- Extracted existing rigNextDie and Scenario 03 resolver helpers into a shared
+  server fixture module, preserving the test helper exports and behavior.
+  Story Recap reuses the public record previously embedded in Private03.
+  Opening timelines, BGM assets, core game rules and normal entry dialogs remain
+  unchanged; the pre-existing Scenario 02 indentation edit is excluded.
+- Validation: production build and pnpm check passed (47 files, 1162 tests),
+  including all-checkpoint continuation, actual final-lock/engineer/history/
+  sealed-bid/showdown behavior, projection, persistence/replay, rollback,
+  credential separation and stale socket handling. A final focused run checked
+  idle/cold-start fixture eviction. The browser walkthrough launched all 36
+  checkpoints through the real page/API in two isolated English/Chinese
+  contexts at 1280/390px with representative 320px checks. It verified all four
+  opening replays, seat switching/reload, private projections, default advance,
+  return/home paths, 48px targets and clipping; no browser errors or failed
+  asset responses remained. Screenshots of the new entry, index, toolbar,
+  inspections and mobile checkpoints were inspected.

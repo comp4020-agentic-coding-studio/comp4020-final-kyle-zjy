@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
+import { launchCheck, advanceCheck } from "./developer/service.ts";
 import { config } from "./config.ts";
 import { log } from "./log.ts";
 import { renderReadme } from "./readme.ts";
@@ -63,6 +64,18 @@ export function createApp(rooms: RoomService, hub: Hub): Hono {
     }
   });
 
+  app.post("/api/developer/runs", async (c) => {
+    const input = await body(c);
+    if (Object.keys(input).some((key) => key !== "presetId")) return c.json({ code: "INVALID" }, 400);
+    try { return c.json(launchCheck(rooms, hub.games, input.presetId), 201); }
+    catch (error) { return fail(c, error); }
+  });
+  app.post("/api/developer/rooms/:code/advance", async (c) => {
+    const { sessionToken } = await body(c);
+    try { advanceCheck(rooms, hub.games, c.req.param("code"), sessionToken); return c.json({ ok: true }); }
+    catch (error) { return fail(c, error); }
+  });
+
   app.all("/api/*", (c) => c.json({ code: "INVALID", message: "Not found." }, 404));
 
   app.get("/readme", (c) => c.redirect("/readme/", 301));
@@ -79,6 +92,8 @@ export function createApp(rooms: RoomService, hub: Hub): Hono {
       : c.html("<!doctype html><title>Fate Instance</title><p>Client not built. Run <code>pnpm build</code>.</p>");
   app.get("/", spa);
   app.get("/room/:code", spa);
+  app.get("/developer", spa);
+  app.get("/developer/room/:code/:seat", spa);
 
   return app;
 }

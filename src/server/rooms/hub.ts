@@ -177,6 +177,7 @@ export class Hub {
   /** A host who drops gets a grace period (a refresh) before the crown moves. */
   private armHostTimer(code: RoomCode): void {
     clearTimeout(this.hostTimers.get(code));
+    if (this.games.state(code)?.flags.developerCheck === 1) return;
     const timer = setTimeout(() => {
       this.hostTimers.delete(code);
       if (this.rooms.hostTimedOut(code, this.connected(code))) {

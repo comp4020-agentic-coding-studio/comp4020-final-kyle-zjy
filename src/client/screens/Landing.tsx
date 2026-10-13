@@ -10,6 +10,8 @@ import { session } from "../net/session.ts";
 import { navigate } from "../router.ts";
 import { reconnect } from "../store.ts";
 
+import "../styles/developer.css";
+
 type Mode = null | "create" | "join";
 
 export function Landing({ initialCode }: { initialCode?: string }) {
@@ -98,6 +100,7 @@ export function Landing({ initialCode }: { initialCode?: string }) {
           <button className="btn btn-ghost w-full" onClick={() => setMode("join")}>
             {t("landing.join")}
           </button>
+          <button className="developer-entry" onClick={() => navigate("/developer")}><span>{t("developer.entry")}</span><small>{t("developer.tagline")}</small></button>
           <div className="mt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
             <a href="/readme/" className="inline-flex min-h-12 items-center justify-center text-sm text-ash underline-offset-4 hover:text-mist hover:underline">
               {t("landing.about")}

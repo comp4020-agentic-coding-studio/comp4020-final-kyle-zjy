@@ -166,3 +166,15 @@ trimmed before lookup.
 
 - Startup sweep: rooms with `updated_at` older than 7 days are deleted (cascade).
 - Closed rooms (everyone left) are marked `closed_at` and swept after 24 h.
+
+## Developer-check persistence
+
+No schema migration is needed. Prepared developer sessions are ordinary
+`game_sessions` rows whose `initial_json` and `state_json` contain the committed
+checkpoint. Later actions enter the existing append-only action log and replay
+from this initial state. The numeric `flags.developerCheck` marker lives in the
+snapshot, scopes server convenience operations, and survives cold restart.
+Test identities use the existing hashed-token `players` and `room_members`
+tables. Returned raw credentials are saved only in the creator's separate,
+bounded browser test-session store. Failed preparation removes newly created
+room/identity rows; it never patches an ordinary session.

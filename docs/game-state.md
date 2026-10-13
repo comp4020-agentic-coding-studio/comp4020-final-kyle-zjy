@@ -426,3 +426,13 @@ already used. Nameless File restores Sanity to 3/3 and
 prevents every later Sanity loss. Black Die and Gambler's Coin arm their next
 eligible roll or Blackjack hand, while Red Contract and Black Crown take effect
 from activation.
+
+## Developer checkpoints
+
+Developer runs use the same `GameState`, pending windows, seeded RNG, item
+instances, public projection and game actions. The server-only closed fixture
+factory prepares prerequisites and advances real handlers; it stores a valid
+prepared snapshot as the replay initial state. `flags.developerCheck = 1`
+scopes manual seat presence and paused disconnect timers to these new rooms.
+Normal gameplay never sets the flag. Clients select only a preset ID, and
+cannot submit a state/round/die/phase. See [developer-check.md](developer-check.md).

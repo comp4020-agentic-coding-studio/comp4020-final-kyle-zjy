@@ -6,7 +6,6 @@ import type { GameState, PlayerId } from "../src/shared/game/state.ts";
 import { createGame, type Seat } from "../src/server/engine/create.ts";
 import { applyGameAction, hostSkip, startGame, tickGame, type Step } from "../src/server/engine/engine.ts";
 import { activePlayerId } from "../src/server/engine/context.ts";
-import { next as nextFloat } from "../src/server/engine/rng.ts";
 
 export const T0 = 1_800_000_000_000;
 export const SEED = "0123456789abcdef0123456789abcdef";
@@ -96,19 +95,4 @@ export class Table {
   }
 }
 
-/**
- * Rigs the generator so the next d6 rolls `value`, by searching for a
- * generator state whose next draw lands there. Tests use it to reach a
- * specific outcome without touching engine code.
- */
-export function rigNextDie(state: GameState, value: number): void {
-  for (let i = 1; i < 10_000; i++) {
-    const probe = { rng: [i * 2654435761 >>> 0, i * 40503 + 7, i * 9973 + 11, i] as [number, number, number, number], rngCalls: 0 };
-    const copy = { ...probe, rng: [...probe.rng] as [number, number, number, number] };
-    if (1 + Math.floor(nextFloat(copy) * 6) === value) {
-      state.rng = probe.rng;
-      return;
-    }
-  }
-  throw new Error("could not rig the die");
-}
+export { rigNextDie } from "../src/server/testing/steps.ts";

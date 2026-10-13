@@ -53,15 +53,15 @@ const SCREENS: Record<GamePhase, ComponentType> = {
   RESULTS: ScenarioResults,
 };
 
-export function RoomGate({ code }: { code: string }) {
+export function RoomGate({ code, token, viewerId }: { code: string; token?: string; viewerId?: string }) {
   const status = useStore((s) => s.status);
   const snapshot = useStore((s) => s.snapshot);
   const t = useT();
 
   useEffect(() => {
-    connectRoom(code);
+    connectRoom(code, token);
     return () => disconnectRoom();
-  }, [code]);
+  }, [code, token]);
 
   useEffect(() => {
     if (status === "left") navigate("/", true);
@@ -86,6 +86,7 @@ export function RoomGate({ code }: { code: string }) {
         {t("gate.replaced.body")}
       </Notice>
     );
+  if (viewerId && snapshot?.game && snapshot.game.viewerId !== viewerId) return <Boarding reconnecting={false} />;
   if (!snapshot) return <Boarding reconnecting={status === "reconnecting"} />;
 
   // the room's phase can briefly lead the game snapshot; wait for the run to arrive

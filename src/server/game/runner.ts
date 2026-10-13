@@ -71,7 +71,7 @@ export class GameRunner {
   presence(roomCode: string, playerId: PlayerId, connected: boolean): void {
     const state = this.state(roomCode);
     const p = state?.players[playerId];
-    if (!state || !p || p.away === !connected || state.phase === "RESULTS") return;
+    if (!state || !p || state.flags.developerCheck === 1 || p.away === !connected || state.phase === "RESULTS") return;
     const now = this.clock();
     this.commit(roomCode, setAway(state, playerId, !connected, now), { kind: connected ? "BACK" : "AWAY", actorId: playerId, at: now });
   }
@@ -100,7 +100,7 @@ export class GameRunner {
    */
   evictIfIdle(roomCode: string): boolean {
     const state = this.cache.get(roomCode);
-    if (!state || state.phase !== "RESULTS") return false;
+    if (!state || (state.phase !== "RESULTS" && state.flags.developerCheck !== 1)) return false;
     this.drop(roomCode);
     return true;
   }
@@ -117,11 +117,21 @@ export class GameRunner {
     this.cache.delete(roomCode);
   }
 
+  /** Load a committed prepared run without restarting its engine sequence. */
+  resumeRoom(roomCode: string): void {
+    const state = this.state(roomCode);
+    if (state) this.schedule(roomCode, state);
+  }
+
   /** After a restart: re-arm timers for every run still in progress. */
   resumeAll(): number {
     const rooms = this.store.activeRooms();
     for (const code of rooms) {
       const state = this.state(code);
+      if (state?.flags.developerCheck === 1) {
+        this.drop(code); // No clock to resume; load this checkpoint when a viewer returns.
+        continue;
+      }
       if (state) this.schedule(code, state);
     }
     return rooms.length;
@@ -142,7 +152,7 @@ export class GameRunner {
   private schedule(roomCode: string, state: GameState): void {
     clearTimeout(this.timers.get(roomCode));
     this.timers.delete(roomCode);
-    if (state.phase === "RESULTS") return;
+    if (state.phase === "RESULTS" || state.flags.developerCheck === 1) return;
     const at = nextDeadline(state);
     if (at === null) return;
     const timer = setTimeout(() => {

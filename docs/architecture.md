@@ -361,3 +361,17 @@ Scenario 04's round-close hook advances its own ten-step Collapse clock;
 the tenth close reaches 10 without changing the existing Exit Rights and Debt
 outcome calculation. Round-specific auctioneer copy, the final warning, and
 personal fate summaries live in the Scenario 04 client localization catalogs.
+
+## Developer / assignment checks
+
+`/developer` launches independent server-prepared test rooms through a closed
+preset API. `/developer/room/:code/:seat` reuses RoomGate, normal projections,
+all scenario screens, cinematics and audio. Three real anonymous identities
+are controlled manually; no automated multiplayer is represented. Test tokens
+use separate bounded browser storage and explicit connection credentials, so
+normal identity/rejoin is preserved. Marked test rooms retain logical seat
+presence, pause disconnect automation and evict idle runs to SQLite.
+Prepared snapshots become the session's replay initial state; subsequent
+inputs use the existing game transaction and broadcast path. The convenience
+advance endpoint authenticates a test seat and rejects normal rooms. See
+[developer-check.md](developer-check.md) for presets and construction details.

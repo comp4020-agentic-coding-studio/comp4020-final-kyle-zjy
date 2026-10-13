@@ -99,19 +99,7 @@ export function Private03({ g }: { g: PlayerView }) {
 
       <p className="label border-b border-signal/20 pb-1 text-signal">{t("s3.secrets.publicGroup")}</p>
       <p className="text-sm text-mist">{t("s3.items.teamLoops", { n: tp.bootstrapProgress.placed, total: tp.bootstrapProgress.total })}</p>
-      <section>
-        <p className="label">{t("s3.secrets.record")}</p>
-        <ol className="s3-story-list mt-2">
-          {tp.story.revealed.map((id: StoryBeatId03, index) => (
-            <li key={id} className={`s3-story-entry ${index === tp.story.revealed.length - 1 ? "s3-story-latest" : ""}`}>
-              <span className="s3-story-index" aria-hidden="true">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <span>{t(`s3.story.${id}`)}</span>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <StoryRecap03 g={g} />
       <section>
         <p className="label">{t(tp.causalRevision ? "s3.secrets.causal" : "s3.secrets.causalInitial", { n: tp.causalRevision })}</p>
         <ul className="mt-1 space-y-1 text-sm">
@@ -201,4 +189,22 @@ export function Private03({ g }: { g: PlayerView }) {
       )}
     </>
   );
+}
+
+/** Existing public incident record, shared with the assignment inspector. */
+export function StoryRecap03({ g }: { g: PlayerView }) {
+  const t = useT();
+  return (<section>
+        <p className="label">{t("s3.secrets.record")}</p>
+        <ol className="s3-story-list mt-2">
+          {g.temporal!.story.revealed.map((id: StoryBeatId03, index) => (
+            <li key={id} className={`s3-story-entry ${index === g.temporal!.story.revealed.length - 1 ? "s3-story-latest" : ""}`}>
+              <span className="s3-story-index" aria-hidden="true">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span>{t(`s3.story.${id}`)}</span>
+            </li>
+          ))}
+        </ol>
+      </section>);
 }

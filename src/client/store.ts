@@ -66,35 +66,40 @@ let ws: WebSocket | null = null;
 let retry = 0;
 let retryTimer: ReturnType<typeof setTimeout> | undefined;
 let wanted: string | null = null;
+let connectionToken: string | null = null;
 let seq = 0;
 const pending = new Map<string, (ok: boolean) => void>();
 
-export function connectRoom(code: string): void {
+export function connectRoom(code: string, token?: string): void {
   wanted = code;
+  connectionToken = token ?? null;
   retry = 0;
-  useStore.setState({ roomCode: code, status: "connecting", snapshot: null, playerId: null });
+  useStore.setState({ roomCode: code, status: "connecting", snapshot: null, playerId: null, cues: [] });
   open();
 }
 
 export function disconnectRoom(): void {
   wanted = null;
+  connectionToken = null;
+  for (const done of pending.values()) done(false);
+  pending.clear();
   clearTimeout(retryTimer);
   ws?.close(1000);
   ws = null;
-  useStore.setState({ status: "idle", roomCode: null, snapshot: null, playerId: null });
+  useStore.setState({ status: "idle", roomCode: null, snapshot: null, playerId: null, cues: [] });
 }
 
 function open(): void {
   const code = wanted;
-  const token = session.token();
+  const token = connectionToken ?? session.token();
   if (!code) return;
   if (!token) return useStore.setState({ status: "needs-join" });
   clearTimeout(retryTimer);
   ws?.close(1000);
   const socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
   ws = socket;
-  socket.onopen = () => socket.send(JSON.stringify({ t: "HELLO", roomCode: code, sessionToken: token }));
-  socket.onmessage = (e) => handle(JSON.parse(String(e.data)) as ServerMessage);
+  socket.onopen = () => { if (ws === socket) socket.send(JSON.stringify({ t: "HELLO", roomCode: code, sessionToken: token })); };
+  socket.onmessage = (e) => { if (ws === socket) handle(JSON.parse(String(e.data)) as ServerMessage); };
   socket.onclose = (e) => {
     if (ws !== socket) return;
     ws = null;
@@ -103,7 +108,7 @@ function open(): void {
     if (!wanted) return;
     if (e.code === CLOSE_REPLACED) return useStore.setState({ status: "replaced" });
     if (e.code === CLOSE_KICKED) {
-      session.setLastRoom(null);
+      if (!connectionToken) session.setLastRoom(null);
       return useStore.setState({ status: "kicked" });
     }
     if (e.code === CLOSE_LEFT) {
@@ -128,7 +133,7 @@ function handle(msg: ServerMessage): void {
   switch (msg.t) {
     case "WELCOME":
       retry = 0;
-      session.setLastRoom(msg.snapshot.room.code);
+      if (!connectionToken) session.setLastRoom(msg.snapshot.room.code);
       useStore.setState({ status: "online", playerId: msg.playerId, snapshot: msg.snapshot, skew: msg.snapshot.serverTime - Date.now() });
       break;
     case "STATE": {
