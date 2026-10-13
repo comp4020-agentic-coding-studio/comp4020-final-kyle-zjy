@@ -250,17 +250,19 @@ retains the full story, replaces distortion/pulses with short opacity changes
 and preserves independent Skip. Narrative information is fully subtitled in
 English and Chinese. One persistent mute control serves both film and game.
 
-Audio has one shared Web Audio owner: procedural pads, world-specific textures,
-short cues and crossfades. No unlicensed music or external audio is loaded.
+Audio has one shared Web Audio owner with two streaming music decks, locally
+served CC BY 4.0 recordings, short foley and crossfades. The score changes with
+public stages and survives Ending/Results. The visible Music menu provides
+composer, sources, license and an edit notice. See [music-direction.md](music-direction.md).
 
 ## Four opening languages
 
 | Scenario | Materials and motion | Sound and handoff |
 | --- | --- | --- |
 | 01 · N13 | Station clock, staggered phones, a quiet black train, perforated tickets turning over, an anonymous manifest, incomplete memory objects. Pale fluorescent green and aged paper. | Broadcast/rail hum first, no music until the tickets; door silence, soft record errors and a ticket punch. Fluorescent rail title dissolves into the actual current carriage. |
-| 02 · Sunken City | Rain, emergency radio, the existing 31-zone hex topology, interrupted roads, boat diagnostics, rescue signals, a rising gauge and blurred cabin. Blue-grey with muted amber warnings. | Rain/wind-like noise, interrupted siren, radio static and distant horn. Water-reflection title fades to the authoritative city map. Capacity remains PENDING. |
-| 03 · Incident Zero | Existing CRT/archive/dual-year film and chronology contradiction. | Existing temporal cues and ambient crossfade; 81-second story retained. |
-| 04 · Auction | Black envelope, unmarked door, velvet elliptical table, eight black chips, covered lot silhouettes, public seats and a white-gloved hammer. Black, wine red and gold. | Paper first, original sparse lounge synthesis with bass/piano/brush texture, chips/cards/hammer. Spotlight title recedes into the real Lot 01 table. |
+| 02 · Sunken City | Rain, emergency radio, the existing 31-zone hex topology, interrupted roads, boat diagnostics, rescue signals, a rising gauge and blurred cabin. Blue-grey with muted amber warnings. | Submerged atmosphere grows into an industrial score; interrupted siren, radio static and distant horn. Water-reflection title fades to the authoritative city map. Capacity remains PENDING. |
+| 03 · Incident Zero | Existing CRT/archive/dual-year film and chronology contradiction. | Layered bells, a mission motif and era-specific scores; 81-second story retained. |
+| 04 · Auction | Black envelope, unmarked door, velvet elliptical table, eight black chips, covered lot silhouettes, public seats and a white-gloved hammer. Black, wine red and gold. | Paper first, recorded noir piano and a bass/piano/brush/trumpet ensemble, chips/cards/hammer. Spotlight title recedes into the real Lot 01 table. |
 
 The controller and accessible controls are common; world art and title motion
 are separate. All new scenes stack their own content at 320/390 px rather than

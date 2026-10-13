@@ -109,7 +109,10 @@ placeholder parity in `opening-zh-CN.ts`. Scenario 03 retains its previous keys.
 The flood renderer uses the existing localized zone names, and auction previews
 read only existing localized lot names. Capacity, rankings, lot effects and
 authenticity are never used in cinematic copy. All narrative cues have captions;
-procedural audio contains no spoken language required to understand the story.
+the music and synthesized foley contain no spoken language required to understand
+the story. The Music menu uses `music.*` keys in the opening catalogs for its
+labels, composer attribution, license label and modification notice. Canonical
+recording titles and composer names remain unchanged in both locales.
 
 Act I and II story text uses stable `s3.story.<ID>` UI keys in both locales, with
 matching engine log templates in the shared message catalog. Archivist 00's

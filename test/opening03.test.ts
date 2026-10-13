@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   game: null as unknown,
   send: vi.fn().mockResolvedValue(true),
   release: vi.fn(),
-  audio: { acquire: vi.fn(), setTheme: vi.fn(), tension: vi.fn(), play: vi.fn(), getMuted: () => true, subscribe: () => () => {}, toggleMute: vi.fn() },
+  audio: { acquire: vi.fn(), setTheme: vi.fn(), tension: vi.fn(), play: vi.fn(), getMuted: () => true, getTrack: () => null, subscribe: () => () => {}, toggleMute: vi.fn() },
 }));
 vi.hoisted(() => { Object.defineProperty(window, "AnimationEvent", { configurable: true, value: window.Event }); });
 // Lifecycle tests own only application timers; real Motion and CSS run in
@@ -214,4 +214,27 @@ it("acquires audio before the first emergency cue, with no missing initial owner
   expect(order).toEqual(["acquire", "sound"]);
   expect(mocks.audio.play).toHaveBeenCalledWith("emergency_broadcast");
   mocks.audio.play.mockReset();
+});
+
+it("hands Skip to the latest public stage and keeps one audio owner through Ending and Results", async () => {
+  const g = fixture("S02_SUNKEN_CITY");
+  mocks.game = g;
+  const render = () => root.render(createElement(ScenarioExperience, { children: createElement("button", { "data-game": true }, "game") }));
+  await act(async () => render());
+  await act(async () => vi.advanceTimersByTime(38000));
+  expect(mocks.audio.setTheme).toHaveBeenLastCalledWith("s02_rising");
+  mocks.audio.setTheme.mockClear();
+  mocks.game = { ...g, phase: "ACT_3", round: 8, sequence: null };
+  await act(async () => render());
+  expect(mocks.audio.setTheme).not.toHaveBeenCalled();
+  await act(async () => host.querySelector<HTMLButtonElement>(".s3-film-skip")!.click());
+  expect(mocks.audio.setTheme).toHaveBeenLastCalledWith("s02_evacuation");
+  await act(async () => host.querySelector(".s3-film")!.dispatchEvent(new Event("animationend", { bubbles: true })));
+  mocks.game = { ...g, phase: "ENDING", outcome: "S02_EVACUATED" };
+  await act(async () => render());
+  expect(mocks.audio.setTheme).toHaveBeenLastCalledWith("s02_ending");
+  mocks.game = { ...g, phase: "RESULTS", outcome: "S02_EVACUATED" };
+  await act(async () => render());
+  expect(mocks.audio.acquire).toHaveBeenCalledTimes(1);
+  expect(mocks.release).not.toHaveBeenCalled();
 });

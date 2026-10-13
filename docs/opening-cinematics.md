@@ -45,25 +45,18 @@ presentation input is public player nicknames for auction seats.
 
 ## Sound
 
-One AudioManager serves every world and the persistent mute control. Themes:
+One AudioManager serves every world and the persistent mute control. The
+placeholder musical synthesis has been replaced with locally served, credited
+recordings, selected for opening story beats and each public gameplay stage.
+See [music-direction.md](music-direction.md) for the complete cue sheet,
+source/license provenance, mastering recipe and playback lifecycle.
 
-- `silence` → `intro_train` → `s01_ambient`: the train's first 22 seconds use
-  environmental cues only; a restrained low score arrives with the tickets.
-- `intro_flood` → `s02_city_ambient`: deterministic noise-based rain/wind texture,
-  low tones, interrupted alarm, distress/static, road failure and distant horn.
-- `scenario03_intro` → `scenario03_2026_ambient` (or actual 1996 ambient): the
-  original temporal score and nine cue types.
-- `silence` → `intro_auction` → `s04_auction_ambient`: paper first, then an
-  original sparse looping piano/bass/brush synthesis, chips, doors, cards and
-  hammer. The auctioneer's strike briefly silences the musical bed.
-
-Buffers and short tones are synthesized locally with deterministic sample noise;
-no asset URLs, downloads, third-party music, speech generation or additional
-dependency is used. Old/new pads and textures crossfade with Web Audio ramps.
-Muted/blocked short effects are discarded rather than delayed until unmute.
-Initial ownership is acquired before the first passive sound cue. Production
-foley/voice recording and richer authored music are optional replacements for
-the working procedural sound, not required runtime assets.
+A two-deck streaming player waits for incoming audio before a 2.4-second
+crossfade. Short synthesized foley remains separate; muted/blocked cues are
+never replayed later. Initial ownership is acquired before the first passive
+sound cue. Ownership now continues through Ending/Results, allowing a coda to
+replace the final-act score. Mute and background pause preserve music position;
+unmount cancels loads/fades, releases media URLs and disconnects all sources.
 
 ## Verification
 

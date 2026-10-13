@@ -816,3 +816,52 @@ names); each variant is now a whole template. No rule, RNG or replay changed
   optional recorded narration remain optional asset upgrades. Core scenario
   rules, win conditions, persistence and hidden-information projection did not
   change. The unrelated pre-existing Scenario 02 translation-file edit was kept.
+
+## Authored music across all four scenarios
+
+- Replaced placeholder oscillator beds and short synthesized lounge loops with
+  27 credited Kevin MacLeod recordings, edited for the game's musical direction.
+  Train cues move from measured piano into anomaly and orchestral escape;
+  flood cues move from submerged atmosphere through rescue to industrial
+  evacuation; temporal cues distinguish 1996/2026, paradox, rewriting and the
+  final history choice; auction cues move from noir piano and jazz into
+  settlement, sealed bids and public revelation. Ending/failure codas replace
+  the action score. Intentional cinematic silent beats remain intact.
+- Added a catalog with ISRC/source/download/license provenance, a full cue
+  sheet, reproducible mastering/verification scripts, MP3 assets, credits and
+  SHA-256 hashes. Loops are normalized, limited and blended at their boundaries.
+  All 27 recordings decode with the expected duration, non-silent seams,
+  finite samples and no clipping; `music-validation.json` retains the report.
+  The composer licenses these recordings under CC BY 4.0. The bilingual Music
+  menu exposes the composer, license, edit notice and every track's source.
+- Added a two-deck streaming player within the existing shared Web Audio owner.
+  It waits for incoming playback before crossfading, ignores obsolete loads,
+  cancels fades on rapid changes/unmount, retries autoplay on gestures, pauses
+  on mute/background and preserves the current position. Muted initial entry
+  requests no music; failed loading leaves the previous track audible. No
+  runtime package, server dependency or external audio service was added.
+- Public projected stages select scores. The viewer's visible year is used,
+  but no hidden boat capacity, private bid/balance/evidence or RNG is read.
+  Background server progress cannot reset an opening's current score. Skip
+  hands over to the latest public phase rather than a fixed first-act ambient.
+- Kept one owner through Ending/Results and isolated lazy child screens behind
+  their own Suspense boundary. Browser testing caught and fixed a lazy Results
+  load that previously suspended the owner and silenced the coda. The mobile
+  temporal causal-preview year column was widened after a clipping check.
+- Validation: production build and `pnpm check` passed (45 files, 1152 tests),
+  including transport races, autoplay/load failure, two-deck reuse, background
+  pause, mute, fallback gain ramps, latest-stage handoff, ending continuity,
+  public-stage selection and existing engine/replay/spec coverage. The real
+  HTTP/WebSocket/projection browser walkthrough covered all four worlds'
+  gameplay stages, native MP3 playback/looping, independent mute, localized
+  credits at 1280/390/320px, ending/results and SPA cleanup. Screenshots were
+  inspected. Full opening regression completion is recorded below.
+- Core game rules, persistence, balance and hidden-information projection are
+  unchanged. The pre-existing Scenario 02 translation indentation edit remains
+  outside this change.
+- Final real-time opening regression passed for all four complete films at
+  1280/390/320px: English/audio and Chinese/reduced-motion/muted contexts,
+  independent Skip, same-session/mid-film reload, a fresh session and navigation
+  teardown. Scenario 03 was rerun after the mobile year-column correction.
+  No console/page errors, failed asset responses, clipping or undersized touch
+  targets remained. New controls and corrected mobile screens were inspected.

@@ -48,14 +48,14 @@ export const OPENINGS: Record<ScenarioId, OpeningDefinition> = {
   },
   S02_SUNKEN_CITY: {
     variant: "flood", scenes: flood, introTheme: "intro_flood", ambientTheme: "s02_city_ambient", label: "o2.aria", hint: "o2.hint",
-    mix: (id) => ({ level: id === "title" ? .25 : id === "distress" ? .9 : .65 }),
+    mix: (id) => ({ level: id === "title" ? .75 : id === "distress" ? .48 : .65, theme: ["water", "capacity", "route", "title"].includes(id) ? "s02_rising" : "intro_flood" }),
   },
   S03_INCIDENT_ZERO: {
     variant: "temporal", scenes: OPENING_SCENES.map((scene) => ({ ...scene, sounds: temporalSounds[scene.id] })), introTheme: "scenario03_intro", ambientTheme: "scenario03_2026_ambient", label: "s3.open.aria", hint: "s3.open.hint",
-    mix: (id, elapsed) => ({ level: id === "records" ? (elapsed >= 9.5 ? 0 : 1.3) : id === "sync" ? .4 : .7 }),
+    mix: (id, elapsed) => ({ level: id === "records" ? (elapsed >= 9.5 ? 0 : .9) : id === "sync" ? .4 : .65, theme: ["mission", "title"].includes(id) ? "s03_resolution" : "scenario03_intro" }),
   },
   S04_UNDERGROUND_AUCTION: {
     variant: "auction", scenes: auction, introTheme: "intro_auction", ambientTheme: "s04_auction_ambient", label: "o4.aria", hint: "o4.hint",
-    mix: (id, elapsed) => ({ level: id === "auctioneer" ? 0 : .7, theme: id === "invitation" && elapsed < 3 ? "silence" : "intro_auction" }),
+    mix: (id, elapsed) => ({ level: id === "auctioneer" && elapsed < 1.2 ? 0 : .65, theme: id === "invitation" && elapsed < 3 ? "silence" : ["seats", "auctioneer", "title"].includes(id) ? "s04_auction_ambient" : "intro_auction" }),
   },
 };

@@ -1,4 +1,11 @@
 export const openingEn = {
+  "music.credits": "Music",
+  "music.score": "Current score",
+  "music.silence": "Quiet interval",
+  "music.composer": "Music by {name} (incompetech.com)",
+  "music.license": "Creative Commons — Attribution 4.0",
+  "music.edits": "Recordings edited into loops and balanced in volume for this game.",
+  "music.recordings": "Recordings & sources",
   "opening.skip": "Skip",
   "opening.soundOn": "Sound on",
   "opening.soundOff": "Sound off",

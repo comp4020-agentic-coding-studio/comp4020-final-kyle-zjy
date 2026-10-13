@@ -601,13 +601,13 @@ the film and restored to the game afterwards; the optional twelve-second
 location hint reads the actual projected location rather than asserting 2026
 if teammates have already moved the viewer.
 
-`src/client/audio/manager.ts` is the implemented shared audio owner in the
-project (the earlier sound section was a design-only interface). One shared
-Web Audio context generates restrained harmonic pads and nine cue types.
-Themes are `scenario03_intro`, `scenario03_2026_ambient` and
-`scenario03_1996_ambient`. Old/new pads crossfade using AudioParam ramps;
-short effects are stopped at handoff rather than queued for later. Mute is
-remembered at `fate:muted`; blocked autoplay degrades to captions and can
-resume on a gesture. There are no downloaded files or audio URL requests.
-These procedural sounds work now; authored music/foley and optional voice
-acting remain an artistic upgrade, not a runtime dependency.
+`src/client/audio/manager.ts` owns the shared Web Audio context, short foley,
+and two reusable streaming music decks. The musical placeholders have been
+replaced by locally served CC BY 4.0 recordings: layered bells in the opening,
+vintage electric piano in 1996, electronic investigation in 2026, and different
+paradox/rewrite/final-choice cues. A 2.4-second crossfade waits for incoming
+playback before retiring the previous track. Audio survives Ending/Results
+and lazy child-screen loads. Mute is remembered at `fate:muted`; autoplay
+retries on a gesture, and backgrounding pauses music. The visible Music menu
+contains composer/license/source credits. See [music-direction.md](music-direction.md)
+for the cue sheet, asset provenance, mastering recipe and tests.

@@ -111,11 +111,15 @@ All four scenarios remember a bounded list of presentation-only opening
 entries (`fate:openings`, scenario ID + session ID + viewer ID) and the shared
 audio mute preference (`fate:muted`). Existing `fate:s03:openings` entries are
 still honored. These contain no game state. One `ScenarioExperience` wrapper
-stays mounted across INTRO/act changes, acknowledges existing readiness
+stays mounted across INTRO/acts/Ending/Results, acknowledges existing readiness
 immediately, and leaves the server running while viewers watch/skip independently.
 The shared cinematic owns one clock, captions, focus, Skip and handoff;
 separate Train/Flood/Temporal/Auction renderers own world-specific art and motion.
 See [`opening-cinematics.md`](opening-cinematics.md).
+Licensed recordings stream locally from `public/audio/music/`; one shared
+context and two reusable media decks bound client memory. Public projected
+stages select cues; hidden state and server RNG never participate.
+See [`music-direction.md`](music-direction.md).
 
 - No accounts. On create/join the server issues `playerId` (public, random) and
   `sessionToken` (secret, 32 random bytes; only its SHA-256 is stored).
@@ -206,7 +210,7 @@ start, the server loads active rooms and re-arms timers from stored deadlines
 │       ├── store/             snapshot store
 │       ├── screens/           one component per phase (Landing, Lobby, Reveal, Game, Ending, Results)
 │       ├── components/        Train, PlayerHUD, ActionWheel, EventCard, DiceRoll, CharacterCard…
-│       ├── audio/             sound interface + mute (no assets until licensed)
+│       ├── audio/             shared context, two streaming decks, public-stage score selection
 │       └── styles/tokens.css  design tokens                          (PHASE 0 ✓)
 ├── Dockerfile                 multi-stage: build client, run src/server/index.ts (PHASE 1 ✓)
 └── fly.toml                   course-fixed, unchanged

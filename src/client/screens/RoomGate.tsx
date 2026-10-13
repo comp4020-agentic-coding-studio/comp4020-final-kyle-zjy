@@ -92,12 +92,12 @@ export function RoomGate({ code }: { code: string }) {
   if (snapshot.room.phase !== "LOBBY" && !snapshot.game) return <Boarding reconnecting={false} />;
   const Screen = SCREENS[snapshot.game?.phase ?? snapshot.room.phase];
   const g = snapshot.game;
-  const openingRun = g && (g.phase === "INTRO" || g.phase.startsWith("ACT_"));
+  const openingRun = g && g.phase !== "LOBBY";
   return (
     <>
       <ConnectionBanner />
       <Suspense fallback={<Boarding reconnecting={false} />}>
-        {openingRun ? <ScenarioExperience key={g.sessionId}><Run /></ScenarioExperience> : <Screen />}
+        {openingRun ? <ScenarioExperience key={g.sessionId}><Suspense fallback={<Boarding reconnecting={false} />}><Screen /></Suspense></ScenarioExperience> : <Screen />}
       </Suspense>
     </>
   );

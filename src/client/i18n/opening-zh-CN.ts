@@ -1,5 +1,12 @@
 import type { OpeningKey } from "./types.ts";
 export const openingZhCN: Record<OpeningKey, string> = {
+  "music.credits": "音乐",
+  "music.score": "当前配乐",
+  "music.silence": "静默段落",
+  "music.composer": "作曲：{name}（incompetech.com）",
+  "music.license": "知识共享 — 署名 4.0",
+  "music.edits": "录音已为游戏剪辑为循环版本，并统一音量。",
+  "music.recordings": "曲目与来源",
   "opening.skip": "跳过",
   "opening.soundOn": "声音开启",
   "opening.soundOff": "声音关闭",

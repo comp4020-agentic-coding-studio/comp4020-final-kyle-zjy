@@ -35,7 +35,7 @@ async function probe(p: Page) {
     Object.assign(window, { openingAudioStats: stats });
     const Native = window.AudioContext;
     if (!Native) return;
-    function track<T extends AudioScheduledSourceNode>(source: T): T {
+    function track<T extends AudioNode>(source: T): T {
       const connect = source.connect.bind(source);
       const disconnect = source.disconnect.bind(source);
       let connected = false;
@@ -47,6 +47,7 @@ async function probe(p: Page) {
       constructor(...args: ConstructorParameters<typeof AudioContext>) { super(...args); stats.contexts++; stats.state = this.state; this.addEventListener("statechange", () => { stats.state = this.state; }); }
       override createOscillator() { return track(super.createOscillator()); }
       override createBufferSource() { return track(super.createBufferSource()); }
+      override createMediaElementSource(element: HTMLMediaElement) { return track(super.createMediaElementSource(element)); }
     };
   });
 }
@@ -128,7 +129,7 @@ try {
         await phone.waitForTimeout(1800);
         const stats = await audioStats(phone);
         assert.equal(stats.contexts, 1);
-        assert.equal(stats.connected, id === "S02_SUNKEN_CITY" ? 4 : id === "S04_UNDERGROUND_AUCTION" ? 1 : 3, "no leftover cinematic voices");
+        assert.equal(stats.connected, 2, "no leftover cinematic voices");
         await shot(phone, `${id}-skipped-game-390`);
         await phone.reload(); await phone.locator(".s3-game-entry:not([inert])").waitFor();
         assert.equal(await phone.locator(".s3-film").count(), 0, "refresh resumes the same game");

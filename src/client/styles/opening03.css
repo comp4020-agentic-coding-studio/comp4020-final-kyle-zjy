@@ -142,7 +142,7 @@
     .s3-film-dual h2 { margin-top: 2px; font-size: 20px; }
     .s3-film-dual .s3-film-meta { margin-top: 0; font-size: 9px; }
     .s3-film-causal-pair { grid-template-columns: minmax(0, 1fr); gap: 6px; margin-top: 10px; }
-    .s3-film-causal-card { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 8px; align-items: center; padding: 12px; }
+    .s3-film-causal-card { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; align-items: center; padding: 12px; }
     .s3-film-causal-card .s3-film-year { font-size: 16px; margin: 0; }
     .s3-film-causal-card .s3-film-feed, .s3-film-causal-card .s3-film-record-icon { display: none; }
     .s3-film-causal-card h2 { margin: 0; font-size: 20px; }

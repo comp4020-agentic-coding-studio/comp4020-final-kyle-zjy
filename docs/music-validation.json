@@ -1,0 +1,191 @@
+{
+  "darkWalk": {
+    "seconds": 77,
+    "headRms": 0.0927,
+    "tailRms": 0.0547,
+    "seamDelta": 0.05121,
+    "peak": 0.7649
+  },
+  "measuredPaces": {
+    "seconds": 65,
+    "headRms": 0.0801,
+    "tailRms": 0.0874,
+    "seamDelta": 0.01452,
+    "peak": 0.7653
+  },
+  "lightlessDawn": {
+    "seconds": 108,
+    "headRms": 0.0743,
+    "tailRms": 0.0738,
+    "seamDelta": 0.02008,
+    "peak": 0.754
+  },
+  "unseenHorrors": {
+    "seconds": 108,
+    "headRms": 0.0808,
+    "tailRms": 0.0811,
+    "seamDelta": 0.02024,
+    "peak": 0.5919
+  },
+  "blueFeather": {
+    "seconds": 108,
+    "headRms": 0.0446,
+    "tailRms": 0.0096,
+    "seamDelta": 0.00561,
+    "peak": 0.5074
+  },
+  "horizon": {
+    "seconds": 108,
+    "headRms": 0.099,
+    "tailRms": 0.0801,
+    "seamDelta": 0.04568,
+    "peak": 0.4416
+  },
+  "lostFrontier": {
+    "seconds": 108,
+    "headRms": 0.1068,
+    "tailRms": 0.0927,
+    "seamDelta": 0.03464,
+    "peak": 0.6904
+  },
+  "industrial": {
+    "seconds": 108,
+    "headRms": 0.0973,
+    "tailRms": 0.0877,
+    "seamDelta": 0.04274,
+    "peak": 0.7841
+  },
+  "complex": {
+    "seconds": 108,
+    "headRms": 0.0842,
+    "tailRms": 0.0935,
+    "seamDelta": 0.02559,
+    "peak": 0.5297
+  },
+  "immersed": {
+    "seconds": 108,
+    "headRms": 0.137,
+    "tailRms": 0.0853,
+    "seamDelta": 0.06058,
+    "peak": 0.7609
+  },
+  "echoes": {
+    "seconds": 108,
+    "headRms": 0.1402,
+    "tailRms": 0.0969,
+    "seamDelta": 0.02907,
+    "peak": 0.6623
+  },
+  "crypto": {
+    "seconds": 108,
+    "headRms": 0.1006,
+    "tailRms": 0.0985,
+    "seamDelta": 0.01562,
+    "peak": 0.4872
+  },
+  "vintage": {
+    "seconds": 108,
+    "headRms": 0.1142,
+    "tailRms": 0.1146,
+    "seamDelta": 0.0649,
+    "peak": 0.5764
+  },
+  "dissonance": {
+    "seconds": 108,
+    "headRms": 0.0792,
+    "tailRms": 0.0782,
+    "seamDelta": 0.00854,
+    "peak": 0.744
+  },
+  "darkestChild": {
+    "seconds": 108,
+    "headRms": 0.0907,
+    "tailRms": 0.0859,
+    "seamDelta": 0.05447,
+    "peak": 0.4638
+  },
+  "darkFog": {
+    "seconds": 108,
+    "headRms": 0.1587,
+    "tailRms": 0.1804,
+    "seamDelta": 0.01985,
+    "peak": 0.5543
+  },
+  "decisions": {
+    "seconds": 80,
+    "headRms": 0.1386,
+    "tailRms": 0.1375,
+    "seamDelta": 0.0202,
+    "peak": 0.7516
+  },
+  "despair": {
+    "seconds": 108,
+    "headRms": 0.213,
+    "tailRms": 0.0596,
+    "seamDelta": 0.02037,
+    "peak": 0.7593
+  },
+  "docks": {
+    "seconds": 108,
+    "headRms": 0.0493,
+    "tailRms": 0.0178,
+    "seamDelta": 0.03894,
+    "peak": 0.703
+  },
+  "covert": {
+    "seconds": 105.882,
+    "headRms": 0.0973,
+    "tailRms": 0.1179,
+    "seamDelta": 0.03997,
+    "peak": 0.6184
+  },
+  "knew": {
+    "seconds": 96,
+    "headRms": 0.1515,
+    "tailRms": 0.0259,
+    "seamDelta": 0.00537,
+    "peak": 0.7979
+  },
+  "roulette": {
+    "seconds": 106.154,
+    "headRms": 0.0452,
+    "tailRms": 0.0674,
+    "seamDelta": 0.00624,
+    "peak": 0.6593
+  },
+  "standoff": {
+    "seconds": 37,
+    "headRms": 0.0821,
+    "tailRms": 0.088,
+    "seamDelta": 0.00617,
+    "peak": 0.4906
+  },
+  "developments": {
+    "seconds": 76,
+    "headRms": 0.1035,
+    "tailRms": 0.0859,
+    "seamDelta": 0.05208,
+    "peak": 0.6015
+  },
+  "gloom": {
+    "seconds": 108,
+    "headRms": 0.0633,
+    "tailRms": 0.0802,
+    "seamDelta": 0.00439,
+    "peak": 0.7515
+  },
+  "vintageEnding": {
+    "seconds": 47,
+    "headRms": 0.0749,
+    "tailRms": 0.1136,
+    "seamDelta": 0.05869,
+    "peak": 0.4787
+  },
+  "aftermath": {
+    "seconds": 108,
+    "headRms": 0.0928,
+    "tailRms": 0.0798,
+    "seamDelta": 0.00579,
+    "peak": 0.7524
+  }
+}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { AudioControl } from "../../audio/AudioControl.tsx";
 import { audio } from "../../audio/manager.ts";
+import { gameplayScore } from "../../audio/score.ts";
 import { useT } from "../../i18n/index.ts";
 import { sendGame, useGame, useStore } from "../../store.ts";
 import { OPENINGS } from "./definitions.ts";
@@ -19,7 +20,7 @@ export function ScenarioExperience({ children }: { children: ReactNode }) {
   const acknowledging = useRef(false);
   const game = useRef<HTMLDivElement>(null);
   const key = openingKey(g);
-  const year = g.temporal?.locations[g.viewerId]?.year;
+  const score = gameplayScore(g);
   const finish = useCallback(() => { setPlaying(false); setHandoff(false); setHint(true); }, []);
   const beginHandoff = useCallback(() => setHandoff(true), []);
 
@@ -27,11 +28,12 @@ export function ScenarioExperience({ children }: { children: ReactNode }) {
   useLayoutEffect(() => audio.acquire(), []);
   useEffect(() => { if (playing) rememberOpening(key); }, [key, playing]);
   useEffect(() => {
-    if (!playing || handoff) audio.tension(.65);
-    const firstTheme = definition.mix(definition.scenes[0].id, 0).theme ?? definition.introTheme;
-    const ambient = g.scenarioId === "S03_INCIDENT_ZERO" && year === "Y1996" ? "scenario03_1996_ambient" : definition.ambientTheme;
-    audio.setTheme(playing && !handoff ? firstTheme : ambient);
-  }, [definition, playing, handoff, year, g.scenarioId]);
+    // The cinematic owns its mix until handoff; background server phase changes
+    // must not reset an already-playing opening cue.
+    if (playing && !handoff) return;
+    audio.tension(.65);
+    audio.setTheme(score);
+  }, [playing, handoff, score]);
   useEffect(() => {
     // Existing readiness is acknowledged independently of cinematic playback.
     if (status !== "online" || g.phase !== "INTRO" || g.sequence?.acks.includes(g.viewerId) || acknowledging.current) return;

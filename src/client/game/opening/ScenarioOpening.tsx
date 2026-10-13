@@ -59,8 +59,8 @@ export function ScenarioOpening({ definition, names = [], onComplete, onHandoff 
     onKeyDown={(event) => {
       if (event.key === "Escape") { event.preventDefault(); skip(); }
       if (event.key === "Tab") {
-        const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")];
-        const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        const buttons = [...event.currentTarget.querySelectorAll<HTMLElement>("button:not(:disabled), summary, a[href]")].filter((element) => element.getClientRects().length > 0);
+        const index = buttons.indexOf(document.activeElement as HTMLElement);
         event.preventDefault();
         buttons[(index + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length]?.focus();
       }

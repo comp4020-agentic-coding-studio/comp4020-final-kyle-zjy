@@ -1,0 +1,143 @@
+Fate Instance — Music credits
+
+Kevin MacLeod (incompetech.com)
+Licensed under Creative Commons: By Attribution 4.0
+https://creativecommons.org/licenses/by/4.0/
+
+Edits: excerpts, tail-to-head crossfades, loudness normalization and MP3 encoding.
+Recordings/compositions: Kevin MacLeod. Game integration and edits: this project.
+
+Dark Walk
+ISRC: USUAN1100468
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100468
+Asset: /audio/music/darkWalk.mp3
+
+Measured Paces
+ISRC: USUAN1100164
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100164
+Asset: /audio/music/measuredPaces.mp3
+
+Lightless Dawn
+ISRC: USUAN1100655
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100655
+Asset: /audio/music/lightlessDawn.mp3
+
+Unseen Horrors
+ISRC: USUAN1400043
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400043
+Asset: /audio/music/unseenHorrors.mp3
+
+Blue Feather
+ISRC: USUAN1100524
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100524
+Asset: /audio/music/blueFeather.mp3
+
+Shadowlands 1 - Horizon
+ISRC: USUAN1700034
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700034
+Asset: /audio/music/horizon.mp3
+
+Lost Frontier
+ISRC: USUAN1300039
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1300039
+Asset: /audio/music/lostFrontier.mp3
+
+Industrial Cinematic
+ISRC: USUAN1600047
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600047
+Asset: /audio/music/industrial.mp3
+
+The Complex
+ISRC: USUAN1300025
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1300025
+Asset: /audio/music/complex.mp3
+
+Immersed
+ISRC: USUAN1600010
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600010
+Asset: /audio/music/immersed.mp3
+
+Echoes of Time
+ISRC: USUAN1300029
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1300029
+Asset: /audio/music/echoes.mp3
+
+Crypto
+ISRC: USUAN1600013
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600013
+Asset: /audio/music/crypto.mp3
+
+Comfortable Mystery
+ISRC: USUAN1100287
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100287
+Asset: /audio/music/vintage.mp3
+
+Cognitive Dissonance
+ISRC: USUAN1100289
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100289
+Asset: /audio/music/dissonance.mp3
+
+Darkest Child
+ISRC: USUAN1100783
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100783
+Asset: /audio/music/darkestChild.mp3
+
+Dark Fog
+ISRC: USUAN1300031
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1300031
+Asset: /audio/music/darkFog.mp3
+
+Decisions
+ISRC: USUAN1100756
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100756
+Asset: /audio/music/decisions.mp3
+
+Despair and Triumph
+ISRC: USUAN1400012
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400012
+Asset: /audio/music/despair.mp3
+
+Night on the Docks - Piano
+ISRC: USUAN1100135
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100135
+Asset: /audio/music/docks.mp3
+
+Covert Affair
+ISRC: USUAN1100795
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100795
+Asset: /audio/music/covert.mp3
+
+I Knew a Guy
+ISRC: USUAN1100199
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100199
+Asset: /audio/music/knew.mp3
+
+Deadly Roulette
+ISRC: USUAN1600033
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600033
+Asset: /audio/music/roulette.mp3
+
+Dark Standoff
+ISRC: USUAN1100268
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100268
+Asset: /audio/music/standoff.mp3
+
+Darkening Developments
+ISRC: USUAN1100267
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100267
+Asset: /audio/music/developments.mp3
+
+Oppressive Gloom
+ISRC: USUAN1100885
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100885
+Asset: /audio/music/gloom.mp3
+
+Comfortable Mystery 2
+ISRC: USUAN1100537
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100537
+Asset: /audio/music/vintageEnding.mp3
+
+Aftermath
+ISRC: USUAN1100575
+https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100575
+Asset: /audio/music/aftermath.mp3
