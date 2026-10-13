@@ -1,13 +1,11 @@
 import type { GameState } from "../../../shared/game/state.ts";
-import { lotForRound04 } from "../../../shared/game/scenario04/lots.ts";
 import { AUCTION_CONFIG04 } from "../../../shared/game/scenario04/config.ts";
 import { characterSkill } from "../../../shared/game/skills.ts";
 import { m } from "../../../shared/i18n/msg.ts";
 import { log } from "../context.ts";
 import { createScenario01, type Seat } from "../create.ts";
 import { START_FATE, START_SANITY } from "../../../shared/game/scenario01/content.ts";
-import { shuffle } from "../rng.ts";
-import { LOTS04 } from "../../../shared/game/scenario04/lots.ts";
+import { generateAuctionPool04 } from "./pool.ts";
 
 export function createScenario04(sessionId: string, seats: Seat[], seed: string, now: number): GameState {
   const s = createScenario01(sessionId, seats, seed, now);
@@ -30,9 +28,11 @@ export function createScenario04(sessionId: string, seats: Seat[], seed: string,
   s.temporal = null;
   s.log = [];
   s.logSeq = 0;
+  const pool = generateAuctionPool04(s);
   s.auction = {
     seatOrder: ordered,
-    currentLot: lotForRound04(1).id,
+    lotOrder: pool.order,
+    currentLot: pool.order[0],
     currentBid: 0,
     currentBidReal: 0,
     currentBidder: null,
@@ -41,13 +41,15 @@ export function createScenario04(sessionId: string, seats: Seat[], seed: string,
     roundStartPlayerId: ordered[0],
     passedPlayers: [],
     auctionOpen: false,
+    raiseBlockedPlayers: [],
+    hollowCoinOwner: null,
     final: null,
     auctionHistory: [],
     itemInstances: {},
     nextItemInstanceNumber: 1,
-    players: Object.fromEntries(ordered.map((id) => [id, { blackChips: AUCTION_CONFIG04.startingBlackChips, debt: 0, items: [], usedLotEffects: [], armedBlackDie: 0, armedCoin: 0, activeCrown: false, sanityWard: false, itemNoticeSeq: 0, itemNotice: null, redContractRemainingRounds: 0, redContractStartsRound: 0, privateIntel: [], reads: [], glassEyeSnapshots: [], nextRollPenalty: 0 }])),
+    players: Object.fromEntries(ordered.map((id) => [id, { blackChips: AUCTION_CONFIG04.startingBlackChips, debt: 0, items: [], usedLotEffects: [], armedBlackDie: 0, armedCoin: 0, activeCrown: false, sanityWard: false, itemNoticeSeq: 0, itemNotice: null, redContractRemainingRounds: 0, redContractStartsRound: 0, privateIntel: [], reads: [], glassEyeSnapshots: [], nextRollPenalty: 0, bellArmed: false, blankChequeArmed: false, mirrorArmed: false, invitationReady: false, glassCupArmed: false, membershipArmed: false, membershipUsedRound: -1, secondWillBeneficiaryId: null, finalItemModifiers: [], privateObservations: [] }])),
     publicIntel: [],
-    counterfeitLots: shuffle(s, LOTS04.slice(0, 9).map((lot) => lot.id)).slice(0, 2),
+    counterfeitLots: pool.counterfeit,
     deal: null,
     challenge: null,
     stats: { highestBid: 0, challengesWon: {}, investigations: {}, deals: 0, borrows: {} },

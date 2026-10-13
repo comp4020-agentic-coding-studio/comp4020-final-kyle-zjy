@@ -277,8 +277,10 @@ The auction retains the Scenario 03 screen structure and shared HUD. The
 central panel is a dark, gold-edged table: lot and price in the middle, fixed
 clockwise seats nearby on wide screens (opposed for two players), and a simple
 grid on phones. The own player HUD is centered within the Scenario 04 dock.
-The current public lot card shows its name and distinct symbol with bidding
-status, but never prints its item effect or unrevealed authenticity. Certified
+The current public lot card shows its name, distinct symbol, atmospheric
+description, and bidding status, but never prints its item effect or unrevealed
+authenticity. Every ordinary item has a compact line icon; a holder's private
+inventory shows the exact effect and any legal target or timing choices. Certified
 intel stays in its separate, explicitly exposed section.
 The original auction progress bar remains in the shared top bar. A separate
 Scenario 04 meter under the objective gauges irreversible hall Collapse from
@@ -306,6 +308,11 @@ both players confirm before the table resumes. These notices use text as well
 as colour. Active auction effects and
 temporary penalties use the same chips as the own ability, immediately after
 it; chips disappear when the server state says the effect ended.
+New item use notices share one brief motion shell. A counterfeit receives the
+same owner-only alert regardless of item; passive fakes confirm on their first
+trigger. Red Thread Scissors adds a cancel control to a pending deal, and the
+trade preview states the Debt consequence of Stranger's IOU. Blackjack shows
+the burnt card and replacement in order before returning to the hand.
 
 Round 10 replaces the round table and turn dock with a mobile-first Final
 Settlement board. The owner's Debt tier and starting negative Final Chips are

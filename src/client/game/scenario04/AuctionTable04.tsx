@@ -1,6 +1,6 @@
 import { LOT_ICON04 } from "./lotVisuals.ts";
 import { getCharacterById } from "../../../shared/characters/roster/index.ts";
-import { lotForRound04 } from "../../../shared/game/scenario04/lots.ts";
+import { LOTS04 } from "../../../shared/game/scenario04/lots.ts";
 import type { PlayerView } from "../../../shared/game/state.ts";
 import { auctionIntelText, auctionLotText } from "../../../shared/i18n/scenario04.ts";
 import { Avatar } from "../../components/Avatar.tsx";
@@ -16,7 +16,7 @@ export function AuctionTable04({ g }: { g: PlayerView }) {
   const last = a.auctionHistory.at(-1);
   const state = a.auctionOpen ? "open" : last?.winnerId ? "sold" : "unsold";
   const who = (id: string | null) => id ? g.players[id]?.nickname ?? t("s4.table.none") : t("s4.table.none");
-  const startingBid = lotForRound04(Math.max(1, g.round)).startingBid;
+  const startingBid = LOTS04.find((entry) => entry.id === a.currentLot)?.startingBid ?? 1;
   const hostLines = ["s4.host.round1", "s4.host.round2", "s4.host.round3", "s4.host.round4", "s4.host.round5", "s4.host.round6", "s4.host.round7", "s4.host.round8", "s4.host.round9"] as const;
   return <section aria-label={t("s4.table.aria")} className="mx-auto w-full max-w-6xl min-w-0 px-3 sm:px-4">
     <div className="relative overflow-hidden rounded-3xl border border-gold/30 bg-[#0b1028]/90 px-4 py-5 shadow-[inset_0_0_60px_#05060d] sm:px-8">
@@ -30,6 +30,7 @@ export function AuctionTable04({ g }: { g: PlayerView }) {
         <p className="label text-signal">{t("s4.top.round", { n: Math.max(1, g.round) })} · {t("s4.table.lot")}</p>
         <div className="mx-auto mt-3 flex size-16 items-center justify-center rounded-2xl border border-gold/40 bg-gold/10 text-gold-bright" aria-hidden="true"><Icon name={LOT_ICON04[a.currentLot] ?? "USE_LOT"} size={36} /></div>
         <h1 className="mt-1 font-display text-3xl text-gold-bright sm:text-4xl">{lot.name}</h1>
+        <p className="mt-2 text-sm italic text-mist">{lot.description}</p>
         {!!a.publicIntel.length && <div className="mt-3 rounded-xl border border-signal/30 p-2 text-left text-xs text-signal"><p className="label">{t("s4.table.publicIntel")}</p>{a.publicIntel.map((id) => <p key={id} className="mt-1">{auctionIntelText(locale, id)}</p>)}</div>}
         <div className="mt-4 grid grid-cols-1 gap-2 text-left sm:grid-cols-3">
           <Stat label={t(a.currentBidder ? "s4.table.bid" : "s4.table.startingBid")} value={a.currentBidder ? String(a.currentBid) : String(startingBid)} />

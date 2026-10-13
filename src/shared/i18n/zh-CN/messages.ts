@@ -4,6 +4,12 @@
 export const ZH_MESSAGES: Record<string, string> = {
   "Choose a known developer checkpoint.": "请选择有效的开发者测试节点。",
   "This command is only available in a developer test room.": "此操作仅适用于开发者测试房间。",
+  "This item sandbox is available only in a Scenario 04 developer room.": "此拍品沙盒仅在第四副本的开发者房间可用。",
+  "Your membership has already covered your last AP action this round.": "会员卡已支付你本轮最后一次 AP 行动。",
+  "Only the player who drew that card may burn it.": "只有抽到那张牌的玩家能烧掉它。",
+  "Burn the last card and draw again": "烧掉最后一张牌，重新抽牌",
+  "Use Reversed Tarot": "使用逆位塔罗牌",
+  "Turn the raw die to its opposite face before the outcome.": "在结算前将原始骰点翻到相对的一面。",
   "Choose another bidder to challenge.": "请选择另一名竞拍者挑战。",
   "Choose a positive whole-number wager.": "请选择正整数赌注。",
   "You cannot wager more Black Chips than you hold.": "赌注不能超过持有的黑筹码。",

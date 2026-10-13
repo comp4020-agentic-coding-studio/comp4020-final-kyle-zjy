@@ -53,6 +53,21 @@ const PATHS: Record<string, string> = {
   S4_CROWN: "M3 8l4 4 5-7 5 7 4-4-2 11H5zM5 19h14",
   S4_DEVIL_KEY: "M7 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zM11 12h10M17 12v4M20 12v3M4 5l2 2M10 4l-1 3",
   S4_EXIT: "M4 3h12v18H4zM9 12h11M16 8l4 4-4 4M12 15h.01",
+  S4_BELL: "M7 17h10l-2-3V9a3 3 0 0 0-6 0v5zM10 20h4M12 3v2",
+  S4_TICKET: "M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4zM12 6v12",
+  S4_CHEQUE: "M3 5h18v14H3zM7 10h10M7 14h6M17 15l2 1",
+  S4_SCISSORS: "M6 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM6 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 6l12 12M8 18 20 6",
+  S4_GLOVE: "M5 12V8a1 1 0 0 1 2 0v4-6a1 1 0 0 1 2 0v5-7a1 1 0 0 1 2 0v7-5a1 1 0 0 1 2 0v8l2-2a2 2 0 0 1 3 2l-4 8H9z",
+  S4_MIRROR: "M6 3h12v18H6zM9 6l3 3M9 14l6-6M13 18l2-2",
+  S4_WATCH: "M12 7v5l3 2M9 2h6M12 4a9 9 0 1 0 0 18 9 9 0 0 0 0-18z",
+  S4_BADGE: "M5 4h14v16H5zM9 4v4h6V4M8 14h8M11 11h2",
+  S4_STAMP: "M8 13h8l2 5H6zM5 20h14M10 8V5a2 2 0 0 1 4 0v3l2 5H8z",
+  S4_CARD: "M5 3h14v18H5zM12 7l4 5-4 5-4-5z",
+  S4_SCROLL: "M6 4h12v16H6a2 2 0 0 1 0-4h12M9 8h6M9 12h6",
+  S4_ENVELOPE: "M3 6h18v12H3zM3 7l9 7 9-7",
+  S4_CUP: "M6 6h12l-2 12H8zM7 3h10M9 21h6",
+  S4_BOOK: "M4 4h8a3 3 0 0 1 3 3v14a3 3 0 0 0-3-3H4zM20 4h-5a3 3 0 0 0-3 3v14a3 3 0 0 1 3-3h5z",
+  S4_MATCH: "M6 20 16 6M15 5c0-2 4-3 4 1 0 2-2 3-4 3zM4 21h8",
 };
 
 export function Icon({ name, size = 22, className = "" }: { name: keyof typeof PATHS | string; size?: number; className?: string }) {

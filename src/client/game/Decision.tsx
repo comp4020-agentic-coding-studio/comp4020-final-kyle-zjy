@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import { EVENT_BY_ID } from "../../shared/game/events.ts";
 import { auctionIntelText, auctionLotText } from "../../shared/i18n/scenario04.ts";
+import { itemLotId04 } from "../../shared/game/scenario04/lots.ts";
 import type { PlayerView, PublicWindow } from "../../shared/game/state.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { useCharacterText, useFormat, useLocale, useT } from "../i18n/index.ts";
@@ -76,7 +77,11 @@ function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
           {w.kind === "S4_DEAL" && g.auction?.deal && (() => {
             const deal = g.auction.deal;
             const asset = deal.forPass ? t("s4.decision.pass") : deal.giveIntel ? auctionIntelText(locale, deal.giveIntel) : deal.forIntel ? auctionIntelText(locale, deal.forIntel) : deal.giveItem ? auctionLotText(locale, deal.giveItem).name : deal.forItem ? auctionLotText(locale, deal.forItem).name : "·";
-            return <p className="mt-2 rounded-xl border border-gold/30 p-3 text-sm">{t("s4.decision.deal", { from: g.players[deal.from].nickname, to: g.players[deal.to].nickname, pay: deal.chips, receive: deal.receiveChips ?? 0, asset })}</p>;
+            return <div className="mt-2 rounded-xl border border-gold/30 p-3 text-sm"><p>{t("s4.decision.deal", { from: g.players[deal.from].nickname, to: g.players[deal.to].nickname, pay: deal.chips, receive: deal.receiveChips ?? 0, asset })}</p>{[deal.giveItem, deal.forItem].some((id) => id && itemLotId04(id) === "LOT_29") && <p className="mt-2 font-semibold text-ember">{t("s4.decision.iouWarning")}</p>}</div>;
+          })()}
+          {w.kind === "S4_DEAL" && g.auction?.deal && [g.auction.deal.from, g.auction.deal.to].includes(g.viewerId) && (() => {
+            const scissors = g.auction.players[g.viewerId].items.find((id) => itemLotId04(id) === "LOT_14");
+            return scissors ? <button className="btn btn-ghost mt-2 min-h-12 w-full" onClick={() => void sendGame({ type: "USE_LOT", lotId: scissors })}>{t("s4.decision.cutDeal")}</button> : null;
           })()}
           {(w.kind === "S4_BLACKJACK" || w.kind === "S4_BLACKJACK_RESULT") && g.auction?.challenge && <div className="mt-2 grid gap-1 rounded-xl border border-gold/30 p-3 text-sm">
             {([g.auction.challenge.target, g.auction.challenge.challenger] as const).map((id) => {
@@ -89,8 +94,9 @@ function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
             <p className="mt-1 text-sm text-moon">{t("s4.decision.bustCard", { name: g.players[g.auction.challenge.bust.playerId].nickname, card: blackjackCard(g.auction.challenge.bust.card), total: g.auction.challenge.bust.total })}</p>
             <p className="mt-2 font-display text-2xl font-semibold text-gold-bright">{t(g.auction.challenge.bust.playerId === g.viewerId ? "s4.decision.youLost" : "s4.decision.opponentBustWon")}</p>
           </div>}
+          {g.auction?.challenge?.burntReplacement && (w.kind === "S4_BLACKJACK" || w.kind === "S4_BLACKJACK_RESULT") && <p role="status" className="mt-2 rounded-xl border border-ember/60 p-2 text-sm">{t("s4.decision.burntCard", { old: blackjackCard(g.auction.challenge.burntReplacement.discarded), fresh: blackjackCard(g.auction.challenge.burntReplacement.replacement) })}</p>}
           <div className="mt-4 grid gap-2">
-            {w.options.map((o, i) => (
+            {w.options.filter((o) => o.id !== "BURN" || g.auction?.challenge?.bust?.playerId === g.viewerId).map((o, i) => (
               <button
                 key={o.id}
                 className={`btn min-h-14 flex-col items-start gap-0 rounded-xl px-4 py-2 text-left ${i === 0 ? "btn-gold" : "btn-ghost"}`}
@@ -118,6 +124,8 @@ function Waiting({ g, w }: { g: PlayerView; w: PublicWindow }) {
   const waitingOn = w.addressees.filter((id) => !w.answeredBy.includes(id)).map((id) => g.players[id]?.nickname ?? t("common.someone"));
   const chosen = w.myAnswer ? w.options.find((o) => o.id === w.myAnswer) : null;
   const answered = chosen ? fmt(chosen.label) : null;
+  const scissors = w.kind === "S4_DEAL" && g.auction?.deal && [g.auction.deal.from, g.auction.deal.to].includes(g.viewerId)
+    ? g.auction.players[g.viewerId].items.find((id) => itemLotId04(id) === "LOT_14") : null;
   return (
     <motion.div className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+108px)] z-30 flex justify-center px-4" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
       <div className="glass flex max-w-full min-w-0 items-center gap-2 rounded-full px-4 py-2 text-sm" role="status">
@@ -128,6 +136,7 @@ function Waiting({ g, w }: { g: PlayerView; w: PublicWindow }) {
             ? t("decision.answered", { title: fmt(w.title), n: w.answeredBy.length, of: w.addressees.length })
             : t("decision.waitingFor", { names: waitingOn.join(t("common.listSep")) })}
         </span>
+        {scissors && <button className="btn btn-ghost pointer-events-auto min-h-12" onClick={() => void sendGame({ type: "USE_LOT", lotId: scissors })}>{t("s4.decision.cutDeal")}</button>}
       </div>
     </motion.div>
   );

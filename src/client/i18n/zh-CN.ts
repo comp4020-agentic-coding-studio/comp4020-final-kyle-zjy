@@ -285,6 +285,8 @@ export const zhCN: Catalog = {
   "action.FINAL_BID": "最终出价",
   "action.FINAL_SHOWDOWN_PICK": "盲选一张牌",
   "action.FINAL_CONTINUE": "继续",
+  "action.DEV_GRANT_LOT": "发放测试拍品",
+  "action.DEV_GENERATE_POOL": "生成测试拍品池",
   "action.RESPOND": "回应",
   "action.ACK_SEQUENCE": "继续",
   "dock.why": "{action}：{reason}",

@@ -15,6 +15,13 @@ export function Effects04({ g, me }: { g: PlayerView; me: PublicPlayerState }) {
     {a.redContractRemainingRounds > 0 && <Chip id="red-contract">{g.round < (a.redContractStartsRound ?? 0) ? t("s4.effect.contractPending") : t("s4.effect.contractActive", { n: a.redContractRemainingRounds })}</Chip>}
     {a.sanityWard && <Chip id="nameless-file">{t("s4.effect.ward")}</Chip>}
     {a.activeCrown && <Chip id="black-crown">{t("s4.effect.crown")}</Chip>}
+    {a.bellArmed && <Chip id="silent-bell">{t("s4.effect.bell")}</Chip>}
+    {g.auction?.raiseBlockedPlayers?.includes(g.viewerId) && <Chip id="bell-block" negative>{t("s4.effect.bellBlocked")}</Chip>}
+    {a.blankChequeArmed && <Chip id="blank-cheque">{t("s4.effect.cheque")}</Chip>}
+    {a.mirrorArmed && <Chip id="mirror">{t("s4.effect.mirror")}</Chip>}
+    {a.invitationReady && <Chip id="invitation">{t("s4.effect.invitation")}</Chip>}
+    {a.glassCupArmed && <Chip id="dice-cup">{t("s4.effect.diceCup")}</Chip>}
+    {a.membershipArmed && <Chip id="membership">{t("s4.effect.membership")}</Chip>}
     {me.lost && <Chip id="lost" negative>{t("s4.effect.lost")}</Chip>}
     {(a.nextRollPenalty ?? 0) < 0 && <Chip id="roll-penalty" negative>{t("s4.effect.rollPenalty", { n: a.nextRollPenalty! })}</Chip>}
   </>;

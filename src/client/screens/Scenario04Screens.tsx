@@ -96,12 +96,13 @@ export function Scenario04Ending() {
   const winner = g.auction?.final?.winnerId;
   const own = g.players[g.viewerId];
   const personal = !winner ? "unclaimed" : winner !== g.viewerId ? "trapped" : type === "debt" ? "winnerDebt" : own.lost || own.sanity <= 1 ? "winnerFrayed" : "winner";
+  const beneficiary = g.auction?.players[g.viewerId].secondWillBeneficiaryId;
   const acked = g.sequence?.acks.includes(g.viewerId) ?? false;
   return <Frame><section className="tarot mx-auto mt-16 max-w-xl p-6 text-center">
     <h1 className="font-display text-4xl text-gold-bright">{t(`s4.ending.${type}.title`)}</h1>
     <p className="mt-4 text-mist">{t(`s4.ending.${type}.body`)}</p>
     <p className="mt-4 font-mono text-sm text-ember">{t("s4.ending.collapse", { n: g.collapse, max: g.collapseMax })}</p>
-    <div className="mt-6 rounded-xl border border-gold/30 bg-night/70 p-4 text-left"><p className="label text-gold">{t("s4.ending.personal.label")}</p><p className="mt-2 leading-relaxed text-moon">{t(`s4.ending.personal.${personal}`)}</p></div>
+    <div className="mt-6 rounded-xl border border-gold/30 bg-night/70 p-4 text-left"><p className="label text-gold">{t("s4.ending.personal.label")}</p><p className="mt-2 leading-relaxed text-moon">{t(`s4.ending.personal.${personal}`)}</p>{beneficiary && beneficiary === winner && winner !== g.viewerId && <p className="mt-2 text-sm text-gold-bright">{t("s4.ending.secondBeneficiary", { name: g.players[beneficiary].nickname })}</p>}</div>
     <button className="btn btn-gold mt-8 w-full" disabled={acked} onClick={() => void sendGame({ type: "ACK_SEQUENCE" })}>{acked ? t("s4.waiting") : t("s4.results")}</button>
   </section><HostSkip g={g} /></Frame>;
 }

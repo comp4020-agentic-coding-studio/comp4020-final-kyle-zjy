@@ -15,6 +15,8 @@ import { applyEffects } from "./effects.ts";
 import { onResume, openWindow } from "./windows.ts";
 import { m, ref } from "../../shared/i18n/msg.ts";
 import { debtPenalty04 } from "../../shared/game/scenario04/debt.ts";
+import { itemLotId04 } from "../../shared/game/scenario04/lots.ts";
+import type { IntelId04 } from "../../shared/game/scenario04/types.ts";
 import type { Msg } from "../../shared/i18n/types.ts";
 
 export const tierOf = (n: number): RollTier => (n <= 1 ? "DISASTER" : n <= 3 ? "FAIL" : n <= 5 ? "SUCCESS" : "PERFECT");
@@ -143,13 +145,15 @@ function armedStakes(ctx: Ctx, p: PlayerGameState): RollContext["stakes"] {
 function offerFate(ctx: Ctx, p: PlayerGameState, roll: Roll): void {
   const room = Math.min(fateLimit(ctx), p.fate, 6 - roll.final);
   const stored = p.storedResult !== null && p.storedResult !== roll.final;
-  if (!roll.modifiable || (room <= 0 && !stored) || p.away) return reactionStage(ctx);
+  const tarot = roll.modifiable && roll.purpose.startsWith("S4_") ? ctx.s.auction?.players[p.playerId].items.find((id) => itemLotId04(id) === "LOT_20") : null;
+  if (!roll.modifiable || (room <= 0 && !stored && !tarot) || p.away) return reactionStage(ctx);
   const options: WindowOption[] = Array.from({ length: Math.max(0, room) + 1 }, (_, n) => ({
     id: String(n),
     label: n === 0 ? m`Keep it` : m`Spend ${n} Fate`,
     detail: n ? m`${roll.final} → ${roll.final + n} (${TIER_LABEL[tierOf(roll.final + n)]})` : m`${roll.final} (${TIER_LABEL[roll.tier]})`,
   }));
   if (stored) options.push({ id: "STORED", label: m`Use your recorded ${p.storedResult!}`, detail: m`${roll.final} → ${p.storedResult!} (${TIER_LABEL[tierOf(p.storedResult!)]}), once` });
+  if (tarot) options.push({ id: "TAROT", label: m`Use Reversed Tarot`, detail: m`Turn the raw die to its opposite face before the outcome.` });
   openWindow(ctx, {
     kind: "FATE_SPEND",
     title: m`Bend fate?`,
@@ -169,6 +173,27 @@ onResume("ROLL_FATE", (ctx, w, answers) => {
   const roll = ctx.s.roll;
   if (!roll || roll.done) return;
   const p = ctx.s.players[roll.playerId];
+  if (answers[roll.playerId] === "TAROT") {
+    const holder = ctx.s.auction?.players[p.playerId];
+    const tarot = holder?.items.find((id) => itemLotId04(id) === "LOT_20");
+    if (tarot && holder) {
+      holder.items.splice(holder.items.indexOf(tarot), 1);
+      holder.usedLotEffects.push(tarot);
+      const instance = ctx.s.auction!.itemInstances[tarot];
+      instance.consumed = true;
+      holder.itemNotice = { seq: ++holder.itemNoticeSeq, at: ctx.now, lotId: tarot, result: instance.counterfeit ? "COUNTERFEIT" : "ACTIVATED" };
+      if (instance.counterfeit) {
+        const intel = `${instance.lotId}_COUNTERFEIT` as IntelId04;
+        if (!holder.privateIntel.includes(intel)) holder.privateIntel.push(intel);
+      } else {
+      roll.raw = 7 - roll.raw;
+      roll.final = roll.modifiers.some((entry) => entry.source.k === "The Black Die") ? 6 : clampDie(roll.raw + roll.modifiers.reduce((sum, entry) => sum + entry.delta, 0));
+      roll.tier = tierOf(roll.final);
+      cue(ctx, "S4_TAROT", { playerId: p.playerId, raw: roll.raw, final: roll.final });
+      }
+    }
+    return offerFate(ctx, p, roll);
+  }
   if (answers[roll.playerId] === "STORED" && p.storedResult !== null) {
     setRollValue(ctx, roll, p.storedResult, m`${p.nickname} uses a recorded result`);
     p.storedResult = null;

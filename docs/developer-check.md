@@ -36,6 +36,12 @@ roster. Nothing mutates a previously joined normal room.
 seed, starts the engine, acknowledges the intro, and uses existing actions,
 `hostSkip`, round progression, repair, votes, pickup/jump/storage, interventions,
 resolve-history, auction, final settlement/bid/reveal, and Blackjack handlers.
+Scenario 04 developer rooms also expose an Auction Item Sandbox in the controls
+menu. Its server-validated intents grant one selected genuine or counterfeit
+ordinary item to the current seat and generate a seeded nine-lot preview. Only
+the developer projection includes the preview, seed, and counterfeit labels;
+ordinary player snapshots omit them. Quick buttons cover Blank Cheque, Broken
+Stopwatch, Ownerless Number, Night Ledger, Burnt Playing Card, and Last Match.
 Fate/reaction windows settle through the same resolver as normal play.
 
 Fixture preparation is explicit rather than a claim that the entire preceding

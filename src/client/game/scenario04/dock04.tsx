@@ -3,7 +3,7 @@ import type { GameAction } from "../../../shared/game/actions.ts";
 import { itemLotId04, LOTS04 } from "../../../shared/game/scenario04/lots.ts";
 import type { LotId04 } from "../../../shared/game/scenario04/types.ts";
 import type { PlayerView } from "../../../shared/game/state.ts";
-import { auctionIntelText, auctionLotText } from "../../../shared/i18n/scenario04.ts";
+import { auctionIntelText, auctionLotEffectText, auctionLotText } from "../../../shared/i18n/scenario04.ts";
 import { useLocale, useT } from "../../i18n/index.ts";
 import { PeopleRow, type DockExtension } from "../Dock.tsx";
 import { Effects04 } from "./Effects04.tsx";
@@ -43,17 +43,27 @@ function ItemChoices({ g, send }: { g: PlayerView; send: (action: GameAction) =>
   return <div data-s4-picker="USE_LOT" className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto">
     {mine.items.map((id) => {
       const base = itemLotId04(id);
+      const definition = LOTS04.find((lot) => lot.id === base)!;
       const status = known.includes(`${base}_COUNTERFEIT` as `${`LOT_${string}`}_${string}`) ? "counterfeit" : "available";
       const actionable = (base !== "LOT_06" || mine.debt > 0) && (base !== "LOT_09" || g.players[g.viewerId].sanity > 0 && !mine.sanityWard);
       const text = auctionLotText(locale, id);
-      return base === "LOT_05" ? <div key={id} className="min-w-0 rounded-xl border border-gold/30 p-2">
+      const sources = base === "LOT_05" ? a.auctionHistory.filter((entry) => entry.round < (a.auctionHistory.find((entry) => entry.lotId === "LOT_05")?.round ?? g.round)).map((entry) => entry.lotId)
+        : base === "LOT_15" ? a.auctionHistory.filter((entry) => entry.round > (a.auctionHistory.find((prior) => prior.lotId === "LOT_15")?.round ?? g.round) && entry.winnerId && entry.winnerId !== g.viewerId).map((entry) => entry.lotId)
+        : base === "LOT_24" ? mine.items.filter((item) => item !== id && !known.some((intel) => intel === `${itemLotId04(item)}_AUTHENTIC` || intel === `${itemLotId04(item)}_COUNTERFEIT`)) : [];
+      if (!definition.active || ["LOT_20", "LOT_27", "LOT_29"].includes(base)) return <div key={id} className="min-w-0 rounded-xl border border-indigo/60 p-2 text-sm"><p className="font-semibold">{text.name} · {t("s4.item.passive")}</p><p className="text-xs text-mist">{auctionLotEffectText(locale, id)}</p></div>;
+      return ["LOT_05", "LOT_15", "LOT_17", "LOT_18", "LOT_21", "LOT_24"].includes(base) ? <div key={id} className="min-w-0 rounded-xl border border-gold/30 p-2">
         <p className="text-sm font-semibold">{text.name} · {t(`s4.item.${status}`)}</p>
-        <p className="text-xs text-mist">{text.description}</p>
-        <p className="label mt-2">{t("s4.item.copySource")}</p>
-        <div className="mt-1 grid grid-cols-2 gap-2">{LOTS04.slice(0, 4).map((source) => <button key={source.id} data-s4-copy={source.id} className="btn btn-ghost min-h-12 h-auto min-w-0 whitespace-normal text-xs" onClick={() => send({ type: "USE_LOT", lotId: id, sourceLotId: source.id })}>{auctionLotText(locale, source.id).name}</button>)}</div>
+        <p className="text-xs text-mist">{auctionLotEffectText(locale, id)}</p>
+        <p className="label mt-2">{t(base === "LOT_17" ? "s4.item.chooseRaise" : base === "LOT_18" || base === "LOT_21" ? "s4.item.choosePlayer" : "s4.item.copySource")}</p>
+        <div className="mt-1 grid grid-cols-2 gap-2">{base === "LOT_17"
+          ? Array.from({ length: Math.max(0, Math.min(12, (mine.blackChips ?? 0) - a.currentBid)) }, (_, i) => a.currentBid + i + 1).map((amount) => <button key={amount} className="btn btn-ghost min-h-12" onClick={() => send({ type: "USE_LOT", lotId: id, amount })}>{amount}</button>)
+          : base === "LOT_18" || base === "LOT_21"
+            ? a.seatOrder.filter((playerId) => playerId !== g.viewerId).map((targetId) => <button key={targetId} className="btn btn-ghost min-h-12 h-auto whitespace-normal" onClick={() => send({ type: "USE_LOT", lotId: id, targetId })}>{g.players[targetId].nickname}</button>)
+            : sources.map((source) => <button key={source} data-s4-copy={source} className="btn btn-ghost min-h-12 h-auto min-w-0 whitespace-normal text-xs" onClick={() => send({ type: "USE_LOT", lotId: id, sourceLotId: source })}>{auctionLotText(locale, source).name}</button>)}
+        </div>
       </div> : <button key={id} data-s4-item={id} className="btn btn-ghost min-h-12 h-auto min-w-0 flex-col items-start whitespace-normal text-left" disabled={!actionable} onClick={() => send({ type: "USE_LOT", lotId: id })}>
           <span className="font-semibold">{text.name} · {t(`s4.item.${status}`)}</span>
-          <span className="text-xs text-mist">{text.description}</span>
+          <span className="text-xs text-mist">{auctionLotEffectText(locale, id)}</span>
         </button>;
     })}
   </div>;
@@ -106,6 +116,7 @@ function DealBuilder({ g, send }: { g: PlayerView; send: (action: GameAction) =>
     <p className="label">{t("s4.dock.chips")}</p>
     <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto">{Array.from({ length: Math.min(max, 20) }, (_, i) => i + 1).map((n) => <button key={n} className={`btn min-h-12 ${amount === n ? "btn-gold" : "btn-ghost"}`} onClick={() => setAmount(n)}>{n}</button>)}</div>
     <p className="text-xs text-mist">{t("s4.dock.terms", { from: g.players[g.viewerId].nickname, pay, to: targetId ? g.players[targetId].nickname : "?", receive, asset: label })}</p>
+    {asset && (kind === "SELL_ITEM" || kind === "BUY_ITEM") && itemLotId04(asset as `LOT_${string}`) === "LOT_29" && <p className="rounded-lg border border-ember/60 p-2 text-xs font-semibold text-ember">{t("s4.decision.iouWarning")}</p>}
     <button className="btn btn-gold min-h-12" disabled={!targetId || amount > max || (kind !== "PASS" && !asset)} onClick={() => {
       if (!targetId) return;
       send({ type: "DEAL", targetId, chips: pay, receiveChips: receive, forPass: kind === "PASS", giveIntel: kind === "INTEL" ? asset! : undefined, giveItem: kind === "SELL_ITEM" ? asset! : undefined, forItem: kind === "BUY_ITEM" ? asset! : undefined });

@@ -2,7 +2,7 @@
 // A skill, an item or an event card is just a list of effects; this module is
 // the only place their meaning lives.
 import { FRAGMENTS, isKeyItem, KEY_FOR_ANCHOR, LOCK_FOR_KEY, MAX_SANITY } from "../../shared/game/scenario01/content.ts";
-import { lotForRound04 } from "../../shared/game/scenario04/lots.ts";
+import { lotForAuctionRound04 } from "../../shared/game/scenario04/lots.ts";
 import type { Effect, EffectKind, EffectSubject } from "../../shared/game/effects.ts";
 import { statusLong as statusName } from "../../shared/game/scenario01/statuses.ts";
 import type { Anchor, FragmentType, ItemId, PlayerId } from "../../shared/game/state.ts";
@@ -150,7 +150,7 @@ const H: Registry = {
     const mine = a.players[selfId];
     const targetId = scope.targets[0];
     const other = targetId ? a.players[targetId] : undefined;
-    const lot = lotForRound04(ctx.s.round);
+    const lot = lotForAuctionRound04(ctx.s, ctx.s.round);
     switch (e.mode) {
       case "CHIPS": mine.blackChips += 2; break;
       case "BID": case "WAGER": mine.blackChips++; break;

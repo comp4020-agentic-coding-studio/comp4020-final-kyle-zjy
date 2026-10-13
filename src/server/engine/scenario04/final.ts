@@ -1,5 +1,5 @@
 import type { GameAction } from "../../../shared/game/actions.ts";
-import { debtPenalty04 } from "../../../shared/game/scenario04/debt.ts";
+import { debtPenalty04, finalBidModifier04, GENUINE_ITEM_FINAL_VALUE04 } from "../../../shared/game/scenario04/debt.ts";
 import type { FinalPlayer04 } from "../../../shared/game/scenario04/types.ts";
 import type { GameState } from "../../../shared/game/state.ts";
 import { m } from "../../../shared/i18n/msg.ts";
@@ -64,7 +64,7 @@ export const FINAL_CONVERT04: Spec<Extract<GameAction, { type: "FINAL_CONVERT" }
     else {
       const id = action.lotId!;
       const instance = a.itemInstances[id];
-      gain = instance.counterfeit ? 0 : 2;
+      gain = instance.counterfeit ? 0 : GENUINE_ITEM_FINAL_VALUE04;
       own.items.splice(own.items.indexOf(id), 1);
       instance.consumed = true;
       spent.items.push({ id, gain });
@@ -132,7 +132,7 @@ export const FINAL_BID04: Spec<Extract<GameAction, { type: "FINAL_BID" }>> = {
     final.players[p.playerId].bid = action.amount;
     if (!Object.values(final.players).every((entry) => entry.bid !== null)) return;
     final.stage = "REVEAL";
-    const ranked = a.seatOrder.map((id) => ({ id, bid: final.players[id].bid!, modifier: a.players[id].activeCrown ? 2 : 0 }))
+    const ranked = a.seatOrder.map((id) => ({ id, bid: final.players[id].bid!, modifier: finalBidModifier04(a.players[id]) }))
       .sort((left, right) => (right.bid + right.modifier) - (left.bid + left.modifier));
     const topEffective = ranked[0].bid + ranked[0].modifier;
     final.tiedPlayerIds = ranked.filter(({ bid, modifier }) => bid + modifier === topEffective).map(({ id }) => id);
@@ -161,7 +161,7 @@ export const FINAL_SHOWDOWN_PICK04: Spec<Extract<GameAction, { type: "FINAL_SHOW
     if (showdown.advancingPlayerIds.length === 1) {
       showdown.winnerId = showdown.advancingPlayerIds[0];
       const id = showdown.winnerId;
-      const effectiveBid = final.players[id].bid! + (ctx.s.auction!.players[id].activeCrown ? 2 : 0);
+      const effectiveBid = final.players[id].bid! + finalBidModifier04(ctx.s.auction!.players[id]);
       awardExitRights(ctx, id, effectiveBid);
     }
     for (const entry of Object.values(final.players)) entry.revealReady = false;

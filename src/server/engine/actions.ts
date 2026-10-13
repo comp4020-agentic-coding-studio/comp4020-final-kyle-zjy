@@ -22,6 +22,7 @@ import { list, m, ref } from "../../shared/i18n/msg.ts";
 import type { Msg } from "../../shared/i18n/types.ts";
 import { characterSkill } from "../../shared/game/skills.ts";
 import { rulesFor, type ActionSet } from "./scenario.ts";
+import { itemLotId04 } from "../../shared/game/scenario04/lots.ts";
 
 export type Fail = { code: RejectCode; reason: Msg };
 export const fail = (code: RejectCode, reason: Msg): Fail => ({ code, reason });
@@ -32,7 +33,9 @@ const IN_RUN = new Set(["ACT_1", "ACT_2", "ACT_3", "ACT_4"]);
 function turnGate(s: GameState, actorId: PlayerId, cost: number, type: GameActionType): Fail | null {
   if (s.phase === "ENDING" || s.phase === "RESULTS") return fail("GAME_OVER", m`The run is over.`);
   if (!IN_RUN.has(s.phase)) return fail("WRONG_PHASE", m`The run hasn't started yet.`);
+  if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && s.flags.developerCheck === 1 && (type === "DEV_GRANT_LOT" || type === "DEV_GENERATE_POOL")) return null;
   if (s.sequence) return fail("WRONG_PHASE", m`Wait for the scene to finish.`);
+  if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && type === "USE_LOT" && s.pending.at(-1)?.kind === "S4_DEAL" && s.auction?.deal && [s.auction.deal.from, s.auction.deal.to].includes(actorId)) return null;
   if (s.pending.some((w) => w.blocksTable) || (s.roll && !s.roll.done)) return fail("WINDOW_OPEN", m`Wait for the current decision to finish.`);
   if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && s.round === 10 && s.auction?.final) {
     const final = s.auction.final;
@@ -45,7 +48,12 @@ function turnGate(s: GameState, actorId: PlayerId, cost: number, type: GameActio
     return allowed ? null : fail("WRONG_PHASE", m`That action is unavailable in the final auction.`);
   }
   const active = activePlayerId(s);
+  if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && s.auction?.auctionOpen && active !== actorId) {
+    if (type === "USE_LOT" && s.auction.passedPlayers.includes(actorId) && s.auction.players[actorId].items.some((id) => itemLotId04(id) === "LOT_17")) return null;
+    if (type === "DEAL" && s.auction.players[actorId].invitationReady) return null;
+  }
   if (active !== actorId) return fail("NOT_YOUR_TURN", active ? m`It's ${s.players[active].nickname}'s turn.` : m`Nobody is acting right now.`);
+  if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && cost > 0 && s.auction?.players[actorId].membershipUsedRound === s.round) return fail("NO_AP", m`Your membership has already covered your last AP action this round.`);
   if (s.players[actorId].ap < cost) return fail("NO_AP", cost === 2 ? m`Needs 2 action points.` : m`No action points left.`);
   return null;
 }
@@ -365,6 +373,7 @@ export function applyAction(ctx: Ctx, actorId: PlayerId, action: GameAction): vo
   if (action.type === "RESPOND") {
     if (s.phase === "RESULTS") throw new RuleError("GAME_OVER", m`The run is over.`);
     if (typeof action.windowId !== "string" || typeof action.optionId !== "string") throw new RuleError("INVALID", m`Invalid answer.`);
+    if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && s.pending.at(-1)?.kind === "S4_BLACKJACK_RESULT" && action.optionId === "BURN" && s.auction?.challenge?.bust?.playerId !== actorId) throw new RuleError("NOT_YOUR_WINDOW", m`Only the player who drew that card may burn it.`);
     if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && s.pending.at(-1)?.id === action.windowId && s.pending.at(-1)?.kind === "S4_DEAL" && action.optionId === "ACCEPT") {
       const deal = s.auction?.deal;
       if (deal?.to === actorId) {
@@ -387,6 +396,10 @@ export function applyAction(ctx: Ctx, actorId: PlayerId, action: GameAction): vo
   if (gate) throw new RuleError(gate.code, gate.reason);
   p.ap -= cost;
   spec.apply(ctx, p, action);
+  if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && set.apCost[action.type] && cost === 0 && s.auction?.players[actorId].membershipArmed) {
+    s.auction.players[actorId].membershipArmed = false;
+    s.auction.players[actorId].membershipUsedRound = s.round;
+  }
 }
 
 /** What the viewer can do right now, with a reason for everything they can't. */

@@ -5,9 +5,12 @@ import { applyGameAction, startGame } from "../src/server/engine/engine.ts";
 import { project } from "../src/server/engine/project.ts";
 import type { GameState } from "../src/shared/game/state.ts";
 import { SEED, seatsFor, T0 } from "./helpers.ts";
+import { LOTS04 } from "../src/shared/game/scenario04/lots.ts";
 
 function start(n = 4): GameState {
-  let s = startGame(createGame("s4-auction", seatsFor(n), SEED, T0, "S04_UNDERGROUND_AUCTION"), T0).state;
+  const fixture = createGame("s4-auction", seatsFor(n), SEED, T0, "S04_UNDERGROUND_AUCTION");
+  fixture.auction!.lotOrder = LOTS04.slice(0, 9).map((lot) => lot.id);
+  let s = startGame(fixture, T0).state;
   for (const id of s.turnOrder) s = applyGameAction(s, id, { type: "ACK_SEQUENCE" }, T0 + 1).state;
   return s;
 }

@@ -30,6 +30,16 @@ export type AuctionPlayer04 = {
   reads: { targetId: PlayerId; round: number; blackChips: number; hasCurrentIntel: boolean }[];
   glassEyeSnapshots: { round: number; chips: Record<PlayerId, number> }[];
   nextRollPenalty: number;
+  bellArmed?: boolean;
+  blankChequeArmed?: boolean;
+  mirrorArmed?: boolean;
+  invitationReady?: boolean;
+  glassCupArmed?: boolean;
+  membershipArmed?: boolean;
+  membershipUsedRound?: number;
+  secondWillBeneficiaryId?: PlayerId | null;
+  finalItemModifiers?: { lotId: LotId04; amount: number; burnedItemId?: LotId04; burnedValue?: number }[];
+  privateObservations?: { kind: "CHIP_BAND" | "CARD_PEEK" | "ITEM_HINT" | "AUTH_CHECK"; targetId?: PlayerId; lotId?: LotId04; value: string }[];
 };
 
 export type AuctionHistory04 = {
@@ -71,6 +81,8 @@ export type FinalState04 = {
 
 export type AuctionState04 = {
   seatOrder: PlayerId[];
+  /** Persisted draw; absent in rooms created before the expanded pool. */
+  lotOrder?: LotId04[];
   currentLot: LotId04;
   currentBid: number;
   /** The binding amount; currentBid is the effective comparison value. */
@@ -81,11 +93,14 @@ export type AuctionState04 = {
   roundStartPlayerId: PlayerId;
   passedPlayers: PlayerId[];
   auctionOpen: boolean;
+  raiseBlockedPlayers?: PlayerId[];
+  hollowCoinOwner?: PlayerId | null;
   final: FinalState04 | null;
   auctionHistory: AuctionHistory04[];
   /** Server-only identity, authenticity, and use state of offered lots and copies. */
   itemInstances: Record<string, AuctionItemInstance04>;
   nextItemInstanceNumber: number;
+  debugPreview?: { seed: string; order: LotId04[]; counterfeit: LotId04[] } | null;
   players: Record<PlayerId, AuctionPlayer04>;
   publicIntel: IntelId04[];
   /** Secret, seeded choice of exactly two lots among rounds 1–9. */
@@ -104,6 +119,7 @@ export type AuctionState04 = {
     stood: PlayerId[];
     coinAsked: PlayerId[];
     bust: null | { playerId: PlayerId; card: number; total: number; winnerId: PlayerId };
+    burntReplacement?: null | { playerId: PlayerId; discarded: number; replacement: number };
   };
   stats: { highestBid: number; challengesWon: Record<PlayerId, number>; investigations: Record<PlayerId, number>; deals: number; borrows: Record<PlayerId, number> };
 };
@@ -125,6 +141,15 @@ export type PublicAuctionPlayer04 = {
   privateIntel: IntelId04[] | null;
   reads: AuctionPlayer04["reads"] | null;
   glassEyeSnapshots: AuctionPlayer04["glassEyeSnapshots"] | null;
+  privateObservations: NonNullable<AuctionPlayer04["privateObservations"]> | null;
+  finalItemModifiers: NonNullable<AuctionPlayer04["finalItemModifiers"]> | null;
+  secondWillBeneficiaryId: PlayerId | null;
+  bellArmed: boolean;
+  blankChequeArmed: boolean;
+  mirrorArmed: boolean;
+  invitationReady: boolean;
+  glassCupArmed: boolean;
+  membershipArmed: boolean;
 };
 
 export type PublicFinalPlayer04 = {
@@ -155,7 +180,8 @@ export type PublicFinal04 = {
   };
 };
 
-export type PublicAuction04 = Omit<AuctionState04, "players" | "challenge" | "deal" | "final" | "counterfeitLots" | "itemInstances" | "nextItemInstanceNumber"> & {
+export type PublicAuction04 = Omit<AuctionState04, "players" | "challenge" | "deal" | "final" | "counterfeitLots" | "itemInstances" | "nextItemInstanceNumber" | "lotOrder" | "debugPreview"> & {
+  debugPool?: { seed: string; order: LotId04[]; counterfeit: LotId04[]; preview?: { seed: string; order: LotId04[]; counterfeit: LotId04[] } | null };
   players: Record<PlayerId, PublicAuctionPlayer04>;
   final: PublicFinal04 | null;
   deal: AuctionState04["deal"];

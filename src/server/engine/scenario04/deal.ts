@@ -8,6 +8,7 @@ import { fail, type Spec } from "../actions.ts";
 import { cue, log } from "../context.ts";
 import { onResume, openWindow } from "../windows.ts";
 import { noticeAcquiredLot04 } from "./items.ts";
+import { confirmPassiveFake04 } from "./items.ts";
 
 type Offer = Extract<GameAction, { type: "DEAL" }>;
 
@@ -41,6 +42,7 @@ export const DEAL04: Spec<Offer> = {
   check: (s, p, offer) => offer ? legal(s, p, offer) : null,
   apply: (ctx, p, offer) => {
     const a = ctx.s.auction!;
+    a.players[p.playerId].invitationReady = false;
     a.deal = { from: p.playerId, to: offer.targetId, chips: offer.chips, receiveChips: offer.receiveChips, giveIntel: offer.giveIntel as IntelId04 | undefined, giveItem: offer.giveItem as LotId04 | undefined, forIntel: offer.forIntel as IntelId04 | undefined, forItem: offer.forItem as LotId04 | undefined, forPass: offer.forPass };
     openWindow(ctx, {
       kind: "S4_DEAL", title: m`Deal offer`, prompt: m`Accept these enforceable terms?`,
@@ -69,13 +71,19 @@ onResume("S4_DEAL", (ctx, _window, answers) => {
   if (deal.giveIntel && !seller.privateIntel.includes(deal.giveIntel)) seller.privateIntel.push(deal.giveIntel);
   if (deal.giveItem) {
     buyer.items.splice(buyer.items.indexOf(deal.giveItem), 1);
-    seller.items.push(deal.giveItem);
-    noticeAcquiredLot04(seller, deal.giveItem, ctx.now);
+    if (itemLotId04(deal.giveItem) === "LOT_29") {
+      a.itemInstances[deal.giveItem].consumed = true;
+      if (a.itemInstances[deal.giveItem].counterfeit) confirmPassiveFake04(ctx, deal.to, deal.giveItem);
+      else { seller.debt += 2; buyer.debt = Math.max(0, buyer.debt - 1); }
+    } else { seller.items.push(deal.giveItem); noticeAcquiredLot04(seller, deal.giveItem, ctx.now); }
   }
   if (deal.forItem) {
     seller.items.splice(seller.items.indexOf(deal.forItem), 1);
-    buyer.items.push(deal.forItem);
-    noticeAcquiredLot04(buyer, deal.forItem, ctx.now);
+    if (itemLotId04(deal.forItem) === "LOT_29") {
+      a.itemInstances[deal.forItem].consumed = true;
+      if (a.itemInstances[deal.forItem].counterfeit) confirmPassiveFake04(ctx, deal.from, deal.forItem);
+      else { buyer.debt += 2; seller.debt = Math.max(0, seller.debt - 1); }
+    } else { buyer.items.push(deal.forItem); noticeAcquiredLot04(buyer, deal.forItem, ctx.now); }
   }
   if (deal.forPass) a.passedPlayers.push(deal.to);
   a.stats.deals++;

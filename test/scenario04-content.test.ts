@@ -12,7 +12,9 @@ import type { LotId04 } from "../src/shared/game/scenario04/types.ts";
 import { rigNextDie, SEED, seatsFor, T0 } from "./helpers.ts";
 
 function start(): GameState {
-  let s = startGame(createGame("s4-content", seatsFor(3), SEED, T0, "S04_UNDERGROUND_AUCTION"), T0).state;
+  const fixture = createGame("s4-content", seatsFor(3), SEED, T0, "S04_UNDERGROUND_AUCTION");
+  fixture.auction!.lotOrder = LOTS04.slice(0, 9).map((lot) => lot.id);
+  let s = startGame(fixture, T0).state;
   for (const id of s.turnOrder) s = applyGameAction(s, id, { type: "ACK_SEQUENCE" }, T0 + 1).state;
   s.auction!.counterfeitLots = [];
   return s;
@@ -25,9 +27,9 @@ function grant(s: GameState, playerId: string, lotId: LotId04) {
 }
 
 describe("Scenario 04 content and abilities", () => {
-  it("registers ten ordered lots and gives every character an auction ability without changing earlier scenarios", () => {
-    expect(LOTS04).toHaveLength(10);
-    expect(LOTS04.map((lot) => lot.id)).toEqual(Array.from({ length: 10 }, (_, i) => `LOT_${String(i + 1).padStart(2, "0")}`));
+  it("registers thirty catalogued lots and gives every character an auction ability without changing earlier scenarios", () => {
+    expect(LOTS04).toHaveLength(30);
+    expect(LOTS04.map((lot) => lot.id)).toEqual(Array.from({ length: 30 }, (_, i) => `LOT_${String(i + 1).padStart(2, "0")}`));
     expect(LOTS04[4]).toMatchObject({ effect: "COPY" });
     expect(LOTS04.every((lot) => lot.startingBid === 1)).toBe(true);
     expect(LOTS04[7].finalAuctionModifier).toBe(2);

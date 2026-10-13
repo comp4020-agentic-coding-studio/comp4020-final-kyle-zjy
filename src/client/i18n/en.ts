@@ -289,6 +289,8 @@ export const en = {
   "action.FINAL_BID": "Final Bid",
   "action.FINAL_SHOWDOWN_PICK": "Choose hidden card",
   "action.FINAL_CONTINUE": "Continue",
+  "action.DEV_GRANT_LOT": "Grant test item",
+  "action.DEV_GENERATE_POOL": "Generate test pool",
   "action.RESPOND": "Respond",
   "action.ACK_SEQUENCE": "Continue",
   "dock.why": "{action}: {reason}",

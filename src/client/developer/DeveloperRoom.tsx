@@ -9,6 +9,7 @@ import { Private04 } from "../game/scenario04/Private04.tsx";
 import { Drawer } from "../game/Drawer.tsx";
 import { StoryRecap03 } from "../game/scenario03/Private03.tsx";
 import { checkPath, savedChecks } from "./session.ts";
+import { AuctionSandbox04 } from "./AuctionSandbox04.tsx";
 import "../styles/developer.css";
 
 export default function DeveloperRoom({ code, seat }: { code: string; seat: number }) {
@@ -52,7 +53,7 @@ export default function DeveloperRoom({ code, seat }: { code: string; seat: numb
         <details className="developer-tools"><summary className="btn btn-ghost">{t("developer.controls")}</summary><div className="developer-tools-panel"><p>{t("developer.manual")}</p><div className="developer-tool-grid">        <a className="btn btn-ghost" href={checkPath(run, (seat + 1) % 3)} target="_blank" rel="noreferrer">{t("developer.openSeat")}</a>
         <button className="btn btn-ghost" disabled={busy || !ready || g?.phase === "RESULTS"} onClick={() => void advance()}>{t("developer.advance")}</button>
         {ready && g?.temporal && <button className="btn btn-ghost" onClick={() => setInspection("story")}>{t("developer.recap")}</button>}
-        {ready && <button className="btn btn-ghost" onClick={() => setInspection("private")}>{t("developer.private")}</button>}</div></div></details>
+        {ready && <button className="btn btn-ghost" onClick={() => setInspection("private")}>{t("developer.private")}</button>}</div>{ready && g?.auction && <AuctionSandbox04 g={g} />}</div></details>
       </div>
       <p className="developer-manual">{t("developer.manualShort")}</p>
       {error && <p role="alert" className="developer-error">{t("developer.error")}</p>}

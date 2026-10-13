@@ -7,6 +7,8 @@ import { cue, log, type Ctx } from "../context.ts";
 import { shuffle } from "../rng.ts";
 import { onResume, openWindow } from "../windows.ts";
 import { AUCTION_CONFIG04 } from "../../../shared/game/scenario04/config.ts";
+import { consumeLot04, heldLot04 } from "./items.ts";
+import { int } from "../rng.ts";
 
 type Challenge = NonNullable<AuctionState04["challenge"]>;
 
@@ -46,9 +48,10 @@ function turnWindow(ctx: Ctx, challenge: Challenge): void {
 }
 
 function bustWindow(ctx: Ctx, challenge: Challenge): void {
+  const burnt = heldLot04(ctx.s, challenge.bust!.playerId, "LOT_27");
   openWindow(ctx, {
     kind: "S4_BLACKJACK_RESULT", title: m`Blackjack result`, prompt: m`The final card is on the table. Confirm to return to the auction.`,
-    addressees: [challenge.target, challenge.challenger], options: [{ id: "CONTINUE", label: m`Continue` }],
+    addressees: [challenge.target, challenge.challenger], options: [{ id: "CONTINUE", label: m`Continue` }, ...(burnt ? [{ id: "BURN", label: m`Burn the last card and draw again` }] : [])],
     defaultOptionId: "CONTINUE", resume: { kind: "S4_BLACKJACK_RESULT" }, blocksTable: true, ownerId: challenge.bust!.playerId,
   });
 }
@@ -106,6 +109,14 @@ onResume("S4_CHALLENGE", (ctx, _window, answers) => {
   a.players[challenge.challenger].blackChips -= challenge.effectiveWager;
   a.players[challenge.target].blackChips -= challenge.effectiveWager;
   challenge.deck = shuffle(ctx.s, Array.from({ length: 52 }, (_, i) => i % 13 + 1));
+  for (const id of [challenge.target, challenge.challenger]) {
+    const holder = a.players[id];
+    if (holder.glassCupArmed) {
+      holder.glassCupArmed = false;
+      const card = [challenge.deck.at(-1)!, challenge.deck.at(-2)!][int(ctx.s, 2)];
+      (holder.privateObservations ??= []).push({ kind: "CARD_PEEK", value: String(card) });
+    }
+  }
   challenge.targetHand = [challenge.deck.pop()!, challenge.deck.pop()!];
   challenge.challengerHand = [challenge.deck.pop()!, challenge.deck.pop()!];
   challenge.turn = challenge.target;
@@ -156,7 +167,28 @@ onResume("S4_BLACKJACK", (ctx, _window, answers) => {
   settle(ctx, target === challenger ? null : target > challenger ? challenge.target : challenge.challenger);
 });
 
-onResume("S4_BLACKJACK_RESULT", (ctx) => {
-  const winner = ctx.s.auction?.challenge?.bust?.winnerId;
-  if (winner) settle(ctx, winner);
+onResume("S4_BLACKJACK_RESULT", (ctx, _window, answers) => {
+  const challenge = ctx.s.auction?.challenge;
+  const bust = challenge?.bust;
+  if (!challenge || !bust) return;
+  const burnt = heldLot04(ctx.s, bust.playerId, "LOT_27");
+  if (answers[bust.playerId] === "BURN" && burnt) {
+    const genuine = consumeLot04(ctx, bust.playerId, burnt);
+    if (genuine) {
+      const hand = bust.playerId === challenge.target ? challenge.targetHand : challenge.challengerHand;
+      const discarded = hand.pop()!;
+      const replacement = challenge.deck.pop()!;
+      hand.push(replacement);
+      challenge.burntReplacement = { playerId: bust.playerId, discarded, replacement };
+      challenge.bust = null;
+      cue(ctx, "S4_BURNT_CARD", { playerId: bust.playerId, discarded, replacement, total: blackjackTotal04(hand) });
+      if (blackjackTotal04(hand) > 21) {
+        challenge.bust = { playerId: bust.playerId, card: replacement, total: blackjackTotal04(hand), winnerId: bust.winnerId };
+        return bustWindow(ctx, challenge);
+      }
+      return turnWindow(ctx, challenge);
+    }
+    // A counterfeit was used at its first valid trigger; its card had no effect.
+  }
+  settle(ctx, bust.winnerId);
 });

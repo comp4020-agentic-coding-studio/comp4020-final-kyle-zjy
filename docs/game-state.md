@@ -365,8 +365,14 @@ stays in the run). Shields and other protections still apply.
 
 ## Scenario 04 auction state
 
-The ten lots live in `src/shared/game/scenario04/lots.ts`. `auction` records
-fixed seat order, active lot, high bid and bidder, passed seats, each round's
+The 29 ordinary lots and fixed Exit Rights lot live in
+`src/shared/game/scenario04/lots.ts`. A new game uses its persisted seeded RNG
+to draw two intel, two economy, two bidding/social, one gambling, one high
+risk, and one endgame item; it shuffles those nine distinct items and only
+then selects exactly two counterfeits. Older saved games without `lotOrder`
+keep their original fixed nine-lot sequence. The future order and counterfeit
+identities remain server-only. `auction` records fixed seat order, active lot,
+high bid and bidder, passed seats, each round's
 opening seat, settlement history, player Black Chips, Debt, won lots,
 certified private intel, READ results, and Glass Eye snapshots. Black Chips and intel are private;
 Debt and won lots are public. Fate, Sanity, AP, Lost, and the seeded die use
@@ -375,7 +381,12 @@ for the three full rounds after activating Red Contract (1 when Lost). It never
 refreshes on an additional bidding lap. Successful bids and passes remain on
 the same turn until END_TURN; one bid is allowed per turn.
 
-A winner pays only at settlement. The winner opens next round immediately
+A winner pays only at settlement. An armed Blank Cheque shifts one winning
+Black Chip into two Debt. Hollow Coin adds one to both the current effective
+bid and binding payment; if payment becomes unaffordable, that lot is
+withdrawn and the bidder gains one Debt. Bell of Silence blocks each rival's
+next chance to raise in that lot, while Broken Stopwatch permits one atomic
+legal raise after Pass if the lot remains open. The winner opens next round immediately
 after their seat; an unsold round opens after its previous opening seat.
 Scenario 04 Collapse starts at 0 / 10 and rises by exactly one when each
 auction round closes. No Scenario 04 action or item lowers it. Round 10 opens
@@ -393,8 +404,11 @@ zero. Abilities add nothing. The starting balance is negative one per two Debt,
 capped at negative four, and stays negative until investment raises it. READY
 locks the settlement and clamps only the usable amount to zero. After everyone
 is READY, each player secretly submits a Final Bid no greater than their usable
-Final Chips. All bids reveal together. An activated Black Crown adds two to its
-holder's effective bid, while the winner pays only the submitted bid. A unique
+Final Chips. All bids reveal together. An activated Black Crown, Half Ticket,
+and Last Match add server-owned effective-bid modifiers through
+`finalBidModifier04`, while the winner pays only the submitted bid. Last Match
+burns one other unused authentic item before READY, forfeiting its normal +2
+conversion to add +3 to effective bid. A unique
 highest effective bid resolves as before. A tie, including tied zero bids,
 pauses the reveal without a winner and starts a Final Showdown after everyone
 continues. Only tied bidders receive five seeded, server-only card ranks (2
@@ -409,7 +423,7 @@ high Debt still changes a winning ending into the debt ending. Debt of 2–3,
 4–5, 6–7, or 8+ also adds a persistent -1, -2, -3, or -4 modifier to every
 Scenario 04 Dice Resolution; the raw seeded die is unchanged, and Blackjack
 does not use that pipeline. Each lot starts at one Black Chip. Exactly two
-of Lots 1–9 are chosen as counterfeits by the seeded RNG at game creation;
+of the nine drawn ordinary lots are chosen as counterfeits by the seeded RNG at game creation;
 their identities remain server secret until discovered. Lot 10 is the final
 objective and does not enter inventory. Won items remain inert until the holder
 uses them, then leave inventory and produce a private activation notice.
@@ -420,12 +434,23 @@ the notice lifetime across client remounts and reconnects. The own HUD derives
 effect chips from server state (armed die and coin, contract rounds, Sanity ward,
 crown, Lost, and next-roll penalty); expiring effects need no client timer.
 Prototype Chrono Key selects an instance recorded in this run's earlier
-auction history (Lots 1–4). It creates a new item instance with the source's
+auction history (any lot offered before the key). It creates a new item instance with the source's
 recorded authenticity and independent consumed state, even if the source was
 already used. Nameless File restores Sanity to 3/3 and
 prevents every later Sanity loss. Black Die and Gambler's Coin arm their next
 eligible roll or Blackjack hand, while Red Contract and Black Crown take effect
 from activation.
+
+The added items share server-owned instance identity, active-use validation,
+and private counterfeit confirmation. Night Ledger and Stranger's IOU trigger
+passively on legal Borrow and accepted transfer respectively; a fake confirms
+only to its holder on the first attempted trigger. Chip bands, authenticity
+checks, hints, and Glass Dice Cup peeks are projected only to their observer.
+Reversed Tarot is offered after the raw Scenario 04 d6 roll and before its
+outcome; Burnt Playing Card is offered in the visible Blackjack bust result.
+Second Will annotates a personal ending without awarding another Exit Right.
+Developer-only item grant and pool preview actions require the developer-room
+flag; their seed and fake identities are never projected to ordinary rooms.
 
 ## Developer checkpoints
 

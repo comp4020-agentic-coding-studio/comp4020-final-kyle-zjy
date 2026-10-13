@@ -8,9 +8,12 @@ import type { GameAction } from "../src/shared/game/actions.ts";
 import type { GameState } from "../src/shared/game/state.ts";
 import type { LotId04 } from "../src/shared/game/scenario04/types.ts";
 import { rigNextDie, SEED, seatsFor, T0 } from "./helpers.ts";
+import { LOTS04 } from "../src/shared/game/scenario04/lots.ts";
 
 function start(): GameState {
-  let s = startGame(createGame("s4-revision", seatsFor(3), SEED, T0, "S04_UNDERGROUND_AUCTION"), T0).state;
+  const fixture = createGame("s4-revision", seatsFor(3), SEED, T0, "S04_UNDERGROUND_AUCTION");
+  fixture.auction!.lotOrder = LOTS04.slice(0, 9).map((lot) => lot.id);
+  let s = startGame(fixture, T0).state;
   for (const id of s.turnOrder) s = applyGameAction(s, id, { type: "ACK_SEQUENCE" }, T0 + 1).state;
   s.auction!.counterfeitLots = [];
   return s;
@@ -46,7 +49,7 @@ describe("Scenario 04 revised rules", () => {
     const again = startGame(createGame("random-b", seatsFor(3), SEED, T0, "S04_UNDERGROUND_AUCTION"), T0).state;
     expect(first.auction!.counterfeitLots).toEqual(again.auction!.counterfeitLots);
     expect(new Set(first.auction!.counterfeitLots).size).toBe(2);
-    expect(first.auction!.counterfeitLots.every((id) => Number(id.slice(4)) >= 1 && Number(id.slice(4)) <= 9)).toBe(true);
+    expect(first.auction!.counterfeitLots.every((id) => first.auction!.lotOrder!.includes(id))).toBe(true);
     expect(JSON.stringify(project(first, "a"))).not.toContain("counterfeitLots");
     expect(JSON.stringify(project(first, "a"))).not.toContain("itemInstances");
     const layouts = new Set(Array.from({ length: 12 }, (_, i) => {

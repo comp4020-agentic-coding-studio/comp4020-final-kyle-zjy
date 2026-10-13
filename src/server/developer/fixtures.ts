@@ -4,7 +4,7 @@ import type { CheckPresetId } from "../../shared/developer.ts";
 import type { GameState, AnchorId } from "../../shared/game/state.ts";
 import type { GameAction } from "../../shared/game/actions.ts";
 import { KEY_FOR_ANCHOR, LOCK_AT } from "../../shared/game/scenario01/content.ts";
-import { lotForRound04 } from "../../shared/game/scenario04/lots.ts";
+import { lotForAuctionRound04 } from "../../shared/game/scenario04/lots.ts";
 import { zoneIndex } from "../../shared/game/scenario02/map.ts";
 import { placeKey03, type RoomId03, type Year03 } from "../../shared/game/scenario03/map.ts";
 import { NODES03, type CausalNodeId03 } from "../../shared/game/scenario03/nodes.ts";
@@ -207,10 +207,15 @@ function auction(t: Checkpoint, id: CheckPresetId) {
   if (id === "s4.auction") { t.round(4); return; }
   const a = t.active;
   if (id === "s4.counterfeit") {
-    const lotId = t.state.auction!.counterfeitLots[0];
-    t.round(Number(lotId.slice(4)));
+    const lotId = "LOT_02";
+    const order = t.state.auction!.lotOrder!;
+    let index = order.indexOf(lotId);
+    if (index < 0) { index = 1; order[index] = lotId; }
+    t.state.auction!.counterfeitLots = [lotId, t.state.auction!.counterfeitLots.find((other) => other !== lotId) ?? "LOT_01"];
+    if (index === 0) t.state.auction!.itemInstances[lotId].counterfeit = true;
+    t.round(index + 1);
     const holder = t.active;
-    t.act(holder, { type: "BID", amount: lotForRound04(t.state.round).startingBid });
+    t.act(holder, { type: "BID", amount: lotForAuctionRound04(t.state, t.state.round).startingBid });
     t.act(holder, { type: "END_TURN" });
     t.until((s) => s.auction!.players[holder].items.includes(lotId));
     t.state.activeIndex = t.state.turnOrder.indexOf(holder);

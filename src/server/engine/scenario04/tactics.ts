@@ -1,6 +1,6 @@
 import type { GameAction } from "../../../shared/game/actions.ts";
 import { AUCTION_CONFIG04 } from "../../../shared/game/scenario04/config.ts";
-import { lotForRound04 } from "../../../shared/game/scenario04/lots.ts";
+import { lotForAuctionRound04 } from "../../../shared/game/scenario04/lots.ts";
 import type { IntelId04 } from "../../../shared/game/scenario04/types.ts";
 import type { GameState, PlayerGameState } from "../../../shared/game/state.ts";
 import { m } from "../../../shared/i18n/msg.ts";
@@ -9,6 +9,7 @@ import { cue, log } from "../context.ts";
 import { onRollOutcome, startRoll } from "../dice.ts";
 import { gainSanity, loseSanity } from "../players.ts";
 import { MAX_SANITY } from "../../../shared/game/scenario01/content.ts";
+import { confirmPassiveFake04, heldLot04 } from "./items.ts";
 
 const otherPlayers = (s: GameState, p: PlayerGameState) => s.auction!.seatOrder.filter((id) => id !== p.playerId);
 
@@ -41,16 +42,21 @@ export const BORROW04: Spec<Extract<GameAction, { type: "BORROW" }>> = {
   check: (s, p) => {
     const a = s.auction!.players[p.playerId];
     if (p.counters.s4BorrowedRound === s.round) return fail("ILLEGAL_TARGET", m`You have already borrowed this round.`);
-    if (a.debt + AUCTION_CONFIG04.borrowDebt > AUCTION_CONFIG04.maxDebt) return fail("ILLEGAL_TARGET", m`Your debt limit has been reached.`);
+    const ledger = heldLot04(s, p.playerId, "LOT_25");
+    const extra = ledger && !s.auction!.itemInstances[ledger].counterfeit ? 1 : 0;
+    if (a.debt + AUCTION_CONFIG04.borrowDebt + extra > AUCTION_CONFIG04.maxDebt) return fail("ILLEGAL_TARGET", m`Your debt limit has been reached.`);
     return null;
   },
   apply: (ctx, p) => {
     const a = ctx.s.auction!;
-    a.players[p.playerId].blackChips += AUCTION_CONFIG04.borrowChips;
-    a.players[p.playerId].debt += AUCTION_CONFIG04.borrowDebt;
+    const ledger = heldLot04(ctx.s, p.playerId, "LOT_25");
+    const extra = ledger && !a.itemInstances[ledger].counterfeit ? 1 : 0;
+    a.players[p.playerId].blackChips += AUCTION_CONFIG04.borrowChips + extra;
+    a.players[p.playerId].debt += AUCTION_CONFIG04.borrowDebt + extra;
+    if (ledger && !extra) confirmPassiveFake04(ctx, p.playerId, ledger);
     a.stats.borrows[p.playerId] = (a.stats.borrows[p.playerId] ?? 0) + 1;
     p.counters.s4BorrowedRound = ctx.s.round;
-    log(ctx, m`${p.nickname} borrows ${AUCTION_CONFIG04.borrowChips} Black Chips and gains ${AUCTION_CONFIG04.borrowDebt} Debt.`, "S4_BORROW", p.playerId);
+    log(ctx, m`${p.nickname} borrows ${AUCTION_CONFIG04.borrowChips + extra} Black Chips and gains ${AUCTION_CONFIG04.borrowDebt + extra} Debt.`, "S4_BORROW", p.playerId);
     cue(ctx, "S4_BORROW", { playerId: p.playerId });
   },
 };
@@ -80,11 +86,13 @@ onRollOutcome("S4_INVESTIGATE", (ctx, p, roll) => {
   const a = ctx.s.auction!;
   a.stats.investigations[p.playerId] = (a.stats.investigations[p.playerId] ?? 0) + 1;
   if (roll.tier === "DISASTER") loseSanity(ctx, p, 1, m`a failed auction investigation`);
-  if (roll.tier === "SUCCESS" || roll.tier === "PERFECT") {
-    const lot = lotForRound04(ctx.s.round);
+  const mirror = a.players[p.playerId].mirrorArmed;
+  a.players[p.playerId].mirrorArmed = false;
+  if (roll.tier === "SUCCESS" || roll.tier === "PERFECT" || mirror) {
+    const lot = lotForAuctionRound04(ctx.s, ctx.s.round);
     const intel = a.players[p.playerId].privateIntel;
     if (!intel.includes(lot.hiddenInfo)) intel.push(lot.hiddenInfo);
-    if (roll.tier === "PERFECT") {
+    if (roll.tier === "PERFECT" || mirror && roll.tier === "SUCCESS") {
       if (!intel.includes(lot.perfectInfo)) intel.push(lot.perfectInfo);
       if (ctx.s.round <= 9) {
         const authenticity = `${lot.id}_${a.counterfeitLots.includes(lot.id) ? "COUNTERFEIT" : "AUTHENTIC"}` as IntelId04;

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { debtTier04 } from "../../../shared/game/scenario04/debt.ts";
+import { debtTier04, GENUINE_ITEM_FINAL_VALUE04 } from "../../../shared/game/scenario04/debt.ts";
 import { itemLotId04, LOTS04 } from "../../../shared/game/scenario04/lots.ts";
 import type { LotId04 } from "../../../shared/game/scenario04/types.ts";
 import type { PlayerView } from "../../../shared/game/state.ts";
-import { auctionLotText } from "../../../shared/i18n/scenario04.ts";
+import { auctionLotEffectText, auctionLotText } from "../../../shared/i18n/scenario04.ts";
 import { Avatar } from "../../components/Avatar.tsx";
 import { getCharacterById } from "../../../shared/characters/roster/index.ts";
 import { useLocale, useT } from "../../i18n/index.ts";
@@ -65,25 +65,28 @@ export function FinalAuction04({ g }: { g: PlayerView }) {
             {me.items.map((id) => {
               const base = itemLotId04(id);
               const item = auctionLotText(locale, id);
-              const usable = (base !== "LOT_06" || me.debt > 0) && (base !== "LOT_09" || player.sanity > (own.converted?.sanity ?? 0) && !me.sanityWard);
+              const usable = (Number(base.slice(4)) <= 9 || ["LOT_12", "LOT_19", "LOT_30"].includes(base)) && (base !== "LOT_06" && base !== "LOT_19" || me.debt > 0) && (base !== "LOT_09" || player.sanity > (own.converted?.sanity ?? 0) && !me.sanityWard);
               return <div key={id} data-final-item={id} className="min-w-0 rounded-xl border border-gold/30 bg-night/70 p-3">
                 <p className="font-semibold">{item.name}</p>
                 <p className="mt-1 text-xs text-mist">{t("s4.item.unverified")}</p>
+                <p className="mt-1 text-xs text-moon">{auctionLotEffectText(locale, id)}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button className="btn btn-ghost min-h-12" disabled={!usable} onClick={() => base === "LOT_05" ? setCopySource(id) : void sendGame({ type: "USE_LOT", lotId: id })}>{t("s4.final.use")}</button>
+                  <button className="btn btn-ghost min-h-12" disabled={!usable} onClick={() => ["LOT_05", "LOT_30"].includes(base) ? setCopySource(id) : void sendGame({ type: "USE_LOT", lotId: id })}>{t("s4.final.use")}</button>
                   <button className="btn btn-gold min-h-12" onClick={() => void sendGame({ type: "FINAL_CONVERT", resource: "ITEM", lotId: id })}>{t("s4.final.convert")}</button>
                 </div>
-                {copySource === id && <div className="mt-2 grid grid-cols-2 gap-2">{LOTS04.slice(0, 4).map((source) => <button key={source.id} className="btn btn-ghost min-h-12 h-auto whitespace-normal text-xs" onClick={() => { setCopySource(null); void sendGame({ type: "USE_LOT", lotId: id, sourceLotId: source.id }); }}>{auctionLotText(locale, source.id).name}</button>)}</div>}
+                {copySource === id && <div className="mt-2 grid grid-cols-2 gap-2">{(base === "LOT_30" ? me.items.filter((other) => other !== id) : a.auctionHistory.filter((entry) => entry.round < (a.auctionHistory.find((entry) => entry.lotId === "LOT_05")?.round ?? 0)).map((entry) => entry.lotId)).map((source) => <button key={source} className="btn btn-ghost min-h-12 h-auto whitespace-normal text-xs" onClick={() => { setCopySource(null); void sendGame({ type: "USE_LOT", lotId: id, sourceLotId: source }); }}>{auctionLotText(locale, source).name}</button>)}</div>}
               </div>;
             })}
           </div>
           {!!own.converted?.items.length && <div className="mt-3 text-left text-sm text-mist"><p className="label">{t("s4.final.invested")}</p>{own.converted.items.map(({ id, gain }) => <p key={id}>{auctionLotText(locale, id).name} · +{gain}</p>)}</div>}
+          {!!me.finalItemModifiers?.length && <div className="mt-3 rounded-xl border border-gold/40 p-3 text-left text-sm"><p className="label">{t("s4.final.specialModifiers")}</p>{me.finalItemModifiers.map((entry, index) => <p key={`${entry.lotId}-${index}`}>{auctionLotText(locale, entry.lotId).name} · +{entry.amount}{entry.burnedItemId && <span className="block text-xs text-mist">{t("s4.final.burnSummary", { item: auctionLotText(locale, entry.burnedItemId).name, value: entry.burnedValue ?? GENUINE_ITEM_FINAL_VALUE04, match: entry.amount, net: entry.amount - (entry.burnedValue ?? GENUINE_ITEM_FINAL_VALUE04) })}</span>}</p>)}</div>}
           <button data-final-ready className="btn btn-gold mt-6 min-h-14 w-full" onClick={() => void sendGame({ type: "FINAL_READY" })}>{t("s4.final.ready")}</button>
         </> : <p className="mt-6 rounded-xl border border-moss/50 p-4 text-moss">{t("s4.final.readyLocked", { n: own.usable ?? 0 })}</p>}
       </>}
       {final.stage === "AUCTION" && <div className="mx-auto mt-8 max-w-lg">
         <p className="font-display text-6xl text-gold-bright" data-final-usable>{own.usable}</p>
         <p className="mt-2 text-mist">{t("s4.final.usable")}</p>
+        {!!me.finalItemModifiers?.length && <p className="mt-2 text-xs text-gold-bright">{t("s4.final.effectiveBonus", { n: me.finalItemModifiers.reduce((sum, entry) => sum + entry.amount, 0) + (me.activeCrown ? 2 : 0) })}</p>}
         {own.status === "BID_SUBMITTED" ? <p className="mt-8 rounded-xl border border-moss/50 p-4 text-moss">{t("s4.final.bidLocked")}</p> : <>
           <label className="label mt-7 block text-left" htmlFor="s4-final-bid">{t("s4.final.yourBid")}</label>
           <input id="s4-final-bid" data-final-bid type="number" min={0} max={own.usable ?? 0} step={1} inputMode="numeric" className="mt-2 min-h-14 w-full rounded-xl border border-gold/60 bg-night px-4 text-center font-display text-3xl" value={bidText} onChange={(event) => setBidText(event.target.value)} />

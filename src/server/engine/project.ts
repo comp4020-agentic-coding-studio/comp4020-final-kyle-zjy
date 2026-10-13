@@ -7,6 +7,7 @@ import type { GameState, PlayerId, PlayerSecrets, PlayerView, PublicPlayerState,
 import { availableActions } from "./actions.ts";
 import { publicCity } from "./scenario02/city.ts";
 import { teamInvestigations03 } from "./scenario03/progress.ts";
+import { finalBidModifier04 } from "../../shared/game/scenario04/debt.ts";
 
 export function project(s: GameState, viewerId: PlayerId): PlayerView {
   const {
@@ -67,6 +68,7 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
     city: publicCity(s, viewerId),
     ...(s.auction ? { auction: {
       seatOrder: [...s.auction.seatOrder],
+      ...(s.flags.developerCheck === 1 ? { debugPool: { seed: s.seed, order: [...(s.auction.lotOrder ?? [])], counterfeit: [...s.auction.counterfeitLots], preview: s.auction.debugPreview ?? null } } : {}),
       currentLot: s.auction.currentLot,
       currentBid: s.auction.currentBid,
       currentBidReal: s.auction.currentBidReal,
@@ -76,6 +78,8 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
       roundStartPlayerId: s.auction.roundStartPlayerId,
       passedPlayers: [...s.auction.passedPlayers],
       auctionOpen: s.auction.auctionOpen,
+      raiseBlockedPlayers: [...(s.auction.raiseBlockedPlayers ?? [])],
+      hollowCoinOwner: s.auction.hollowCoinOwner ?? null,
       auctionHistory: [...s.auction.auctionHistory],
       publicIntel: [...s.auction.publicIntel],
       stats: s.auction.stats,
@@ -97,7 +101,7 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
           const own = id === viewerId;
           const revealed = ["REVEAL", "SHOWDOWN_PICK", "SHOWDOWN_REVEAL"].includes(s.auction!.final!.stage);
           const bid = revealed || own ? entry.bid : null;
-          const modifier = revealed ? (s.auction!.players[id].activeCrown ? 2 : 0) : null;
+          const modifier = revealed ? finalBidModifier04(s.auction!.players[id]) : null;
           return [id, {
             status: revealed ? "REVEALED" : entry.bid !== null ? "BID_SUBMITTED" : entry.ready ? "READY" : "SETTLING",
             continued: revealed && entry.revealReady,
@@ -127,6 +131,15 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
         privateIntel: id === viewerId ? [...p.privateIntel] : null,
         reads: id === viewerId ? [...p.reads] : null,
         glassEyeSnapshots: id === viewerId ? p.glassEyeSnapshots.map((snap) => ({ round: snap.round, chips: { ...snap.chips } })) : null,
+        privateObservations: id === viewerId ? [...(p.privateObservations ?? [])] : null,
+        finalItemModifiers: id === viewerId ? [...(p.finalItemModifiers ?? [])] : null,
+        secondWillBeneficiaryId: id === viewerId ? p.secondWillBeneficiaryId ?? null : null,
+        bellArmed: id === viewerId && !!p.bellArmed,
+        blankChequeArmed: id === viewerId && !!p.blankChequeArmed,
+        mirrorArmed: id === viewerId && !!p.mirrorArmed,
+        invitationReady: id === viewerId && !!p.invitationReady,
+        glassCupArmed: id === viewerId && !!p.glassCupArmed,
+        membershipArmed: id === viewerId && !!p.membershipArmed,
       }])),
       deal: s.auction.deal && [s.auction.deal.from, s.auction.deal.to].includes(viewerId) ? s.auction.deal : null,
       challenge: s.auction.challenge ? (({ deck: _deck, ...visible }) => visible)(s.auction.challenge) : null,
