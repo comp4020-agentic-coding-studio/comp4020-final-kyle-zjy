@@ -230,6 +230,30 @@ toggle is always visible in the top bar and remembered per device.
 - Colour never carries meaning alone (see §3).
 - Contrast AA for all text; minimum body size 16px on mobile.
 
+## Scenario 03 opening
+
+The 81-second client film uses restrained blue-grey surveillance feeds,
+perspective room schematics, a redacted case file and the 1996/1998 date
+contradiction. The same room shell switches between digital blue-grey 2026
+and warm, scanned analogue 1996. The brief rewind uses selected years and
+small horizontal distortion, never a bright full-screen flash. Lockdown uses
+a three-second warning pulse. Anonymous blurred silhouettes suggest missing
+visitors without identifying anyone.
+
+The film follows the existing Motion/CSS stack. A stable scene/caption clock
+owns playback, and each scene crossfades. The title dissolves into the live
+map/HUD with a two-second handoff; black bars recede. Skip remains available
+from the start and becomes more visible after two seconds. At 320/390 px,
+era panels and causal examples stack, captions wrap, controls remain at least
+48 px and safe-area/dynamic viewport insets protect the edges. Reduced motion
+retains the full story, replaces distortion/pulses with short opacity changes
+and preserves independent Skip. Narrative information is fully subtitled in
+English and Chinese. One persistent mute control serves both film and game.
+
+Audio now has a shared Web Audio implementation for Scenario 03: procedural
+low pads, nine lightweight cue types and pad crossfades. Other scenarios keep
+their existing presentation; no unlicensed music or external audio is loaded.
+
 ## Scenario 04 table
 
 The auction retains the Scenario 03 screen structure and shared HUD. The

@@ -1,6 +1,7 @@
-// Scenario 03 (Incident Zero): the intro, the run on scenario 02's layout
+// Scenario 03 (Incident Zero): the run on scenario 02's layout
 // (src/client/game/scenario03/ holds its map, panels, dock actions and private
 // drawer), the identity and third-route scenes, the ending and the results.
+// Its client opening is owned by game/scenario03/opening/Experience03.tsx.
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { RoomId03, Year03 } from "../../shared/game/scenario03/map.ts";
@@ -26,26 +27,6 @@ import "../styles/scenario03.css";
 
 function Frame({ children }: { children: React.ReactNode }) {
   return <main className="night-sky relative min-h-dvh px-3 py-5 text-moon sm:px-6"><div className="mx-auto max-w-5xl">{children}</div></main>;
-}
-
-export function Scenario03Intro() {
-  const g = useGame();
-  const t = useT();
-  if (!g) return null;
-  const acked = g.sequence?.acks.includes(g.viewerId) ?? false;
-  return <Frame>
-    <section className="tarot s3-scene-card mx-auto mt-10 max-w-xl p-6 text-center">
-      <p className="label text-signal">{t("s3.development")}</p>
-      <p className="s3-scene-clock" aria-hidden="true">23:47</p>
-      <h1 className="mt-4 font-display text-4xl text-gold-bright">{t("s3.title")}</h1>
-      <p className="mt-3 text-mist italic">{t("s3.subtitle")}</p>
-      <p className="mt-8 text-lg">{t("s3.intro")}</p>
-      <button className="btn btn-gold mt-8 w-full" disabled={acked} onClick={() => void sendGame({ type: "ACK_SEQUENCE" })}>
-        {acked ? t("s3.waiting") : t("s3.begin")}
-      </button>
-    </section>
-    <HostSkip g={g} />
-  </Frame>;
 }
 
 /**

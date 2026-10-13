@@ -96,6 +96,12 @@ English: timing, targets, amounts, and "once per run" carry over word for word.
 
 ## Scenario 03 foundation terms (zh-CN)
 
+The client-only opening uses `s3.open.*` in `s3-en.ts` and `s3-zh-CN.ts` for
+whole subtitle sentences, file/monitor labels, tasks, audio controls and the
+post-opening location hint. Numbers and year tokens remain numeric. Its
+anonymous visitor display never reads server-only identities. The opening
+contains no game-state messages and does not alter the engine catalogs.
+
 Act I and II story text uses stable `s3.story.<ID>` UI keys in both locales, with
 matching engine log templates in the shared message catalog. Archivist 00's
 name, prompt and private note use `s3.npc.*` keys. The official file is always

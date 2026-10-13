@@ -115,9 +115,12 @@ try {
   await pick(phone, "Scorpio", /ENTP/);
   await pick(desk, "Pisces", /ISFJ/);
   await phone.getByRole("button", { name: "Enter the Administration" }).click();
-  for (const [p] of pages) await p.getByRole("button", { name: "Enter the Administration" }).waitFor({ timeout: 20_000 });
+  for (const [p] of pages) await p.locator(".s3-film").waitFor({ timeout: 20_000 });
   for (const [p, tag] of pages) await shotOnce(p, tag, "intro");
-  for (const [p] of pages) await tap(p.getByRole("button", { name: "Enter the Administration" }));
+  for (const [p] of pages) {
+    await tap(p.getByRole("button", { name: "Skip", exact: true }));
+    await p.locator(".s3-film").waitFor({ state: "detached" });
+  }
 
   const header = (p: Page) => p.locator("header").first().innerText().catch(() => "");
   // the top bar reads "ACT I · CYCLE", then the cycle "n / 12", then the collapse gauge

@@ -107,6 +107,12 @@ until the reveal, and settlement animation cues are not broadcast to opponents.
 
 ## 5. Identity, sessions, reconnect
 
+Scenario 03 additionally remembers a bounded list of presentation-only opening
+entries (`fate:s03:openings`, session ID + viewer ID) and the shared audio mute
+preference (`fate:muted`). These contain no game state. Its opening wrapper is
+stable across INTRO/act changes, acknowledges existing readiness immediately,
+and leaves the server running while each viewer watches or skips independently.
+
 - No accounts. On create/join the server issues `playerId` (public, random) and
   `sessionToken` (secret, 32 random bytes; only its SHA-256 is stored).
 - The client stores `{ roomCode, playerId, sessionToken }` in `localStorage`

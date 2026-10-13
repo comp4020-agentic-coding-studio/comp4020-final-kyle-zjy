@@ -567,3 +567,46 @@ specific missing final-route conditions. Scan picker descriptions explain
 the three existing effects. The Trade picker exposes the server's existing
 relic, ordinary supply and Fate offers at its existing 0 AP cost. Story beats,
 phase transitions, map, dice and ending requirements remain unchanged.
+
+## Client opening cinematic
+
+`RoomGate` mounts one `Experience03`, keyed by the server session ID, across
+INTRO and all four acts. It immediately sends the existing INTRO
+`ACK_SEQUENCE` independently of playback, so an 81-second presentation does
+not hold the server's readiness barrier. Every viewer watches/skips locally;
+the authoritative snapshot continues to update beneath an inert, hidden HUD.
+Later story sequences, turns, AP, causality, relics and endings are unchanged.
+
+The centralized opening clock traverses sync failure, lockdown, Incident Zero
+and the 1996/1998 contradiction, two eras, rewind, causal examples, missing
+records, the investigation brief, title and a two-second handoff. The causal
+examples refer to REPORT, WORKER and PROTOTYPE_CORE without applying any
+intervention or disclosing a late-game consequence. All captions and display
+labels use bilingual `s3.open.*` client keys. No sealed profile or ending data
+is read by the cinematic.
+
+The bounded `fate:s03:openings` localStorage list records `[sessionId,
+viewerId]` at playback entry. Refresh during or after the film resumes the
+current game; a new session/player has its own entry. Guarded storage and
+in-memory fallback keep private-mode playback usable. An unseen reconnect
+after cycle 1 skips the opening rather than obscuring an ongoing run.
+
+Skip clears the one cinematic clock immediately, stops cinematic SFX through
+the shared audio theme change, and fades to the current server view. Natural
+completion fades the film and letterbox while the underlying HUD appears.
+Unmount restores body scrolling, cancels the clock/hint, removes audio unlock
+listeners and stops/disconnects every owned voice. Focus is contained during
+the film and restored to the game afterwards; the optional twelve-second
+location hint reads the actual projected location rather than asserting 2026
+if teammates have already moved the viewer.
+
+`src/client/audio/manager.ts` is the first implemented audio owner in the
+project (the earlier sound section was a design-only interface). One shared
+Web Audio context generates restrained harmonic pads and nine cue types.
+Themes are `scenario03_intro`, `scenario03_2026_ambient` and
+`scenario03_1996_ambient`. Old/new pads crossfade using AudioParam ramps;
+short effects are stopped at handoff rather than queued for later. Mute is
+remembered at `fate:muted`; blocked autoplay degrades to captions and can
+resume on a gesture. There are no downloaded files or audio URL requests.
+These procedural sounds work now; authored music/foley and optional voice
+acting remain an artistic upgrade, not a runtime dependency.

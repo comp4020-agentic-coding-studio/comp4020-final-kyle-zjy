@@ -734,3 +734,41 @@ names); each variant is now a whole template. No rule, RNG or replay changed
   loop and showed its new room text to the teammate in 2026. The 320 px
   screen was inspected. Production build and `pnpm check` passed (41 test
   files, 1120 tests), including localization and Scenario 01/02 regressions.
+
+## Scenario 03: opening cinematic
+
+- Replaced the entry card with an 81-second client-only opening: temporal
+  synchronization failure, lockdown, the Incident Zero file and 1996/1998
+  contradiction, two eras, rewind, three causal previews, missing records,
+  investigation brief, title and a two-second fade into the live map/HUD.
+  The examples use REPORT, WORKER and PROTOTYPE_CORE without changing any
+  authoritative fact or revealing late-game identities or ending conditions.
+- A stable session-keyed wrapper acknowledges the existing INTRO immediately.
+  Each viewer watches or skips independently while server snapshots continue.
+  The game UI remains inert during playback; timers, body scroll, focus and
+  audio ownership are released on completion, Skip or unmount. A bounded
+  session/player presentation marker avoids replay after refresh, including
+  a refresh during the film; new sessions play again.
+- Added the project's first implemented shared AudioManager: procedural pads,
+  nine lightweight SFX types, independent cinematic/present/past themes,
+  crossfades, persisted mute and guarded autoplay recovery. No downloaded or
+  unlicensed assets, missing URLs or added dependencies. Authored music,
+  foley and optional voice acting remain an artistic upgrade.
+- English/Chinese captions and display copy use s3.open.*. Small screens
+  stack the era panels and causal examples; safe-area/dynamic viewport sizing,
+  48px controls, focus containment and reduced motion preserve usability.
+  A brief, localized hint reads the actual projected location after entry.
+- Verification: production build and pnpm check passed (43 files, 1129 tests).
+  Nine focused lifecycle/audio tests cover StrictMode, rerenders, phase
+  transition, memory, cancellation, silent-beat Skip, crossfade, all SFX,
+  unavailable audio and teardown. Real isolated browser contexts covered
+  390/1280px playback and independent mid-film Skip, the complete real-time
+  81-second path, and complete real-time Chinese/reduced/muted playback at
+  320px. The focused opening walkthrough passed reload during/after playback,
+  new-session entry, navigation cleanup and S01/S02 exclusion with no browser
+  errors or failed requests. The updated standard Scenario 03 walkthrough
+  also played two full cycles at 320/1280px. Screenshots were inspected.
+- Browser dependencies and Chinese font fallback were supplied through
+  temporary test-environment paths only; no system/project dependency change
+  or font asset was added. No engine rule, balance, replay or hidden-information
+  projection changed.

@@ -18,7 +18,7 @@ const Intro = named(() => import("./Intro.tsx"), "Intro");
 const Game = named(() => import("./Game.tsx"), "Game");
 const CityGame = named(() => import("./CityGame.tsx"), "CityGame");
 const Scenario03Game = named(() => import("./Scenario03Screens.tsx"), "Scenario03Game");
-const Scenario03Intro = named(() => import("./Scenario03Screens.tsx"), "Scenario03Intro");
+const Experience03 = named(() => import("../game/scenario03/opening/Experience03.tsx"), "Experience03");
 const Scenario03Ending = named(() => import("./Scenario03Screens.tsx"), "Scenario03Ending");
 const Scenario03Results = named(() => import("./Scenario03Screens.tsx"), "Scenario03Results");
 const Scenario04Game = named(() => import("./Scenario04Screens.tsx"), "Scenario04Game");
@@ -36,7 +36,7 @@ function Run() {
 
 function ScenarioIntro() {
   const scenario = useStore((s) => s.snapshot?.game?.scenarioId);
-  return scenario === "S04_UNDERGROUND_AUCTION" ? <Scenario04Intro /> : scenario === "S03_INCIDENT_ZERO" ? <Scenario03Intro /> : <Intro />;
+  return scenario === "S04_UNDERGROUND_AUCTION" ? <Scenario04Intro /> : <Intro />;
 }
 function ScenarioEnding() {
   const scenario = useStore((s) => s.snapshot?.game?.scenarioId);
@@ -97,11 +97,13 @@ export function RoomGate({ code }: { code: string }) {
   // the room's phase can briefly lead the game snapshot; wait for the run to arrive
   if (snapshot.room.phase !== "LOBBY" && !snapshot.game) return <Boarding reconnecting={false} />;
   const Screen = SCREENS[snapshot.game?.phase ?? snapshot.room.phase];
+  const g = snapshot.game;
+  const temporalRun = g?.scenarioId === "S03_INCIDENT_ZERO" && (g.phase === "INTRO" || g.phase.startsWith("ACT_"));
   return (
     <>
       <ConnectionBanner />
       <Suspense fallback={<Boarding reconnecting={false} />}>
-        <Screen />
+        {temporalRun ? <Experience03 key={g.sessionId} /> : <Screen />}
       </Suspense>
     </>
   );
