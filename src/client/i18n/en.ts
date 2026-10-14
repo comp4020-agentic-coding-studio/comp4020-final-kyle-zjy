@@ -197,7 +197,6 @@ export const en = {
   "game.anchorsAria": "Anchors repaired: {n} of 3",
   "game.anchorsLater": "Anchors appear in round 4",
   "game.anchorTitle": "{name} {progress}/{required}",
-  "game.fragmentsAria": "Memory fragments: {n} (need 3)",
 
   "banner.vote": "Vote: {title}",
   "banner.rolling": "{name} is rolling",
@@ -474,7 +473,7 @@ export const en = {
   "poster.round": "Round {n}",
   "poster.cast": "Who was there",
   "memory.title": "Memory Board",
-  "memory.open": "Memory Board · {n}/6 · core {core}/6",
+  "game.memoryAria": "Memory Board: {n} fragments (3 needed), {core} of 6 core memories",
   "memory.intro": "What the train is trying to make everyone forget. The pieces don't say whose they are: that's for the table to argue.",
   "memory.fragments": "Memory fragments · {n}/{total}",
   "memory.from": "Found in the {carriage}",

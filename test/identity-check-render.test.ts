@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// The identity file under reduced motion: it still appears, says only public
-// things, and its stamp follows the server's verdict on the roll.
+// The identity file under reduced motion: it heads the dice card (so it can't
+// cover the roll), says only public things, and its stamp follows the server.
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -10,11 +10,12 @@ const mocks = vi.hoisted(() => ({ play: vi.fn() }));
 vi.mock("motion/react", async () => {
   const { createElement } = await import("react");
   const strip = (tag: string) => ({ initial: _i, animate: _a, exit: _e, transition: _t, ...props }: Record<string, unknown>) => createElement(tag, props);
-  return { useReducedMotion: () => true, AnimatePresence: ({ children }: { children: React.ReactNode }) => children, motion: { button: strip("button"), p: strip("p"), span: strip("span") } };
+  return { useReducedMotion: () => true, AnimatePresence: ({ children }: { children: React.ReactNode }) => children, motion: { div: strip("div"), button: strip("button"), p: strip("p"), span: strip("span") } };
 });
 vi.mock("../src/client/audio/manager.ts", () => ({ audio: { play: mocks.play } }));
+vi.mock("../src/client/store.ts", () => ({ sendGame: vi.fn() }));
 
-const { IdentityCheck01 } = await import("../src/client/game/IdentityCheck01.tsx");
+const { DiceOverlay } = await import("../src/client/game/Dice.tsx");
 const { project } = await import("../src/server/engine/project.ts");
 const { rigNextDie, Table } = await import("./helpers.ts");
 
@@ -44,7 +45,7 @@ describe("identity verification under reduced motion", () => {
     host = document.createElement("div");
     document.body.append(host);
     const root = createRoot(host);
-    await act(async () => root.render(createElement(IdentityCheck01, { g: view })));
+    await act(async () => root.render(createElement(DiceOverlay, { g: view })));
     const text = host.textContent ?? "";
     expect(text).toContain(view.players[me].nickname);
     expect(text).toContain("Identity verification");
@@ -52,7 +53,12 @@ describe("identity verification under reduced motion", () => {
     expect(view.roll?.done).toBe(false);
     expect(text).toContain("CHECKING");
     expect(text).not.toMatch(/VERIFIED|WAVERING/);
-    expect(host.querySelector(".identity-file")).not.toBeNull();
+    // inside the dice card, above the roll: it can't sit on top of the die or the Fate choice
+    const file = host.querySelector(".identity-file")!;
+    const card = host.querySelector('[role="dialog"]')!;
+    expect(file).not.toBeNull();
+    expect(card.contains(file)).toBe(true);
+    expect(card.firstElementChild).toBe(file);
     expect(text).not.toContain("PRIVATE TRUTH");
     expect(mocks.play).toHaveBeenCalledWith("ticket_punch");
     expect(mocks.play).toHaveBeenCalledTimes(1);

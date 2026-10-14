@@ -8,7 +8,8 @@ import type { PlayerView } from "../../../shared/game/state.ts";
 import { Avatar } from "../../components/Avatar.tsx";
 import { useT } from "../../i18n/index.ts";
 
-export function Triage({ g }: { g: PlayerView }) {
+/** `docked`: as a narrow column beside the map (no outer margin; name above work and place). */
+export function Triage({ g, docked = false }: { g: PlayerView; docked?: boolean }) {
   const t = useT();
   const city = g.city!;
   const seats = city.boat.capacity;
@@ -18,7 +19,7 @@ export function Triage({ g }: { g: PlayerView }) {
     .map((id, i) => ({ id, i, work: city.contrib[id] ?? 0 }))
     .sort((a, b) => b.work - a.work || a.i - b.i);
   return (
-    <section aria-label={t("s2.triage.title")} className="triage mx-3 rounded-xl border border-ember/30 bg-black/35 px-3 py-2">
+    <section aria-label={t("s2.triage.title")} className={`triage rounded-xl border border-ember/30 bg-black/35 px-3 py-2 ${docked ? "" : "mx-3"}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3">
         <p className="label text-[10px] text-ember">{t("s2.triage.title")}</p>
         <p className="font-mono text-[11px] text-gold">{t("s2.triage.seats", { aboard: city.boat.aboard.length, seats })}</p>
@@ -33,12 +34,16 @@ export function Triage({ g }: { g: PlayerView }) {
             <li key={r.id} className={`triage-row flex min-w-0 items-center gap-2 rounded-md border-l-4 px-2 py-1 text-xs ${aboard ? "border-signal bg-signal/10" : p.carriageIndex === pier ? "border-gold bg-gold/10" : "border-ash/60 bg-white/[0.03]"}`}>
               <span className="w-9 shrink-0 font-mono text-[10px] text-ash">{t("s2.triage.rank", { n: rank + 1 })}</span>
               <Avatar zodiac={ch.zodiac} mbti={ch.mbti} size={22} />
-              <span className="min-w-0 flex-1 truncate font-semibold text-moon">
-                {p.nickname}
-                {r.id === g.viewerId ? ` ${t("s2.triage.you")}` : ""}
+              <span className={`min-w-0 flex-1 ${docked ? "" : "flex items-center gap-2"}`}>
+                <span className={`block min-w-0 truncate font-semibold text-moon ${docked ? "" : "flex-1"}`}>
+                  {p.nickname}
+                  {r.id === g.viewerId ? ` ${t("s2.triage.you")}` : ""}
+                </span>
+                <span className={`flex min-w-0 items-center gap-x-2 ${docked ? "flex-wrap" : "shrink-0"}`}>
+                  <span className="shrink-0 font-mono text-[10px] text-mist">{r.work === 1 ? t("s2.triage.work.one") : t("s2.triage.work.other", { n: r.work })}</span>
+                  <span className="shrink-0 rounded border border-current px-1 font-mono text-[9px] font-bold tracking-wider whitespace-nowrap text-gold">{place}</span>
+                </span>
               </span>
-              <span className="shrink-0 font-mono text-[10px] text-mist">{r.work === 1 ? t("s2.triage.work.one") : t("s2.triage.work.other", { n: r.work })}</span>
-              <span className="shrink-0 rounded border border-current px-1 font-mono text-[9px] font-bold tracking-wider text-gold">{place}</span>
             </li>
           );
         })}

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { R, center, corners, bounds } from "./geometry.ts";
 // Scenario 02's map: the city as hexes, north (the hills) at the top. Height
 // shades each zone; water lies over flooded zones and swallows drowned ones;
@@ -19,9 +20,10 @@ const GROUND = { HIGH: "#3b4a3a", MEDIUM: "#2c3546", LOW: "#232838" } as const;
 // plain marks every font has (no emoji)
 const FACILITY_MARK: Partial<Record<FacilityId, string>> = { POWER_STATION: "⚡", PUMP_STATION: "≈", HARBOUR: "⚓", BROADCAST_TOWER: "Ψ", HOSPITAL: "✚", FIRE_STATION: "▲", CONTROL_CENTRE: "◉", SHIPYARD: "⚙" };
 
-type Props = { g: PlayerView; selected: number; onSelect: (zone: number) => void; moveTargets?: number[]; onMove?: (zone: number) => void };
+/** `aside`: shown at the map's left edge, scrolling with it (scenario 02's triage board). */
+type Props = { g: PlayerView; selected: number; onSelect: (zone: number) => void; moveTargets?: number[]; onMove?: (zone: number) => void; aside?: ReactNode };
 
-export function HexCityMap({ g, selected, onSelect, moveTargets = [], onMove }: Props) {
+export function HexCityMap({ g, selected, onSelect, moveTargets = [], onMove, aside }: Props) {
   const t = useT();
   const text = useScenario02Text();
   const city = g.city!;
@@ -33,7 +35,10 @@ export function HexCityMap({ g, selected, onSelect, moveTargets = [], onMove }: 
 
   return (
     <section aria-label={t("s2.map.aria")} className="no-scrollbar overflow-x-auto overscroll-x-contain px-2">
-      <svg viewBox={`${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`} className="mx-auto block h-auto max-h-[52vh] w-full max-w-3xl min-w-[360px]" role="group">
+      {/* the triage board, once seats are known, rides at the map's left edge and scrolls with it */}
+      <div className={aside ? "mx-auto flex w-max max-w-none items-start gap-3 lg:w-auto lg:max-w-6xl" : undefined}>
+      {aside && <div className="w-60 shrink-0">{aside}</div>}
+      <svg viewBox={`${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`} className={`mx-auto block h-auto max-h-[52vh] max-w-3xl min-w-[360px] ${aside ? "w-[360px] shrink-0 lg:w-full lg:shrink" : "w-full"}`} role="group">
         <defs>
           <pattern id="waves" width="12" height="8" patternUnits="userSpaceOnUse">
             <path d="M0 5q3-4 6 0t6 0" fill="none" stroke="#5ce1e6" strokeOpacity=".45" strokeWidth="1" />
@@ -166,6 +171,7 @@ export function HexCityMap({ g, selected, onSelect, moveTargets = [], onMove }: 
           );
         })}
       </svg>
+      </div>
     </section>
   );
 }

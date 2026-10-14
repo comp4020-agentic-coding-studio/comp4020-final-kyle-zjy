@@ -2,13 +2,13 @@
 // left (Collapse), and the run's progress (anchors, fragments, core memories).
 // Every value is text as well as colour.
 import { motion } from "motion/react";
-import { FRAGMENTS, SCENARIO } from "../../shared/game/scenario01/content.ts";
-import type { FragmentType, PlayerView } from "../../shared/game/state.ts";
+import { SCENARIO } from "../../shared/game/scenario01/content.ts";
+import type { PlayerView } from "../../shared/game/state.ts";
 import { useScenarioText, useT } from "../i18n/index.ts";
 import { rich } from "../i18n/rich.ts";
 import { Icon } from "./Icon.tsx";
 
-export function TopBar({ g, onLog, onSecrets, secretsCount }: { g: PlayerView; onLog: () => void; onSecrets: () => void; secretsCount: number }) {
+export function TopBar({ g, onLog, onSecrets, onMemory, secretsCount }: { g: PlayerView; onLog: () => void; onSecrets: () => void; onMemory: () => void; secretsCount: number }) {
   const danger = g.collapse >= 9;
   const t = useT();
   const act = Math.min(g.act, 3) as 1 | 2 | 3;
@@ -29,9 +29,9 @@ export function TopBar({ g, onLog, onSecrets, secretsCount }: { g: PlayerView; o
         </div>
 
         <div className="min-w-0 flex-1" role="meter" aria-label={t("game.collapse")} aria-valuenow={g.collapse} aria-valuemin={0} aria-valuemax={g.collapseMax}>
-          <div className="flex items-baseline justify-between">
-            <span className={`label text-[9px] sm:text-[10px] ${danger ? "text-ember" : ""}`}>{t("game.collapse")}</span>
-            <span className={`font-mono text-sm whitespace-nowrap ${danger ? "text-ember" : "text-moon"}`}>
+          <div className="flex min-w-0 items-baseline justify-between">
+            <span className={`label min-w-0 truncate text-[9px] sm:text-[10px] ${danger ? "text-ember" : ""}`}>{t("game.collapse")}</span>
+            <span className={`shrink-0 pl-1 font-mono text-sm whitespace-nowrap ${danger ? "text-ember" : "text-moon"}`}>
               {g.collapse} / {g.collapseMax}
             </span>
           </div>
@@ -50,7 +50,7 @@ export function TopBar({ g, onLog, onSecrets, secretsCount }: { g: PlayerView; o
 
         <div className="hidden shrink-0 items-center gap-3 sm:flex">
           <Anchors g={g} />
-          <Fragments have={g.fragments} />
+          <MemoryLink g={g} onOpen={onMemory} />
         </div>
 
         <button onClick={onSecrets} className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gold/30 text-mist hover:text-moon" aria-label={t("game.secretsAria", { n: secretsCount })}>
@@ -63,7 +63,7 @@ export function TopBar({ g, onLog, onSecrets, secretsCount }: { g: PlayerView; o
       </div>
       <div className="mx-auto mt-1.5 flex max-w-6xl items-center justify-between gap-3 sm:hidden">
         <Anchors g={g} />
-        <Fragments have={g.fragments} />
+        <MemoryLink g={g} onOpen={onMemory} />
       </div>
     </header>
   );
@@ -95,19 +95,14 @@ function Anchors({ g }: { g: PlayerView }) {
   );
 }
 
-const ALL_FRAGMENTS = Object.keys(FRAGMENTS) as FragmentType[];
-
-function Fragments({ have }: { have: FragmentType[] }) {
+/** Opens the Memory Board; the fragment and core-memory counts ride on the button, as text. */
+function MemoryLink({ g, onOpen }: { g: PlayerView; onOpen: () => void }) {
   const t = useT();
-  const names = useScenarioText().fragments;
   return (
-    <div className="flex items-center gap-1" aria-label={t("game.fragmentsAria", { n: have.length })}>
-      {ALL_FRAGMENTS.map((f) => (
-        <span key={f} title={names[f].name} className={have.includes(f) ? "text-violet-soft" : "text-indigo"}>
-          <Icon name="FRAGMENT" size={13} />
-        </span>
-      ))}
-      <span className={`font-mono text-[11px] ${have.length >= 3 ? "text-violet-soft" : "text-mist"}`}>{have.length}/3</span>
-    </div>
+    <button type="button" onClick={onOpen} aria-label={t("game.memoryAria", { n: g.fragments.length, core: g.coreMemories })} className="flex min-h-12 items-center gap-1.5 rounded-full border border-violet/40 px-3 text-violet-soft hover:border-violet-soft">
+      <Icon name="FRAGMENT" size={14} />
+      <span className="text-[11px] font-semibold whitespace-nowrap">{t("memory.title")}</span>
+      <span className={`font-mono text-[11px] whitespace-nowrap ${g.fragments.length >= 3 ? "text-violet-soft" : "text-mist"}`}>{g.fragments.length}/3</span>
+    </button>
   );
 }

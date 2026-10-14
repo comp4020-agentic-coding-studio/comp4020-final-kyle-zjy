@@ -193,7 +193,6 @@ export const zhCN: Catalog = {
   "game.anchorsAria": "已修复现实锚点：{n} / 3",
   "game.anchorsLater": "现实锚点将在第 4 轮出现",
   "game.anchorTitle": "{name} {progress}/{required}",
-  "game.fragmentsAria": "记忆碎片：{n}（需要 3 块）",
 
   "banner.vote": "投票：{title}",
   "banner.rolling": "{name} 正在掷骰",
@@ -470,7 +469,7 @@ export const zhCN: Catalog = {
   "poster.round": "第 {n} 轮",
   "poster.cast": "在场的人",
   "memory.title": "记忆墙",
-  "memory.open": "记忆墙 · {n}/6 · 核心 {core}/6",
+  "game.memoryAria": "记忆墙：记忆碎片 {n}（需要 3 块），核心记忆 {core}/6",
   "memory.intro": "列车想让所有人忘掉的东西。碎片不会说明它属于谁——这要由大家讨论。",
   "memory.fragments": "记忆碎片 · {n}/{total}",
   "memory.from": "发现于{carriage}",

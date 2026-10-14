@@ -56,9 +56,9 @@ export function CityGame() {
             setLooking(null);
             void sendGame({ type: "MOVE", toCarriage: z });
           }}
+          aside={g.city?.boat.capacity != null ? <Triage g={g} docked /> : undefined}
         />
         <FinalStartup g={g} />
-        <Triage g={g} />
         <ZonePanel g={g} zone={looking ?? mine} onBack={() => setLooking(null)} />
         <EventPanel g={g} />
         <PlayersStrip g={g} onOpen={setSheet} />

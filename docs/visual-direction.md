@@ -264,7 +264,8 @@ Reduced motion keeps the colour and drops the pulses.
 
 ### Scenario 01 in play
 
-- **Memory Board** (`game/MemoryBoard.tsx`, opened under the Inspector line):
+- **Memory Board** (`game/MemoryBoard.tsx`, opened from the top bar, where the
+  link replaces the old fragment counter and still shows `n/3`):
   six fragment cards pinned with the carriage they came from (unfound ones say
   where to look), and the outline of a person that lights one piece per core
   memory. It never says whose memory a fragment is.
@@ -280,7 +281,8 @@ Reduced motion keeps the colour and drops the pulses.
   assembling into one figure. All of these are tap-to-dismiss and only show
   what the server already decided.
 - **Identity verification** (`game/IdentityCheck01.tsx`): when a ticket-check
-  roll starts, a cold-white passenger file slides over the dice: IDENTITY
+  roll starts, a cold-white passenger file heads the dice card itself (so it
+  never covers the die or the Fate choice): IDENTITY
   VERIFICATION, the name (with a scan line and a brief record jitter), one
   record the whole table can already see (an anchor they restored, a key they
   carry, or the carriage they were last confirmed in), their list status, and
@@ -298,7 +300,9 @@ Reduced motion keeps the colour and drops the pulses.
   bar, rotating through public facts only: zones that go under at the next
   rise (`warning`), people still waiting, standing tunnels and bridges, roads
   lost, flooded districts. The ROUND cue plays radio static (stageFx).
-- **Evacuation triage** (`city/Triage.tsx`, once seats are known): people
+- **Evacuation triage** (`city/Triage.tsx`, once seats are known): a narrow
+  column docked at the left of the map's scroll row (it scrolls with the map on
+  phones; before seats are known the map stands alone, unchanged). People
   ranked by public work, tagged ABOARD / AT THE PIER / IN THE CITY. Pass
   holdings are never shown.
 - **Boarding**: the window opens with a horn (BOARDING_OPEN cue) and an
@@ -445,8 +449,8 @@ and only then the outcome control appears.
 
 ### Scenario 04 in play
 
-- **Table and lot card.** The current lot is a Lot Card at the centre: `LOT nn`, icon,
-  name, one vague line, price, high bidder, turn and "n of N still in". It never
+- **Table and lot card.** The current lot is a compact Lot Card at the centre
+  (icon beside the name, so it stays short): `LOT nn`, icon, name, one vague line, price, high bidder, turn and "n of N still in". It never
   prints the use effect or authenticity (effect text appears only in the holder's
   own inventory and final settlement). Each new bid drops a chip toward the card
   (`S4_BID` cue, `chip_drop`). Seats show a chip stack: chip counts are private, so

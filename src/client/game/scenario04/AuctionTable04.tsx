@@ -36,15 +36,19 @@ export function AuctionTable04({ g }: { g: PlayerView }) {
         {a.houseRule === "holdingDisclosure" && !!Object.keys(a.holdingDeclarations ?? {}).length && <div className="mb-3 rounded-xl border border-gold/30 p-2 text-left text-xs"><p className="label text-gold">{t("s4.house.declarations")}</p>{Object.entries(a.holdingDeclarations ?? {}).map(([id, lotId]) => <p key={id} className="mt-1">{g.players[id]?.nickname} · {auctionLotText(locale, lotId).name}</p>)}</div>}
         {a.houseRule === "transparentTrade" && !!a.publicTrades?.length && <div className="mb-3 rounded-xl border border-gold/30 p-2 text-left text-xs"><p className="label text-gold">{t("s4.house.trades")}</p>{a.publicTrades.map((trade, index) => <p key={index} className="mt-1">{g.players[trade.from]?.nickname} ⇄ {g.players[trade.to]?.nickname} · {trade.chips} / {trade.receiveChips} {t("s4.final.blackChips")} · {trade.giveItem ? auctionLotText(locale, trade.giveItem).name : "—"} / {trade.forItem ? auctionLotText(locale, trade.forItem).name : "—"}</p>)}</div>}
         {g.round === 9 && a.preliminarySettlement && <div data-s4-preliminary className="mb-3 rounded-xl border border-gold/50 bg-gold/10 p-3 text-left text-sm"><p className="label text-gold">{t("s4.house.preliminary")}</p><div className="mt-2 grid grid-cols-2 gap-1 text-xs text-moon sm:grid-cols-3"><p>{t("s4.final.blackChips")} {a.preliminarySettlement.blackChips}</p><p>{t("s4.house.preliminaryItems")} +{a.preliminarySettlement.itemValue}</p><p>{t("s4.final.sanity")} +{a.preliminarySettlement.sanity}</p><p>{t("s4.final.fate")} +{a.preliminarySettlement.fate}</p><p>{t("s4.final.ap")} +{a.preliminarySettlement.ap}</p><p>{t("s4.table.debt", { n: a.players[g.viewerId].debt })} −{a.preliminarySettlement.debtPenalty}</p>{a.preliminarySettlement.finalModifier !== 0 && <p>{t("s4.house.preliminaryModifier")} +{a.preliminarySettlement.finalModifier}</p>}</div><p className="mt-2 border-t border-gold/20 pt-2 font-bold text-gold-bright">{t("s4.house.preliminaryTotal", { n: a.preliminarySettlement.total })}</p></div>}
-        <article data-s4-lot-card className="relative mx-auto mt-1 max-w-xl overflow-hidden rounded-2xl border border-gold/50 bg-[linear-gradient(165deg,#241812,#100a07)] px-4 pb-4 pt-3 shadow-[0_0_30px_#d7ae5124]">
-          <p className="label text-signal">{t("s4.lot.number", { n: String(Math.max(1, g.round)).padStart(2, "0") })} · {t("s4.table.lot")}</p>
-          <div className="mx-auto mt-3 flex size-16 items-center justify-center rounded-2xl border border-gold/40 bg-gold/10 text-gold-bright" aria-hidden="true"><Icon name={LOT_ICON04[a.currentLot] ?? "USE_LOT"} size={36} /></div>
-          <h1 className="mt-1 font-display text-3xl text-gold-bright sm:text-4xl">{lot.name}</h1>
-          <p className="mt-2 text-sm italic text-mist">{lot.description}</p>
-          <p className="mt-1 text-[11px] text-ash">{t("s4.lot.sealed")}</p>
+        <article data-s4-lot-card className="relative mx-auto mt-1 max-w-md overflow-hidden rounded-2xl border border-gold/50 bg-[linear-gradient(165deg,#241812,#100a07)] px-3 pb-3 pt-2 text-left shadow-[0_0_30px_#d7ae5124]">
+          <p className="label text-[10px] text-signal">{t("s4.lot.number", { n: String(Math.max(1, g.round)).padStart(2, "0") })} · {t("s4.table.lot")}</p>
+          <div className="mt-1.5 flex min-w-0 items-center gap-3">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-gold/40 bg-gold/10 text-gold-bright" aria-hidden="true"><Icon name={LOT_ICON04[a.currentLot] ?? "USE_LOT"} size={26} /></div>
+            <div className="min-w-0">
+              <h1 className="break-words font-display text-xl leading-tight text-gold-bright sm:text-2xl">{lot.name}</h1>
+              <p className="mt-0.5 text-xs italic text-mist">{lot.description}</p>
+            </div>
+          </div>
+          <p className="mt-1 text-[10px] text-ash">{t("s4.lot.sealed")}</p>
           <AnimatePresence>{!reduce && a.currentBid > 0 && <motion.span key={`chip-${a.currentBid}`} data-s4-bid-chip aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 z-10 -ml-4 size-8 rounded-full border-2 border-gold-bright bg-[#05060d] shadow-lg shadow-gold/30" initial={{ y: 110, x: 0, opacity: 0.95, scale: 0.7 }} animate={{ y: -6, opacity: 0, scale: 1.15 }} transition={{ duration: 0.75, ease: "easeOut" }} />}</AnimatePresence>
-          {!!a.publicIntel.length && <div className="mt-3 rounded-xl border border-signal/30 p-2 text-left text-xs text-signal"><p className="label">{t("s4.table.publicIntel")}</p>{a.publicIntel.map((id) => <p key={id} className="mt-1">{auctionIntelText(locale, id)}</p>)}</div>}
-          <div className="mt-4 grid grid-cols-2 gap-2 text-left sm:grid-cols-4">
+          {!!a.publicIntel.length && <div className="mt-2 rounded-xl border border-signal/30 p-2 text-left text-xs text-signal"><p className="label">{t("s4.table.publicIntel")}</p>{a.publicIntel.map((id) => <p key={id} className="mt-1">{auctionIntelText(locale, id)}</p>)}</div>}
+          <div className="mt-2 grid grid-cols-2 gap-1.5 text-left sm:grid-cols-4">
             <Stat label={t(a.currentBid > 0 ? "s4.table.bid" : "s4.table.startingBid")} value={a.currentBid > 0 ? String(a.currentBid) : String(startingBid)} />
             <Stat label={t("s4.table.bidder")} value={a.houseRule === "anonymousSeat" && a.currentBid > 0 && !a.currentBidder ? t("s4.house.anonymous") : who(a.currentBidder)} />
             <Stat label={t("s4.table.turn")} value={who(a.turnPlayerId)} />
@@ -87,5 +91,5 @@ function ChipStack({ own, n }: { own: boolean; n: number | null }) {
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
-  return <div className="min-w-0 rounded-lg border border-indigo/70 px-2 py-1.5"><p className="label text-[9px] text-mist">{label}</p><p className="break-words font-mono text-sm text-moon">{value}</p></div>;
+  return <div className="min-w-0 rounded-lg border border-indigo/70 px-2 py-1"><p className="label text-[9px] text-mist">{label}</p><p className="break-words font-mono text-xs text-moon">{value}</p></div>;
 }

@@ -9,6 +9,7 @@ import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { useFormat, useT } from "../i18n/index.ts";
 import { sendGame } from "../store.ts";
+import { IdentityStrip01 } from "./IdentityCheck01.tsx";
 
 // The tier's word is in the catalogs (dice.tier.<TIER>); its colour is here.
 const TIER_COLOR: Record<RollTier, string> = {
@@ -105,12 +106,13 @@ export function DiceOverlay({ g }: { g: PlayerView }) {
       {visible && roll && roller && tier && (
         <motion.div
           key={roll.id}
-          className="pointer-events-none fixed inset-0 z-40 flex items-start justify-center bg-black/45 px-4 pt-[22vh]"
+          className={`pointer-events-none fixed inset-0 z-40 flex items-start justify-center bg-black/45 px-4 ${roll.purpose === "TICKET_CHECK" ? "pt-[12vh]" : "pt-[22vh]"}`}
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -12 }}
         >
           <div className="tarot pointer-events-auto w-full max-w-sm p-4 text-center" onClick={() => setShown(99)} role="dialog" aria-label={t("dice.theirs", { name: roller.nickname, label })} aria-live="polite">
+            {roll.purpose === "TICKET_CHECK" && <IdentityStrip01 g={g} roll={roll} />}
             <p className="label">{heading}</p>
             <div className="mt-3 flex items-center justify-center gap-4">
               <motion.div animate={tumbling ? { rotate: [0, 90, 200, 320, 360], scale: [1, 0.9, 1.05, 0.95, 1] } : { rotate: 0 }} transition={{ duration: 0.7 }}>
