@@ -11,6 +11,7 @@ import { RELIC_STORAGE03 } from "../../../shared/game/scenario03/items.ts";
 import type { PlayerView } from "../../../shared/game/state.ts";
 import { useItemText, useT } from "../../i18n/index.ts";
 import type { S3Key } from "../../i18n/types.ts";
+import { Icon } from "../Icon.tsx";
 import { PlacePanel, RunTopBar } from "../RunTopBar.tsx";
 import { actSteps03, routeSteps03 } from "./clarity03.ts";
 import { roomKey03, roomState03 } from "./Map03.tsx";
@@ -30,12 +31,16 @@ export function TopBar03({ g, onLog, onSecrets, onDossier, secretsCount }: { g: 
       onSecrets={onSecrets}
       secretsCount={secretsCount}
       logLabel={t("s3.top.log")}
+      actions={
+        // phones: the icon alone; wider screens add the word
+        <button type="button" onClick={onDossier} className="flex h-12 min-w-12 shrink-0 items-center justify-center gap-1.5 rounded-full border border-signal/50 px-3 text-xs font-semibold text-signal hover:border-signal" aria-label={t("s3.dossier.title")}>
+          <Icon name="REGISTER" size={18} /><span className="hidden md:inline">{t("s3.dossier.open")}</span>
+        </button>
+      }
       chapter={t("chapter.s03", { n: String(Math.max(1, g.round)).padStart(2, "0"), year: t(`s3.year.short.${year}`), stability: g.collapseMax - g.collapse, max: g.collapseMax })}
     >
       <span className={`${chip} ${year === "Y1996" ? "border-gold/60 text-gold-bright" : "border-signal/60 text-signal"}`}>{t(`s3.year.short.${year}`)}</span>
-      <button type="button" onClick={onDossier} className="flex min-h-12 items-center gap-1.5 rounded-full border border-signal/50 px-3 text-xs font-semibold text-signal hover:border-signal" aria-label={t("s3.dossier.title")}>
-        {t("s3.dossier.open")}<span className="font-mono text-[10px] text-mist">{t("s3.causal.revision", { n: tp.causalRevision })}</span>
-      </button>
+      <span className="font-mono text-[10px] text-mist">{t("s3.causal.revision", { n: tp.causalRevision })}</span>
       {tp.bootstrapProgress.total > 0 && <span className="font-mono text-[10px] text-gold">{t("s3.top.sources", { n: tp.bootstrapProgress.placed, total: tp.bootstrapProgress.total })}</span>}
     </RunTopBar>
   );

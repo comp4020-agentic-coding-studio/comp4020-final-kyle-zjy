@@ -16,6 +16,7 @@ export function RunTopBar({
   secretsCount,
   logLabel,
   chapter,
+  actions,
 }: {
   act: string;
   round: string;
@@ -29,8 +30,25 @@ export function RunTopBar({
   onSecrets: () => void;
   secretsCount: number;
   logLabel: string;
+  /** Extra buttons just left of the secrets button (scenario 03's dossier). */
+  actions?: ReactNode;
 }) {
   const t = useT();
+  const meter = (
+    <>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="label min-w-0 truncate text-[10px] text-mist">{gauge.label}</span>
+        <span className="shrink-0 font-mono text-sm whitespace-nowrap text-moon">
+          {gauge.value} / {gauge.max}
+        </span>
+      </div>
+      <div className="mt-1 grid grid-cols-12 gap-0.5" aria-hidden="true">
+        {Array.from({ length: gauge.max }, (_, i) => (
+          <span key={i} className={`h-1.5 rounded-sm ${i < gauge.value ? gauge.fill(i) : "bg-indigo"}`} />
+        ))}
+      </div>
+    </>
+  );
   return (
     <header className="safe-top relative z-20 border-b border-gold/15 bg-[#05060d]/85 px-3 py-2 backdrop-blur-md sm:px-4">
       <div className="mx-auto flex max-w-6xl items-center gap-3">
@@ -39,20 +57,13 @@ export function RunTopBar({
           <p className="truncate font-mono text-lg leading-tight text-moon">{round}</p>
           {chapter && <p className="truncate font-mono text-[10px] tracking-wider text-gold uppercase">{chapter}</p>}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="label min-w-0 truncate text-[10px] text-mist">{gauge.label}</span>
-            <span className="shrink-0 font-mono text-sm whitespace-nowrap text-moon">
-              {gauge.value} / {gauge.max}
-            </span>
-          </div>
-          <div className="mt-1 grid grid-cols-12 gap-0.5" aria-hidden="true">
-            {Array.from({ length: gauge.max }, (_, i) => (
-              <span key={i} className={`h-1.5 rounded-sm ${i < gauge.value ? gauge.fill(i) : "bg-indigo"}`} />
-            ))}
-          </div>
+        {/* with an extra button, narrow phones move the gauge to its own row below */}
+        <div className={`min-w-0 flex-1 ${actions ? "hidden min-[480px]:block lg:max-w-xl" : ""}`}>
+          {meter}
           <div className="mt-1 hidden flex-wrap items-center gap-1 sm:flex">{children}</div>
         </div>
+        {actions && <div className="min-w-0 flex-1 min-[480px]:hidden" />}
+        {actions && <div className="flex shrink-0 items-center gap-2 lg:ml-auto">{actions}</div>}
         <button className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gold/30 text-mist hover:text-moon" onClick={onSecrets} aria-label={t("game.secretsAria", { n: secretsCount })}>
           <Icon name="SECRET" size={20} />
           {secretsCount > 0 && <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet px-1 font-mono text-[10px] text-white">{secretsCount}</span>}
@@ -61,6 +72,7 @@ export function RunTopBar({
           <Icon name="LOG" size={20} />
         </button>
       </div>
+      {actions && <div className="mx-auto mt-1.5 max-w-6xl min-[480px]:hidden">{meter}</div>}
       {/* phones: the chips get their own full-width row instead of a narrow column */}
       <div className="mx-auto mt-1.5 flex max-w-6xl flex-wrap items-center gap-1 sm:hidden">{children}</div>
     </header>
