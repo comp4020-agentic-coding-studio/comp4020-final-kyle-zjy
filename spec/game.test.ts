@@ -175,10 +175,16 @@ describe("a full table of 10", () => {
     const { seats } = await startedRun(10);
     const first = await intoRound1(seats);
     const byId = new Map(seats.map((s) => [s.join.playerId, s]));
+    let previousVersion = first.version - 1;
     for (const id of first.turnOrder) {
       const seat = byId.get(id)!;
-      await gameOf(seat.c, (g) => g.turnOrder[g.activeIndex] === id && g.pending.length === 0);
-      expect(await seat.c.play({ type: "END_TURN" })).toMatchObject({ t: "ACK" });
+      // Each socket retains earlier snapshots; wait for this round's newly
+      // committed turn before sending an action with its version.
+      const turn = await gameOf(seat.c, (g) => g.phase === "ACT_1" && g.round === 1 && g.step === "PLAYER_TURNS"
+        && !g.sequence && g.pending.length === 0 && g.turnOrder[g.activeIndex] === id && g.version > previousVersion);
+      previousVersion = turn.version;
+      const result = await seat.c.play({ type: "END_TURN" }, { stateVersion: turn.version });
+      expect(result, `END_TURN for ${id} at version ${turn.version}: ${JSON.stringify(result)}`).toMatchObject({ t: "ACK" });
     }
     // the round's event may ask for a decision; everyone takes the default until round 2
     for (let guard = 0; guard < 30; guard++) {
