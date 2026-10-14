@@ -17,9 +17,10 @@ export default function DeveloperCheck() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const last = savedChecks().at(-1);
-  const start = async (id: CheckPresetId) => {
+  /** `open`: an inspection to open on arrival (the dossier presets open the Timeline Dossier). */
+  const start = async (id: CheckPresetId, open?: "dossier") => {
     setBusy(true); setError(false);
-    try { navigate(checkPath(await launchCheck(id))); }
+    try { const run = await launchCheck(id); if (open) sessionStorage.setItem("fate:developer:open", open); navigate(checkPath(run)); }
     catch { setError(true); setBusy(false); }
   };
   return <main className="night-sky developer-page">
@@ -48,6 +49,10 @@ export default function DeveloperCheck() {
         <h2 id="developer-ui-title" className="developer-section-title">{t("developer.openings")}</h2>
         <div className="developer-grid developer-replays">{([1, 2, 3, 4] as const).map((n) => <button key={n} className="btn btn-ghost" disabled={busy} onClick={() => void start(`s${n}.start`)}>{t("developer.replay", { n: String(n).padStart(2, "0") })}</button>)}</div>
         <div className="developer-grid developer-replays">{([['phase','s1.fold'],['ending','s1.ending'],['recap','s3.recap'],['private','s4.private'],['dice','s3.dice'],['trade','s1.trade']] as const).map(([key, id]) => <button key={key} className="btn btn-ghost" disabled={busy} onClick={() => void start(id)}>{t(`developer.${key}`)}</button>)}</div>
+      </section>
+      <section aria-labelledby="developer-dossier-title" className="developer-ui">
+        <h2 id="developer-dossier-title" className="developer-section-title">{t("developer.dossier")}</h2>
+        <div className="developer-grid developer-replays">{([["initial", "s3.start"], ["one", "s3.dossier-one"], ["multi", "s3.dossier-multi"], ["contra", "s3.dossier-contra"], ["final", "s3.archive"]] as const).map(([key, id]) => <button key={key} className="btn btn-ghost" disabled={busy} onClick={() => void start(id, "dossier")}>{t(`developer.dossier.${key}`)}</button>)}</div>
       </section>
       <EndingPreview />
     </div>

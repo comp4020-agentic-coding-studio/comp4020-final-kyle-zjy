@@ -5,7 +5,8 @@ import { useEffect, type ReactNode } from "react";
 import { useT } from "../i18n/index.ts";
 import { Icon } from "./Icon.tsx";
 
-export function Drawer({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+/** `wide`: a broader desktop sheet, for a panel that reads as a document (the Scenario 03 dossier). */
+export function Drawer({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
   const t = useT();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -19,7 +20,7 @@ export function Drawer({ title, onClose, children }: { title: string; onClose: (
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="glass safe-bottom relative flex max-h-[80dvh] bg-night w-full flex-col rounded-t-2xl sm:max-h-none sm:w-[400px] sm:rounded-none sm:rounded-l-2xl"
+        className={`glass safe-bottom relative flex max-h-[80dvh] bg-night w-full flex-col rounded-t-2xl sm:max-h-none ${wide ? "sm:w-[min(760px,100%)]" : "sm:w-[400px]"} sm:rounded-none sm:rounded-l-2xl`}
         initial={{ y: 40, x: 0, opacity: 0 }}
         animate={{ y: 0, x: 0, opacity: 1 }}
         exit={{ y: 40, opacity: 0 }}

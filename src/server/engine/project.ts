@@ -164,6 +164,8 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
       discoveredFacts: [...s.temporal.discoveredFacts],
       locations: { ...s.temporal.locations },
       present: { ...s.temporal.present },
+      // 2026 as the run began: fixed at creation, the base every rewrite derives from; all public world state
+      originalPresent: { ...s.temporal.baselinePresent },
       interventions: s.temporal.interventions.map((item) => ({ ...item, actorId: s.temporal!.story.revealed.includes("INTRUDERS_IDENTIFIED") ? item.actorId : null })),
       surveillance: s.temporal.surveillanceReviewed || s.temporal.story.revealed.includes("INTRUDERS_IDENTIFIED")
         ? s.temporal.surveillance.map(({ evidenceId: _evidenceId, ...item }) => ({ ...item, actorId: s.temporal!.story.revealed.includes("INTRUDERS_IDENTIFIED") ? item.actorId : null }))

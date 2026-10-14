@@ -611,3 +611,47 @@ and lazy child-screen loads. Mute is remembered at `fate:muted`; autoplay
 retries on a gesture, and backgrounding pauses music. The visible Music menu
 contains composer/license/source credits. See [music-direction.md](music-direction.md)
 for the cue sheet, asset provenance, mastering recipe and tests.
+
+## Timeline Dossier (Incident Zero Dossier)
+
+One place to read the story, opened from **Dossier** in the top bar (a wide
+drawer on desktop, a bottom sheet on phones). It replaces the separate causal
+network, incident record and consequence/initial record lists that used to
+live in the private drawer, which now keeps only private material and points
+here.
+
+- **Original 2026** is `Temporal03.baselinePresent`. The server sets it once
+  at creation (the case file is seeded) and never changes it. Every
+  `derivePresent03` call starts from it. The projection now sends it as
+  `originalPresent`; every field is public world state. Nothing new is stored
+  and no derivation changed.
+- **Current 2026** is the projected `present`.
+- **Model** (`client/game/scenario03/dossier03.ts`, pure, public data only):
+  seven records chosen for the story and routes. These are the accident
+  record, Ji, the staff, the prototype, the core, the research worker and the
+  official report. Each record is a chain: 1996 decision (from the public
+  intervention list; the actor shows only after identities are revealed) →
+  Incident Zero → original value → current value. An undecided cause is `???`,
+  or "not yet reachable" before its act.
+- **Status:**
+  - CHANGED: original ≠ current.
+  - CONTRADICTED: the record's official claim has been disproved by a
+    discovered fact, but history still matches the claim.
+  - CONFIRMED: a decision is on record.
+  - PARTIAL: the value is public but its cause isn't yet.
+  - UNKNOWN: unreachable and unverified.
+- **Assessment** never names a route. It reads drift and contradictions from
+  the records. "Converging" comes only from the server's `routeConditions`,
+  when every condition of some open history is met.
+- **Timeline shift:** `S3_CAUSAL_REWRITE`'s before/after present picks the
+  rewritten records. They flash, the old value is struck through and fades,
+  and the new value writes in (1–2 s; outline only under reduced motion). The
+  toast now opens the dossier.
+- **Possible histories** (Act IV) list each open route's `routeConditions`,
+  with the server's verdict. Each condition maps to its record
+  (`ROUTE_RECORDS`) and scrolls to it, highlighted.
+- **Private:** directives, evidence and relics never enter the dossier.
+- Checks: `test/scenario03-dossier.test.ts` (snapshot fixed, rewrites,
+  contradiction, shift reading, no route named, privacy, replay) and
+  `scripts/ui-dossier03.ts` (1280/390/320, link-back). Developer presets:
+  initial, one intervention, multiple rewrites, contradiction, final archive.

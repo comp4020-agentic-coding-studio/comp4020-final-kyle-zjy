@@ -179,9 +179,10 @@ describe("a full table of 10", () => {
     for (const id of first.turnOrder) {
       const seat = byId.get(id)!;
       // Each socket retains earlier snapshots; wait for this round's newly
-      // committed turn before sending an action with its version.
+      // committed turn before sending an action with its version. Ten sockets
+      // under a parallel suite can take more than the default 3 s to deliver.
       const turn = await gameOf(seat.c, (g) => g.phase === "ACT_1" && g.round === 1 && g.step === "PLAYER_TURNS"
-        && !g.sequence && g.pending.length === 0 && g.turnOrder[g.activeIndex] === id && g.version > previousVersion);
+        && !g.sequence && g.pending.length === 0 && g.turnOrder[g.activeIndex] === id && g.version > previousVersion, 10_000);
       previousVersion = turn.version;
       const result = await seat.c.play({ type: "END_TURN" }, { stateVersion: turn.version });
       expect(result, `END_TURN for ${id} at version ${turn.version}: ${JSON.stringify(result)}`).toMatchObject({ t: "ACK" });

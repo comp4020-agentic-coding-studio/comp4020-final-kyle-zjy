@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { StoryRecap } from "../game/StoryRecap.tsx";
 import { EndingPoster } from "../game/EndingPoster.tsx";
 import { DirectiveResults03, TimelineShift03 } from "../game/scenario03/Causal03.tsx";
+import { TimelineDossier03 } from "../game/scenario03/TimelineDossier03.tsx";
+import { Drawer } from "../game/Drawer.tsx";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { RoomId03, Year03 } from "../../shared/game/scenario03/map.ts";
 import type { PlayerView, PublicPlayerState } from "../../shared/game/state.ts";
@@ -42,7 +44,7 @@ export function Scenario03Game() {
   const g = useGame();
   const t = useT();
   const [mode, setMode] = useState<Mode>(null);
-  const [drawer, setDrawer] = useState<null | "log" | "secrets">(null);
+  const [drawer, setDrawer] = useState<null | "log" | "secrets" | "dossier">(null);
   const [sheet, setSheet] = useState<PublicPlayerState | null>(null);
   const [looking, setLooking] = useState<RoomId03 | null>(null);
   const [viewYear, setViewYear] = useState<Year03>("Y2026");
@@ -89,7 +91,7 @@ export function Scenario03Game() {
 
   return (
     <main className="night-sky relative flex min-h-dvh flex-col">
-      <TopBar03 g={g} onLog={() => setDrawer("log")} onSecrets={() => setDrawer("secrets")} secretsCount={secrets} />
+      <TopBar03 g={g} onLog={() => setDrawer("log")} onSecrets={() => setDrawer("secrets")} onDossier={() => setDrawer("dossier")} secretsCount={secrets} />
       <Banner g={g} />
       <Objective03 g={g} />
       <div className="flex min-h-0 flex-1 flex-col justify-center gap-1 py-1">
@@ -147,7 +149,7 @@ export function Scenario03Game() {
       <Dock g={g} mode={mode} setMode={setMode} extension={DOCK03} />
 
       <CueFeed g={g} />
-      <TimelineShift03 />
+      <TimelineShift03 onOpen={() => setDrawer("dossier")} hidden={drawer === "dossier"} />
       <AnimatePresence>
         {jumpFlash && <motion.div
           key={jumpFlash.key}
@@ -170,6 +172,7 @@ export function Scenario03Game() {
       {!g.pending.length && g.sequence?.kind === "S3_THIRD_ROUTE" && <ThirdRouteSequence03 g={g} />}
       <AnimatePresence>
         {drawer === "log" && <LogDrawer key="log" g={g} title={t("s3.top.log")} onClose={() => setDrawer(null)} />}
+        {drawer === "dossier" && <Drawer key="dossier" wide title={t("s3.dossier.title")} onClose={() => setDrawer(null)}><TimelineDossier03 g={g} /></Drawer>}
         {drawer === "secrets" && <SecretsDrawer key="secrets" g={g} sections={<Private03 g={g} />} onClose={() => setDrawer(null)} />}
         {sheet && <PlayerSheet key="sheet" g={g} p={sheet} onClose={() => setSheet(null)} />}
       </AnimatePresence>

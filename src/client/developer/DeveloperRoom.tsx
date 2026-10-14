@@ -8,6 +8,7 @@ import { Private03 } from "../game/scenario03/Private03.tsx";
 import { Private04 } from "../game/scenario04/Private04.tsx";
 import { Drawer } from "../game/Drawer.tsx";
 import { StoryRecap03 } from "../game/scenario03/Private03.tsx";
+import { TimelineDossier03 } from "../game/scenario03/TimelineDossier03.tsx";
 import { checkPath, savedChecks } from "./session.ts";
 import { AuctionSandbox04 } from "./AuctionSandbox04.tsx";
 import { HouseRuleSandbox04 } from "./HouseRuleSandbox04.tsx";
@@ -23,7 +24,7 @@ export default function DeveloperRoom({ code, seat }: { code: string; seat: numb
   const roomPhase = useStore((s) => s.snapshot?.room.phase);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
-  const [inspection, setInspection] = useState<null | "private" | "story">(null);
+  const [inspection, setInspection] = useState<null | "private" | "story" | "dossier">(null);
   const ready = g?.sessionId === run?.sessionId && g?.flags.developerCheck === 1 && g?.viewerId === run?.seats[seat].playerId;
   useLayoutEffect(() => {
     if (!bar.current || !root.current) return;
@@ -33,7 +34,9 @@ export default function DeveloperRoom({ code, seat }: { code: string; seat: numb
   }, [run?.sessionId]);
   useEffect(() => {
     if (!ready) return;
-    setInspection(run?.presetId === "s3.recap" ? "story" : run?.presetId === "s4.private" ? "private" : null);
+    let open: string | null = null;
+    try { open = sessionStorage.getItem("fate:developer:open"); sessionStorage.removeItem("fate:developer:open"); } catch { /* storage blocked */ }
+    setInspection(open === "dossier" || run?.presetId?.startsWith("s3.dossier") ? "dossier" : run?.presetId === "s3.recap" ? "story" : run?.presetId === "s4.private" ? "private" : null);
   }, [ready, run?.sessionId, seat]);
   useEffect(() => { if (status === "online" && roomPhase === "LOBBY") navigate("/developer"); }, [status, roomPhase]);
   if (!run) return <main className="night-sky developer-page"><p>{t("developer.missing")}</p><button className="btn btn-ghost" onClick={() => navigate("/developer")}>{t("developer.back")}</button></main>;
@@ -54,6 +57,7 @@ export default function DeveloperRoom({ code, seat }: { code: string; seat: numb
         <details className="developer-tools"><summary className="btn btn-ghost">{t("developer.controls")}</summary><div className="developer-tools-panel"><p>{t("developer.manual")}</p><div className="developer-tool-grid">        <a className="btn btn-ghost" href={checkPath(run, (seat + 1) % 3)} target="_blank" rel="noreferrer">{t("developer.openSeat")}</a>
         <button className="btn btn-ghost" disabled={busy || !ready || g?.phase === "RESULTS"} onClick={() => void advance()}>{t("developer.advance")}</button>
         {ready && g?.temporal && <button className="btn btn-ghost" onClick={() => setInspection("story")}>{t("developer.recap")}</button>}
+        {ready && g?.temporal && <button className="btn btn-ghost" onClick={() => setInspection("dossier")}>{t("developer.dossier.open")}</button>}
         {ready && <button className="btn btn-ghost" onClick={() => setInspection("private")}>{t("developer.private")}</button>}</div>{ready && g?.auction && <><AuctionSandbox04 g={g} /><HouseRuleSandbox04 g={g} /></>}</div></details>
       </div>
       <p className="developer-manual">{t("developer.manualShort")}</p>
@@ -61,6 +65,7 @@ export default function DeveloperRoom({ code, seat }: { code: string; seat: numb
     </header>
     <RoomGate key={`${code}:${seat}`} code={code} token={run.seats[seat].sessionToken} viewerId={run.seats[seat].playerId} />
     {ready && g && inspection === "private" && <SecretsDrawer key={`${code}:${seat}:private`} g={g} onClose={() => setInspection(null)} sections={g.temporal ? <Private03 g={g} /> : g.auction ? <Private04 g={g} /> : undefined} />}
+    {ready && g?.temporal && inspection === "dossier" && <Drawer wide title={t("s3.dossier.title")} onClose={() => setInspection(null)}><TimelineDossier03 g={g} /></Drawer>}
     {ready && g?.temporal && inspection === "story" && <Drawer title={t("developer.recap")} onClose={() => setInspection(null)}><StoryRecap03 g={g} /></Drawer>}
   </div>;
 }

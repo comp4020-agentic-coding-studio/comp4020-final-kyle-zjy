@@ -17,7 +17,7 @@ import { roomKey03, roomState03 } from "./Map03.tsx";
 
 const chip = "rounded-full border px-1.5 py-0.5 text-[10px] font-bold tracking-wider";
 
-export function TopBar03({ g, onLog, onSecrets, secretsCount }: { g: PlayerView; onLog: () => void; onSecrets: () => void; secretsCount: number }) {
+export function TopBar03({ g, onLog, onSecrets, onDossier, secretsCount }: { g: PlayerView; onLog: () => void; onSecrets: () => void; onDossier: () => void; secretsCount: number }) {
   const t = useT();
   const tp = g.temporal!;
   const year = tp.locations[g.viewerId]?.year ?? "Y2026";
@@ -33,7 +33,9 @@ export function TopBar03({ g, onLog, onSecrets, secretsCount }: { g: PlayerView;
       chapter={t("chapter.s03", { n: String(Math.max(1, g.round)).padStart(2, "0"), year: t(`s3.year.short.${year}`), stability: g.collapseMax - g.collapse, max: g.collapseMax })}
     >
       <span className={`${chip} ${year === "Y1996" ? "border-gold/60 text-gold-bright" : "border-signal/60 text-signal"}`}>{t(`s3.year.short.${year}`)}</span>
-      <span className="font-mono text-[10px] text-mist">{t("s3.causal.revision", { n: tp.causalRevision })}</span>
+      <button type="button" onClick={onDossier} className="flex min-h-12 items-center gap-1.5 rounded-full border border-signal/50 px-3 text-xs font-semibold text-signal hover:border-signal" aria-label={t("s3.dossier.title")}>
+        {t("s3.dossier.open")}<span className="font-mono text-[10px] text-mist">{t("s3.causal.revision", { n: tp.causalRevision })}</span>
+      </button>
       {tp.bootstrapProgress.total > 0 && <span className="font-mono text-[10px] text-gold">{t("s3.top.sources", { n: tp.bootstrapProgress.placed, total: tp.bootstrapProgress.total })}</span>}
     </RunTopBar>
   );

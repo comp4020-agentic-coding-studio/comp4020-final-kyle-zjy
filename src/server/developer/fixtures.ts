@@ -182,11 +182,15 @@ function closeLoops(t: Checkpoint, leaveLast = false) {
 }
 function temporal(t: Checkpoint, id: CheckPresetId) {
   if (id === "s3.start") return;
-  t.round(id === "s3.jump" || id === "s3.shift" || id === "s3.dice" ? 2 : id === "s3.bootstrap" ? 4 : id === "s3.echo" ? 6 : id === "s3.recap" ? 7 : 10);
+  t.round(id === "s3.jump" || id === "s3.shift" || id === "s3.dice" || id === "s3.dossier-one" ? 2 : id === "s3.bootstrap" ? 4 : id === "s3.echo" ? 6 : id === "s3.recap" ? 7 : id === "s3.dossier-contra" ? 9 : 10);
   if (id === "s3.jump") { t.place(t.active, "CENTRAL_HALL", "Y2026"); return; }
   if (id === "s3.shift") { t.place(t.active, "ARCHIVES", "Y1996"); return; }
   if (id === "s3.bootstrap") { closeLoops(t, true); return; }
   if (id === "s3.echo" || id === "s3.recap") return;
+  // Timeline Dossier presets: one rewrite, several, and an unresolved contradiction
+  if (id === "s3.dossier-one") { t.intervene("WORKER", "SAVE"); return; }
+  if (id === "s3.dossier-multi") { t.intervene("STAFF_EVACUATION", "EVACUATE"); t.intervene("ACCIDENT_RECORD", "CONTROLLED"); t.intervene("WORKER", "SAVE"); return; }
+  if (id === "s3.dossier-contra") return;
   if (id === "s3.dice") { t.place(t.active, "ARCHIVES", "Y2026"); t.act(t.active, { type: "INVESTIGATE" }); return; }
   const route: EndingRoute03 = id === "s3.erased" ? "NO_TOMORROW" : id === "s3.deceive" ? "DECEIVE_HISTORY" : "OFFICIAL_HISTORY";
   if (route === "NO_TOMORROW") { t.intervene("PROTOTYPE_CORE", "SHUT_DOWN"); t.intervene("ACCIDENT_RECORD", "ERASED"); }

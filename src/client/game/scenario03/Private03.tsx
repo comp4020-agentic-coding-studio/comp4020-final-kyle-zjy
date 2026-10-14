@@ -14,7 +14,7 @@ import type { S3Key } from "../../i18n/types.ts";
 import { Section } from "../SecretsDrawer.tsx";
 import { roomKey03 } from "./Map03.tsx";
 import { archiveLeadText03 } from "./archiveLead03.ts";
-import { CausalNetwork03, Directive03 } from "./Causal03.tsx";
+import { Directive03 } from "./Causal03.tsx";
 
 const EVIDENCE: Record<string, S3Key> = {
   ARCHIVIST_NOTE: "s3.npc.note",
@@ -97,44 +97,10 @@ export function Private03({ g }: { g: PlayerView }) {
         </p>
         <p className="mt-1 text-sm">{words.skillDescription}</p>
       </section>
-      <CausalNetwork03 g={g} />
       {s && s.peeks.length > 0 && <Section title={t("secrets.glimpses")} empty="" items={s.peeks.map((x) => ({ id: x.id, text: fmt(x.text), meta: t("secrets.round", { n: x.round }) }))} />}
 
       <p className="label border-b border-signal/20 pb-1 text-signal">{t("s3.secrets.publicGroup")}</p>
       <p className="text-sm text-mist">{t("s3.items.teamLoops", { n: tp.bootstrapProgress.placed, total: tp.bootstrapProgress.total })}</p>
-      <StoryRecap03 g={g} />
-      <section>
-        <p className="label">{t(tp.causalRevision ? "s3.secrets.causal" : "s3.secrets.causalInitial", { n: tp.causalRevision })}</p>
-        <ul className="mt-1 space-y-1 text-sm">
-          <li>{t("s3.causal.case", { id: p.caseFile })}</li>
-          <li>{t(p.secretArchiveOpen ? "s3.causal.gateOpen" : "s3.causal.gateClosed")}</li>
-          <li>{t(p.workerPresent ? "s3.causal.workerHere" : "s3.causal.workerAbsent")}</li>
-          <li>{t(p.badgeCache ? "s3.causal.badgeHere" : "s3.causal.badgeAbsent")}</li>
-          <li>{t(p.report === "CORRECTED" ? "s3.causal.reportCorrected" : "s3.causal.reportOfficial")}</li>
-          {g.act >= 3 && <li>{t(p.administrationIntegrity === "FADING" ? "s3.causal.integrityFading" : "s3.causal.integrityStable")}</li>}
-        </ul>
-        {tp.interventions.length > 0 && (
-          <div className="s3-causal-history">
-            <p className="label text-mist">{t("s3.causal.history")}</p>
-            <ol>
-              {[...tp.interventions]
-                .sort((a, b) => b.seq - a.seq)
-                .map((entry) => (
-                  <li key={entry.seq}>
-                    <span className="s3-causal-year">1996</span>
-                    <span className="s3-causal-decision">
-                      {t(`s3.node.${entry.nodeId}`)} · {t(`s3.choice.${entry.nodeId}.${entry.choiceId}` as S3Key)}
-                    </span>
-                    <span className="s3-causal-arrow" aria-hidden="true">
-                      →
-                    </span>
-                    <span className="s3-causal-year">2026</span>
-                  </li>
-                ))}
-            </ol>
-          </div>
-        )}
-      </section>
       {g.act >= 2 && (tp.surveillanceReviewed || tp.identityMatches.length > 0) && (
         <section>
           <p className="label">{t("s3.secrets.intruders")}</p>
@@ -156,40 +122,7 @@ export function Private03({ g }: { g: PlayerView }) {
           </ul>
         </section>
       )}
-      {g.act >= 3 && (
-        <section>
-          <p className="label">{t("s3.secrets.paradox")}</p>
-          <ul className="mt-1 space-y-1 text-sm">
-            <li>{t(p.administrationIntegrity === "FADING" ? "s3.paradox.fading" : "s3.paradox.stable")}</li>
-            <li>{t(p.powerRoomExists ? "s3.paradox.powerHere" : "s3.paradox.powerGone")}</li>
-          </ul>
-          {tp.discoveredFacts.map((id) => (
-            <div key={id} className="mt-1.5 rounded-lg border border-gold/20 px-3 py-2 text-sm">
-              <p>{t(`s3.fact.${id}.official`)}</p>
-              <p className="mt-0.5 text-signal">{t(`s3.fact.${id}.observed`)}</p>
-            </div>
-          ))}
-          <p className="label mt-2 text-gold">{t("s3.route.title")}</p>
-          <ul className="mt-1 space-y-1 text-sm">
-            {tp.story.availableRoutes.map((id) => (
-              <li key={id}>{t(`s3.route.${id}`)}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {g.act >= 4 && (
-        <section>
-          <p className="label">{t("s3.secrets.final")}</p>
-          <ul className="mt-1 space-y-1 text-sm">
-            <li>{t(`s3.final.record.${p.accidentRecord}`)}</li>
-            <li>{t(p.staffEvacuated ? "s3.final.staffSafe" : "s3.final.staffUnsafe")}</li>
-            <li>{t(p.jiStaged ? "s3.final.jiStaged" : "s3.final.jiExposed")}</li>
-            <li>{t(p.prototypeHidden ? "s3.final.prototypeHidden" : "s3.final.prototypeExposed")}</li>
-            <li>{t("s3.final.bootstrap", { n: tp.bootstrapProgress.placed, total: tp.bootstrapProgress.total })}</li>
-          </ul>
-          <p className="mt-1 text-xs text-mist">{t("s3.final.where")}</p>
-        </section>
-      )}
+      <p className="text-sm text-mist">{t("s3.dossier.pointer")}</p>
     </>
   );
 }

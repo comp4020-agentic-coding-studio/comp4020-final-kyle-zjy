@@ -29,7 +29,8 @@ const TOUCHES: Record<CausalNodeId03, (keyof TemporalPresent03)[]> = {
 
 const roomsOf = (keys: (keyof TemporalPresent03)[]) => [...new Set(keys.map((k) => ROOM_OF[k]).filter((r): r is RoomId03 => !!r))];
 
-export function TimelineShift03() {
+/** `onOpen`: opens the Timeline Dossier, where the rewritten records change in place. */
+export function TimelineShift03({ onOpen, hidden = false }: { onOpen?: () => void; hidden?: boolean }) {
   const t = useT();
   const cue = useStore((s) => s.cues?.findLast((c) => c.kind === "S3_CAUSAL_REWRITE"));
   const [open, setOpen] = useState<string | null>(null);
@@ -44,8 +45,8 @@ export function TimelineShift03() {
   const changed = roomsOf((Object.keys(after) as (keyof TemporalPresent03)[]).filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k])));
   return (
     <AnimatePresence>
-      {open && cue?.key === open && (
-        <motion.button key={open} className="s3-shift fixed inset-x-3 top-[calc(env(safe-area-inset-top)+96px)] z-40 mx-auto max-w-md rounded-xl border border-signal/50 bg-[#061a22]/95 p-3 text-left" initial={{ opacity: 0, y: -10, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0 }} onClick={() => setOpen(null)} aria-live="polite">
+      {open && cue?.key === open && !hidden && (
+        <motion.button key={open} className="s3-shift fixed inset-x-3 top-[calc(env(safe-area-inset-top)+96px)] z-40 mx-auto max-w-md rounded-xl border border-signal/50 bg-[#061a22]/95 p-3 text-left" initial={{ opacity: 0, y: -10, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0 }} onClick={() => { setOpen(null); onOpen?.(); }} aria-live="polite">
           <p className="label text-signal">{t("s3.shift.kicker")}</p>
           <p className="font-display text-xl text-moon">{t("s3.shift.title")}</p>
           <ul className="mt-1 grid grid-cols-1 gap-0.5 font-mono text-xs text-mist">
@@ -56,6 +57,7 @@ export function TimelineShift03() {
             ))}
           </ul>
           <p className="mt-1 text-[11px] text-ash">{t("s3.shift.note")}</p>
+          {onOpen && <span className="mt-1 block font-mono text-xs text-signal underline underline-offset-4">{t("s3.dossier.shiftOpen")}</span>}
         </motion.button>
       )}
     </AnimatePresence>

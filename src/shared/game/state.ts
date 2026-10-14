@@ -144,6 +144,8 @@ export type PublicTemporal03 = Omit<Temporal03, "baselinePresent" | "evidence" |
   worldItems: Omit<TemporalItem03, "ownerId" | "bootstrapOwnerId">[];
   myItems: Omit<TemporalItem03, "bootstrapOwnerId">[];
   myObligations: BootstrapObligation03[];
+  /** 2026 as this run began (the immutable baseline `present` is derived from). */
+  originalPresent: TemporalPresent03;
   /** Per open final history, each condition and whether the server finds it met. */
   routeConditions?: Partial<Record<EndingRoute03, { label: Msg; met: boolean }[]>>;
   /** The viewer's own Administration directive (scenario03/directives.ts); after the run, everyone's with the verdict. */
