@@ -2,7 +2,9 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState, type FormEvent } from "react";
 import { CodeInput } from "../components/CodeInput.tsx";
 import { LanguageSwitch } from "../components/LanguageSwitch.tsx";
-import { useT, type MessageKey, type TFunction } from "../i18n/index.ts";
+import { useLocale, useT, type MessageKey, type TFunction } from "../i18n/index.ts";
+import { scenarioText } from "../../shared/i18n/content.ts";
+import { scenario02Text } from "../../shared/i18n/scenario02.ts";
 import { MAX_PLAYERS } from "../../shared/protocol.ts";
 import { PlatformScene } from "../components/PlatformScene.tsx";
 import { api, ApiError } from "../net/api.ts";
@@ -18,6 +20,8 @@ export function Landing({ initialCode }: { initialCode?: string }) {
   const [mode, setMode] = useState<Mode>(initialCode ? "join" : null);
   const [lastRoom, setLastRoom] = useState<string | null>(null);
   const t = useT();
+  const locale = useLocale();
+  const scenarios = [scenarioText(locale).scenario.title, scenario02Text(locale).scenario.title, t("s3.title"), t("s4.title")];
 
   useEffect(() => {
     const code = session.lastRoom();
@@ -30,7 +34,7 @@ export function Landing({ initialCode }: { initialCode?: string }) {
     <main className="night-sky vignette relative flex min-h-dvh flex-col overflow-hidden">
       <PlatformScene />
 
-      {/* destination board */}
+      {/* departure board: the four scenarios */}
       <motion.header
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -38,18 +42,15 @@ export function Landing({ initialCode }: { initialCode?: string }) {
         className="relative z-10 mx-auto mt-4 w-[min(100%-32px,560px)] rounded-lg border border-[#1f2547] bg-[#04050b]/90 px-4 py-3 shadow-[0_10px_40px_rgb(0_0_0/.6)]"
       >
         <div className="flex items-center justify-between gap-3 font-mono text-[13px] sm:text-sm">
-          <span className="led-amber text-lg sm:text-xl">00:17</span>
-          <span className="led">N13</span>
-          <span className="truncate text-mist">
-            {t("landing.board.terminus")} <span className="led-amber tracking-widest">██████</span>
-          </span>
+          <span className="led-amber text-lg sm:text-xl">01–04</span>
+          <span className="truncate text-mist">{t("landing.board.scenarios")}</span>
         </div>
         <div className="mt-1 overflow-hidden whitespace-nowrap font-mono text-[11px] text-ash">
           <motion.div
             animate={{ x: ["100%", "-100%"] }}
             transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
           >
-            {t("landing.board.ticker")}
+            {scenarios.map((title, i) => `${String(i + 1).padStart(2, "0")} ${title}`).join("  ·  ")}
           </motion.div>
         </div>
       </motion.header>
@@ -102,7 +103,7 @@ export function Landing({ initialCode }: { initialCode?: string }) {
           </button>
           <button className="developer-entry" onClick={() => navigate("/developer")}><span>{t("developer.entry")}</span><small>{t("developer.tagline")}</small></button>
           <div className="mt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-            <a href="/readme/" className="inline-flex min-h-12 items-center justify-center text-sm text-ash underline-offset-4 hover:text-mist hover:underline">
+            <a href="/readme/" className="inline-flex min-h-12 min-w-12 items-center justify-center px-1 text-sm text-ash underline-offset-4 hover:text-mist hover:underline">
               {t("landing.about")}
             </a>
             <LanguageSwitch />

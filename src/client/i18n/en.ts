@@ -28,8 +28,7 @@ export const en = {
   "common.ap": "AP",
 
   // ---- landing ------------------------------------------------------------
-  "landing.board.terminus": "TERMINUS",
-  "landing.board.ticker": "PASSENGERS WITH TICKETS, PLEASE BOARD NOW · PASSENGER COUNT IS BEING CONFIRMED · DO NOT FALL ASLEEP",
+  "landing.board.scenarios": "SCENARIOS NOW BOARDING",
   "landing.kicker": "A party game for 2–10 passengers",
   "landing.title1": "Fate",
   "landing.title2": "Instance",

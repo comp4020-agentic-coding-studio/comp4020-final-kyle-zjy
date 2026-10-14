@@ -24,8 +24,7 @@ export const zhCN: Catalog = {
   "common.ap": "行动点",
 
   // ---- landing ------------------------------------------------------------
-  "landing.board.terminus": "终点站",
-  "landing.board.ticker": "持票乘客请立即上车 · 乘客人数正在确认 · 请勿入睡",
+  "landing.board.scenarios": "副本 · 现正开放",
   "landing.kicker": "一款 2–10 名乘客的派对游戏",
   "landing.title1": "命运",
   "landing.title2": "副本",
