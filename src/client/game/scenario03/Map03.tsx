@@ -48,7 +48,7 @@ export function Map03({ g, year, ripple, selected, onSelect, moveTargets, onMove
   const targets = new Set(moveTargets);
   const edges = ROOM_IDS.flatMap((room) => ADJACENT03[room].filter((next) => ROOM_IDS.indexOf(room) < ROOM_IDS.indexOf(next)).map((next) => [room, next] as const));
   return (
-    <section aria-label={t("s3.map")} className={`s3-map-shell ${year === "Y1996" ? "s3-past" : "s3-present"} ${ripple ? "s3-map-rewritten" : ""}`}>
+    <section data-guide="map" aria-label={t("s3.map")} className={`s3-map-shell ${year === "Y1996" ? "s3-past" : "s3-present"} ${ripple ? "s3-map-rewritten" : ""}`}>
       <div className="s3-map-grid">
         <svg className="s3-map-lines-desktop" viewBox="0 0 720 300" aria-hidden="true">
           {edges.map(([a, b]) => (

@@ -176,12 +176,13 @@ describe("a full table of 10", () => {
     const first = await intoRound1(seats);
     const byId = new Map(seats.map((s) => [s.join.playerId, s]));
     let previousVersion = first.version - 1;
-    for (const id of first.turnOrder) {
+    for (const [n, id] of first.turnOrder.entries()) {
       const seat = byId.get(id)!;
       // Each socket retains earlier snapshots; wait for this round's newly
       // committed turn before sending an action with its version. Ten sockets
       // under a parallel suite can take more than the default 3 s to deliver.
-      const turn = await gameOf(seat.c, (g) => g.phase === "ACT_1" && g.round === 1 && g.step === "PLAYER_TURNS"
+      // The first turn is the view intoRound1 already took off seat 0's queue.
+      const turn = n === 0 ? first : await gameOf(seat.c, (g) => g.phase === "ACT_1" && g.round === 1 && g.step === "PLAYER_TURNS"
         && !g.sequence && g.pending.length === 0 && g.turnOrder[g.activeIndex] === id && g.version > previousVersion, 10_000);
       previousVersion = turn.version;
       const result = await seat.c.play({ type: "END_TURN" }, { stateVersion: turn.version });

@@ -1,0 +1,26 @@
+/* First-view bubble guide: a light dim, a glowing outline around one region,
+   a small dark bubble beside it. Pointer events pass through to the game. */
+@layer components {
+  .bubble-guide { --g-edge: #6fe0ea; position: fixed; inset: 0; z-index: 80; pointer-events: none; }
+  .bubble-S01_LAST_TRAIN { --g-edge: #c7c2e8; }
+  .bubble-S02_SUNKEN_CITY { --g-edge: #6fc3e0; }
+  .bubble-S04_UNDERGROUND_AUCTION { --g-edge: #e2b866; }
+  .bubble-guide-ring { position: fixed; border: 2px solid var(--g-edge); border-radius: 12px; box-shadow: 0 0 0 9999px #02030a80, 0 0 18px var(--g-edge); }
+  .bubble-guide-bubble { position: fixed; pointer-events: auto; padding: 12px 14px 10px; border: 1px solid var(--g-edge); border-radius: 12px; background: #070b18f2; color: var(--c-moon); box-shadow: 0 10px 30px #000a; overflow: hidden; }
+  .bubble-guide-bubble::before { content: ""; position: absolute; left: 50%; width: 10px; height: 10px; background: #070b18; border: 1px solid var(--g-edge); transform: translateX(-50%) rotate(45deg); }
+  .bubble-guide-bubble.is-below::before { top: -6px; border-right: 0; border-bottom: 0; }
+  .bubble-guide-bubble.is-above::before { bottom: -6px; border-left: 0; border-top: 0; }
+  .bubble-guide-count { font-family: var(--f-mono); font-size: 10px; letter-spacing: .14em; color: var(--c-mist); }
+  .bubble-guide-bubble h2 { margin-top: 2px; font-family: var(--f-display); font-size: 20px; line-height: 1.2; color: var(--g-edge); }
+  .bubble-guide-bubble p:not(.bubble-guide-count) { margin-top: 4px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+  .bubble-guide-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; }
+  .bubble-guide-btn { min-height: 48px; min-width: 64px; padding: 6px 12px; border: 1px solid #ffffff2a; border-radius: 999px; font-size: 13px; color: var(--c-mist); }
+  .bubble-guide-btn.is-next { border-color: var(--g-edge); color: var(--g-edge); }
+  .bubble-guide-btn:focus-visible { outline: 2px solid var(--g-edge); outline-offset: 2px; }
+  .bubble-guide-progress { position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: var(--g-edge); transform-origin: left; animation: bubble-progress linear forwards; }
+  @keyframes bubble-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @media (prefers-reduced-motion: reduce) {
+    .bubble-guide-ring { transition: none; }
+    .bubble-guide-progress { animation: none; transform: scaleX(1); opacity: .5; }
+  }
+}

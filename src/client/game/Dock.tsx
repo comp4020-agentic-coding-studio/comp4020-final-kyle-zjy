@@ -76,8 +76,8 @@ export function Dock({ g, mode, setMode, extension }: { g: PlayerView; mode: Mod
   return (
     <div className="safe-bottom relative z-20 border-t border-gold/15 bg-[#05060d]/92 px-3 pt-2 backdrop-blur-md sm:px-4">
       <div className="mx-auto grid max-w-6xl gap-2 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:gap-4">
-        {extension?.hudClassName ? <div className={extension.hudClassName}><Hud g={g} me={me} extension={extension} /></div> : <Hud g={g} me={me} extension={extension} />}
-        <div className="min-w-0">
+        <div data-guide="hud" className={extension?.hudClassName}><Hud g={g} me={me} extension={extension} /></div>
+        <div className="min-w-0" data-guide="actions">
           <AnimatePresence mode="wait">
             {mode ? (
               <motion.div key={mode} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>

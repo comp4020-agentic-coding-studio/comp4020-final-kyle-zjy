@@ -8,6 +8,7 @@ import { useLocale, useT, type MessageKey } from "../i18n/index.ts";
 import { navigate } from "../router.ts";
 import { checkPath, launchCheck, savedChecks } from "./session.ts";
 import { EndingPreview } from "./EndingPreview.tsx";
+import { forgetGuides } from "../components/guide/steps.ts";
 import "../styles/developer.css";
 
 export default function DeveloperCheck() {
@@ -16,6 +17,7 @@ export default function DeveloperCheck() {
   const [selected, setSelected] = useState<Record<string, CheckPresetId>>({ S01_LAST_TRAIN: "s1.start", S02_SUNKEN_CITY: "s2.start", S03_INCIDENT_ZERO: "s3.start", S04_UNDERGROUND_AUCTION: "s4.start" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
+  const [cleared, setCleared] = useState(false);
   const last = savedChecks().at(-1);
   /** `open`: an inspection to open on arrival (the dossier presets open the Timeline Dossier). */
   const start = async (id: CheckPresetId, open?: "dossier") => {
@@ -53,6 +55,14 @@ export default function DeveloperCheck() {
       <section aria-labelledby="developer-dossier-title" className="developer-ui">
         <h2 id="developer-dossier-title" className="developer-section-title">{t("developer.dossier")}</h2>
         <div className="developer-grid developer-replays">{([["initial", "s3.start"], ["one", "s3.dossier-one"], ["multi", "s3.dossier-multi"], ["contra", "s3.dossier-contra"], ["final", "s3.archive"]] as const).map(([key, id]) => <button key={key} className="btn btn-ghost" disabled={busy} onClick={() => void start(id, "dossier")}>{t(`developer.dossier.${key}`)}</button>)}</div>
+      </section>
+      <section aria-labelledby="developer-guide-title" className="developer-ui">
+        <h2 id="developer-guide-title" className="developer-section-title">{t("developer.guide")}</h2>
+        <p className="developer-note">{t("developer.guide.note")}</p>
+        <div className="developer-grid developer-replays">
+          {([1, 2, 3, 4] as const).map((n) => <button key={n} className="btn btn-ghost" disabled={busy} onClick={() => { forgetGuides(); void start(n === 4 ? "s4.auction" : n === 3 ? "s3.jump" : n === 2 ? "s2.parts" : "s1.anchors"); }}>{t("developer.guide.play", { n: `0${n}` })}</button>)}
+          <button className="btn btn-ghost" onClick={() => { forgetGuides(); setCleared(true); }}>{cleared ? t("developer.guide.cleared") : t("developer.guide.clear")}</button>
+        </div>
       </section>
       <EndingPreview />
     </div>

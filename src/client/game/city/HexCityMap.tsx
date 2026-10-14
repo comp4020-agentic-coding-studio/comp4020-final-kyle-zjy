@@ -43,7 +43,7 @@ export function HexCityMap({ g, selected, onSelect, moveTargets = [], onMove, as
   }, [docked]);
 
   return (
-    <section ref={frame} aria-label={t("s2.map.aria")} className="no-scrollbar overflow-x-auto overscroll-x-contain px-2">
+    <section ref={frame} data-guide="map" aria-label={t("s2.map.aria")} className="no-scrollbar overflow-x-auto overscroll-x-contain px-2">
       {/* the triage board, once seats are known, rides at the map's left edge and scrolls with it; an
           equal empty column on the right keeps the map centred (on a phone it opens scrolled to the map) */}
       <div className={docked ? "grid w-max min-w-full grid-cols-[15rem_360px] items-start gap-3 lg:w-auto lg:grid-cols-[minmax(15rem,1fr)_minmax(0,48rem)_minmax(15rem,1fr)]" : undefined}>

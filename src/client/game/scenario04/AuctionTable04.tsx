@@ -25,7 +25,7 @@ export function AuctionTable04({ g }: { g: PlayerView }) {
   return <section aria-label={t("s4.table.aria")} className="mx-auto w-full max-w-6xl min-w-0 px-3 sm:px-4">
     <div className="relative overflow-hidden rounded-3xl border border-gold/30 bg-[#0b1028]/90 px-4 py-5 shadow-[inset_0_0_60px_#05060d] sm:px-8">
       <div className="pointer-events-none absolute inset-x-[14%] top-8 bottom-5 hidden rounded-[50%] border border-gold/15 lg:block" aria-hidden="true" />
-      <div className="relative mx-auto max-w-3xl rounded-2xl border border-gold/30 bg-[#05060d]/80 p-4 text-center">
+      <div data-guide="map" className="relative mx-auto max-w-3xl rounded-2xl border border-gold/30 bg-[#05060d]/80 p-4 text-center">
         <div data-s4-transition={g.round} className="mb-3 grid min-w-0 grid-cols-1 gap-3 border-b border-gold/20 pb-3 text-left md:items-start md:grid-cols-[minmax(0,1fr)_minmax(220px,0.78fr)]" aria-live="polite">
           <div className="min-w-0"><div className="flex items-center gap-2"><span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/10 text-gold" aria-hidden="true"><Icon name="INSPECTOR" size={23} /></span><p className="label text-xs text-gold">{t("s4.host.label")}</p></div>
             {last?.round === g.round - 1 && <p className="mt-2 text-xs text-mist">{t(last.winnerId ? "s4.host.lastSold" : "s4.host.lastUnsold")}</p>}
@@ -60,7 +60,7 @@ export function AuctionTable04({ g }: { g: PlayerView }) {
       </div>
       <p className="label relative mt-5 text-center text-gold">{t("s4.table.seats")}</p>
       <p className="relative mt-1 text-center text-xs text-mist">{t("s4.table.firstLap", { names: [...a.seatOrder.slice(a.seatOrder.indexOf(a.roundStartPlayerId)), ...a.seatOrder.slice(0, a.seatOrder.indexOf(a.roundStartPlayerId))].map((id) => g.players[id].nickname).join(" → ") })}</p>
-      <ol className="relative mx-auto mt-2 grid max-w-4xl grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-between">
+      <ol data-guide="seats" className="relative mx-auto mt-2 grid max-w-4xl grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-between">
         {a.seatOrder.map((id, index) => {
           const p = g.players[id];
           const player = a.players[id];

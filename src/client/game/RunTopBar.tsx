@@ -50,7 +50,7 @@ export function RunTopBar({
     </>
   );
   return (
-    <header className="safe-top relative z-20 border-b border-gold/15 bg-[#05060d]/85 px-3 py-2 backdrop-blur-md sm:px-4">
+    <header data-guide="top" className="safe-top relative z-20 border-b border-gold/15 bg-[#05060d]/85 px-3 py-2 backdrop-blur-md sm:px-4">
       <div className="mx-auto flex max-w-6xl items-center gap-3">
         <div className="min-w-0 max-w-[38%] shrink sm:max-w-[30%]">
           <p className="label truncate text-[10px] text-signal">{act}</p>
@@ -64,7 +64,7 @@ export function RunTopBar({
         </div>
         {actions && <div className="min-w-0 flex-1 min-[480px]:hidden" />}
         {actions && <div className="flex shrink-0 items-center gap-2 lg:ml-auto">{actions}</div>}
-        <button className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gold/30 text-mist hover:text-moon" onClick={onSecrets} aria-label={t("game.secretsAria", { n: secretsCount })}>
+        <button className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gold/30 text-mist hover:text-moon" onClick={onSecrets} data-guide="secrets" aria-label={t("game.secretsAria", { n: secretsCount })}>
           <Icon name="SECRET" size={20} />
           {secretsCount > 0 && <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet px-1 font-mono text-[10px] text-white">{secretsCount}</span>}
         </button>
@@ -109,7 +109,7 @@ export function PlacePanel({
   back?: { label: string; onClick: () => void };
 }) {
   return (
-    <section className="mx-auto w-full max-w-6xl px-3 sm:px-4" aria-label={ariaLabel}>
+    <section data-guide="place" className="mx-auto w-full max-w-6xl px-3 sm:px-4" aria-label={ariaLabel}>
       <div className="rounded-xl border border-gold/20 bg-[#0b1028]/80 px-3 py-2 text-xs">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <span className="label shrink-0 text-[10px] text-signal">{kicker}</span>

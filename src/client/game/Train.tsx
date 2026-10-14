@@ -31,7 +31,7 @@ export function Train({ g, moveTargets = [], onPick }: Props) {
   }, [focus]);
 
   return (
-    <section aria-label={t("train.aria")} className="relative">
+    <section data-guide="map" aria-label={t("train.aria")} className="relative">
       <div ref={scroller} className="no-scrollbar overflow-x-auto overscroll-x-contain px-3 pt-2 pb-3 sm:px-4">
         <LayoutGroup>
           <ol className="mx-auto flex w-max items-stretch gap-0">

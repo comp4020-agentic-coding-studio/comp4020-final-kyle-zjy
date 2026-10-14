@@ -493,3 +493,18 @@ notice identify the page. Test rooms have a compact persistent return/seat bar
 and a collapsible tool panel. The existing game and opening remain visible;
 the film is inset below the measured bar only in developer rooms. Cards stack
 at phone widths, use zero-minimum grid tracks, and keep 48px controls.
+
+## First-view bubble guide
+
+Each scenario's first in-play screen gets a short screen tour (4–6 notes, in
+`src/client/components/guide/steps.ts`). Each note outlines one region tagged
+`data-guide="…"` and puts a small bubble beside it. The tour dims the page only
+slightly and never blocks input. A note advances by itself after 2.6 s or on
+Next, and Skip or Escape ends the tour. A note whose region isn't on screen is
+passed over.
+`ScenarioExperience` starts the tour only once the screen is clear: no scene
+card, no unresolved roll, and no decision waiting on this player. It plays once
+per scenario per browser (`localStorage` `fate:guide:<scenario>`), and the "?"
+button beside the sound controls replays it. The tour is presentation only: it
+reads no game state beyond what is already rendered. It is checked by
+`test/bubble-guide.test.ts` and in the browser by `scripts/ui-guide.ts`.

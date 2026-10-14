@@ -14,7 +14,7 @@ export function TopBar({ g, onLog, onSecrets, onMemory, secretsCount }: { g: Pla
   const act = Math.min(g.act, 3) as 1 | 2 | 3;
   const actFull = t(`game.act.${act}.full`);
   return (
-    <header className="relative z-20 border-b border-gold/15 bg-[#05060d]/85 px-3 pt-[max(8px,env(safe-area-inset-top))] pb-2 backdrop-blur-md sm:px-4">
+    <header data-guide="top" className="relative z-20 border-b border-gold/15 bg-[#05060d]/85 px-3 pt-[max(8px,env(safe-area-inset-top))] pb-2 backdrop-blur-md sm:px-4">
       <div className="mx-auto flex max-w-6xl items-center gap-2 sm:gap-4">
         <div className="shrink-0">
           <p className="label text-[9px] leading-none sm:text-[10px]" title={actFull}>
@@ -53,7 +53,7 @@ export function TopBar({ g, onLog, onSecrets, onMemory, secretsCount }: { g: Pla
           <MemoryLink g={g} onOpen={onMemory} />
         </div>
 
-        <button onClick={onSecrets} className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gold/30 text-mist hover:text-moon" aria-label={t("game.secretsAria", { n: secretsCount })}>
+        <button onClick={onSecrets} data-guide="secrets" className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gold/30 text-mist hover:text-moon" aria-label={t("game.secretsAria", { n: secretsCount })}>
           <Icon name="SECRET" />
           {secretsCount > 0 && <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet px-1 font-mono text-[10px] text-white">{secretsCount}</span>}
         </button>
@@ -99,7 +99,7 @@ function Anchors({ g }: { g: PlayerView }) {
 function MemoryLink({ g, onOpen }: { g: PlayerView; onOpen: () => void }) {
   const t = useT();
   return (
-    <button type="button" onClick={onOpen} aria-label={t("game.memoryAria", { n: g.fragments.length, core: g.coreMemories })} className="flex min-h-12 items-center gap-1.5 rounded-full border border-violet/40 px-3 text-violet-soft hover:border-violet-soft">
+    <button type="button" data-guide="memory" onClick={onOpen} aria-label={t("game.memoryAria", { n: g.fragments.length, core: g.coreMemories })} className="flex min-h-12 items-center gap-1.5 rounded-full border border-violet/40 px-3 text-violet-soft hover:border-violet-soft">
       <Icon name="FRAGMENT" size={14} />
       <span className="text-[11px] font-semibold whitespace-nowrap">{t("memory.title")}</span>
       <span className={`font-mono text-[11px] whitespace-nowrap ${g.fragments.length >= 3 ? "text-violet-soft" : "text-mist"}`}>{g.fragments.length}/3</span>

@@ -33,7 +33,7 @@ export function TopBar03({ g, onLog, onSecrets, onDossier, secretsCount }: { g: 
       logLabel={t("s3.top.log")}
       actions={
         // phones: the icon alone; wider screens add the word
-        <button type="button" onClick={onDossier} className="flex h-12 min-w-12 shrink-0 items-center justify-center gap-1.5 rounded-full border border-signal/50 px-3 text-xs font-semibold text-signal hover:border-signal" aria-label={t("s3.dossier.title")}>
+        <button type="button" data-guide="dossier" onClick={onDossier} className="flex h-12 min-w-12 shrink-0 items-center justify-center gap-1.5 rounded-full border border-signal/50 px-3 text-xs font-semibold text-signal hover:border-signal" aria-label={t("s3.dossier.title")}>
           <Icon name="REGISTER" size={18} /><span className="hidden md:inline">{t("s3.dossier.open")}</span>
         </button>
       }

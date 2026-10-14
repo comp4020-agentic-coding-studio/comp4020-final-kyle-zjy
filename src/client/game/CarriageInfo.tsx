@@ -16,7 +16,7 @@ export function CarriageInfo({ g }: { g: PlayerView }) {
   const search = fmt(g.myActions.find((a) => a.type === "SEARCH")?.hint ?? info.searchHint);
   const repair = g.myActions.find((a) => a.type === "REPAIR");
   return (
-    <section className="mx-auto w-full max-w-6xl px-3 sm:px-4" aria-label={t("carriage.aria")}>
+    <section data-guide="place" className="mx-auto w-full max-w-6xl px-3 sm:px-4" aria-label={t("carriage.aria")}>
       <div className="rounded-xl border px-3 py-2" style={{ borderColor: `${accent}55`, background: `linear-gradient(90deg, ${accent}14, transparent 70%)` }}>
         <p className="text-sm">
           <span className="label mr-2 text-[10px]">{t("carriage.youAreIn")}</span>
