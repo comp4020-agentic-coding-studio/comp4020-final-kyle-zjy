@@ -301,8 +301,10 @@ Reduced motion keeps the colour and drops the pulses.
   rise (`warning`), people still waiting, standing tunnels and bridges, roads
   lost, flooded districts. The ROUND cue plays radio static (stageFx).
 - **Evacuation triage** (`city/Triage.tsx`, once seats are known): a narrow
-  column docked at the left of the map's scroll row (it scrolls with the map on
-  phones; before seats are known the map stands alone, unchanged). People
+  column docked at the left of the map's scroll row. The map stays centred (an
+  equal empty column balances it on desktop; on phones the row opens scrolled
+  to the map and the triage is one swipe left). Before seats are known the map
+  stands alone, unchanged. People
   ranked by public work, tagged ABOARD / AT THE PIER / IN THE CITY. Pass
   holdings are never shown.
 - **Boarding**: the window opens with a horn (BOARDING_OPEN cue) and an

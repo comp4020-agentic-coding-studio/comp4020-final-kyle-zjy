@@ -9,7 +9,7 @@ import { R, center, corners, bounds } from "./geometry.ts";
 // On a phone the map keeps a minimum width and scrolls inside its own frame,
 // so every zone stays big enough to tap.
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getCharacterById } from "../../../shared/characters/roster/index.ts";
 import { ZONES, type FacilityId } from "../../../shared/game/scenario02/map.ts";
 import type { PlayerView, PublicZone } from "../../../shared/game/state.ts";
@@ -32,13 +32,23 @@ export function HexCityMap({ g, selected, onSelect, moveTargets = [], onMove, as
   const statusWord = (z: PublicZone) => t(`s2.status.${z.status}`);
   const active = g.step === "PLAYER_TURNS" ? g.turnOrder[g.activeIndex] : null;
   const sunkNow = useJustSunk();
+  const frame = useRef<HTMLElement>(null);
+  const mapRef = useRef<SVGSVGElement>(null);
+  const docked = !!aside;
+  // when the row is wider than the screen, open it with the map in the middle (the triage is a scroll left)
+  useLayoutEffect(() => {
+    const f = frame.current, m = mapRef.current;
+    if (!docked || !f || !m || f.scrollWidth <= f.clientWidth) return;
+    f.scrollLeft = m.getBoundingClientRect().left - f.getBoundingClientRect().left + f.scrollLeft + m.clientWidth / 2 - f.clientWidth / 2;
+  }, [docked]);
 
   return (
-    <section aria-label={t("s2.map.aria")} className="no-scrollbar overflow-x-auto overscroll-x-contain px-2">
-      {/* the triage board, once seats are known, rides at the map's left edge and scrolls with it */}
-      <div className={aside ? "mx-auto flex w-max max-w-none items-start gap-3 lg:w-auto lg:max-w-6xl" : undefined}>
-      {aside && <div className="w-60 shrink-0">{aside}</div>}
-      <svg viewBox={`${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`} className={`mx-auto block h-auto max-h-[52vh] max-w-3xl min-w-[360px] ${aside ? "w-[360px] shrink-0 lg:w-full lg:shrink" : "w-full"}`} role="group">
+    <section ref={frame} aria-label={t("s2.map.aria")} className="no-scrollbar overflow-x-auto overscroll-x-contain px-2">
+      {/* the triage board, once seats are known, rides at the map's left edge and scrolls with it; an
+          equal empty column on the right keeps the map centred (on a phone it opens scrolled to the map) */}
+      <div className={docked ? "grid w-max min-w-full grid-cols-[15rem_360px] items-start gap-3 lg:w-auto lg:grid-cols-[minmax(15rem,1fr)_minmax(0,48rem)_minmax(15rem,1fr)]" : undefined}>
+      {docked && <div className="w-60 min-w-0 justify-self-end">{aside}</div>}
+      <svg ref={mapRef} viewBox={`${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`} className="mx-auto block h-auto max-h-[52vh] w-full max-w-3xl min-w-[360px]" role="group">
         <defs>
           <pattern id="waves" width="12" height="8" patternUnits="userSpaceOnUse">
             <path d="M0 5q3-4 6 0t6 0" fill="none" stroke="#5ce1e6" strokeOpacity=".45" strokeWidth="1" />
@@ -171,6 +181,7 @@ export function HexCityMap({ g, selected, onSelect, moveTargets = [], onMove, as
           );
         })}
       </svg>
+      {docked && <div className="hidden lg:block" aria-hidden="true" />}
       </div>
     </section>
   );
