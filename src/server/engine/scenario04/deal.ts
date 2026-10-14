@@ -9,6 +9,7 @@ import { cue, log } from "../context.ts";
 import { onResume, openWindow } from "../windows.ts";
 import { noticeAcquiredLot04 } from "./items.ts";
 import { confirmPassiveFake04 } from "./items.ts";
+import { houseRuleAt04 } from "../../../shared/game/scenario04/houseRules.ts";
 
 type Offer = Extract<GameAction, { type: "DEAL" }>;
 
@@ -86,6 +87,12 @@ onResume("S4_DEAL", (ctx, _window, answers) => {
     } else { buyer.items.push(deal.forItem); noticeAcquiredLot04(buyer, deal.forItem, ctx.now); }
   }
   if (deal.forPass) a.passedPlayers.push(deal.to);
+  if (houseRuleAt04(a, ctx.s.round) === "transparentTrade") {
+    (a.publicTrades ??= []).push({ round: ctx.s.round, from: deal.from, to: deal.to,
+      chips: deal.chips, receiveChips: deal.receiveChips ?? 0,
+      giveItem: deal.giveItem ? itemLotId04(deal.giveItem) : null,
+      forItem: deal.forItem ? itemLotId04(deal.forItem) : null });
+  }
   a.stats.deals++;
   log(ctx, m`The accepted deal settles in full.`, "S4_DEAL", deal.from);
   cue(ctx, "S4_DEAL", { from: deal.from, to: deal.to, pass: !!deal.forPass });

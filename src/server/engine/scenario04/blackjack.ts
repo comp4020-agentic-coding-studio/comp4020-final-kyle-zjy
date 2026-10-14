@@ -9,6 +9,7 @@ import { onResume, openWindow } from "../windows.ts";
 import { AUCTION_CONFIG04 } from "../../../shared/game/scenario04/config.ts";
 import { consumeLot04, heldLot04 } from "./items.ts";
 import { int } from "../rng.ts";
+import { houseRuleAt04 } from "../../../shared/game/scenario04/houseRules.ts";
 
 type Challenge = NonNullable<AuctionState04["challenge"]>;
 
@@ -88,6 +89,11 @@ function settle(ctx: Ctx, winner: PlayerId | null): void {
     a.players[challenge.challenger].blackChips += amount;
     a.players[challenge.target].blackChips += amount;
     log(ctx, m`Blackjack is a push. Both stakes return.`, "S4_CHALLENGE");
+  }
+  if (winner && houseRuleAt04(a, ctx.s.round) === "houseChallenge" && !a.houseChallengeBonusClaimed) {
+    a.houseChallengeBonusClaimed = true;
+    a.players[winner].blackChips += 2;
+    cue(ctx, "S4_HOUSE_CHALLENGE_BONUS", { winnerId: winner, chips: 2 });
   }
   cue(ctx, "S4_CHALLENGE_END", { winnerId: winner, pot: amount * 2 });
   a.challenge = null;

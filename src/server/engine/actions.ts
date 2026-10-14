@@ -23,6 +23,7 @@ import type { Msg } from "../../shared/i18n/types.ts";
 import { characterSkill } from "../../shared/game/skills.ts";
 import { rulesFor, type ActionSet } from "./scenario.ts";
 import { itemLotId04 } from "../../shared/game/scenario04/lots.ts";
+import { houseRuleAt04 } from "../../shared/game/scenario04/houseRules.ts";
 
 export type Fail = { code: RejectCode; reason: Msg };
 export const fail = (code: RejectCode, reason: Msg): Fail => ({ code, reason });
@@ -33,10 +34,11 @@ const IN_RUN = new Set(["ACT_1", "ACT_2", "ACT_3", "ACT_4"]);
 function turnGate(s: GameState, actorId: PlayerId, cost: number, type: GameActionType): Fail | null {
   if (s.phase === "ENDING" || s.phase === "RESULTS") return fail("GAME_OVER", m`The run is over.`);
   if (!IN_RUN.has(s.phase)) return fail("WRONG_PHASE", m`The run hasn't started yet.`);
-  if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && s.flags.developerCheck === 1 && (type === "DEV_GRANT_LOT" || type === "DEV_GENERATE_POOL")) return null;
+  if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && s.flags.developerCheck === 1 && ["DEV_GRANT_LOT", "DEV_GENERATE_POOL", "DEV_SET_HOUSE_RULE", "DEV_GENERATE_HOUSE_RULES"].includes(type)) return null;
   if (s.sequence) return fail("WRONG_PHASE", m`Wait for the scene to finish.`);
   if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && type === "USE_LOT" && s.pending.at(-1)?.kind === "S4_DEAL" && s.auction?.deal && [s.auction.deal.from, s.auction.deal.to].includes(actorId)) return null;
   if (s.pending.some((w) => w.blocksTable) || (s.roll && !s.roll.done)) return fail("WINDOW_OPEN", m`Wait for the current decision to finish.`);
+  if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && houseRuleAt04(s.auction, s.round) === "holdingDisclosure" && s.auction?.holdingPendingIds?.includes(actorId) && !["DECLARE_HOLDING", "END_TURN"].includes(type)) return fail("WRONG_PHASE", m`Declare one held auction item before acting.`);
   if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && s.round === 10 && s.auction?.final) {
     const final = s.auction.final;
     const mine = final.players[actorId];
@@ -394,9 +396,11 @@ export function applyAction(ctx: Ctx, actorId: PlayerId, action: GameAction): vo
   const cost = set.costFor?.(s, p, action.type) ?? set.apCost[action.type] ?? 0;
   const gate = turnGate(s, actorId, cost, action.type) ?? spec.check(s, p, action);
   if (gate) throw new RuleError(gate.code, gate.reason);
+  const courtesyFree = s.scenarioId === "S04_UNDERGROUND_AUCTION" && action.type === "INVESTIGATE" && houseRuleAt04(s.auction, s.round) === "openingCourtesy" && p.counters.s4CourtesyUsedRound !== s.round;
   p.ap -= cost;
   spec.apply(ctx, p, action);
-  if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && set.apCost[action.type] && cost === 0 && s.auction?.players[actorId].membershipArmed) {
+  if (courtesyFree) p.counters.s4CourtesyUsedRound = s.round;
+  if (s.scenarioId === "S04_UNDERGROUND_AUCTION" && set.apCost[action.type] && cost === 0 && !courtesyFree && s.auction?.players[actorId].membershipArmed) {
     s.auction.players[actorId].membershipArmed = false;
     s.auction.players[actorId].membershipUsedRound = s.round;
   }

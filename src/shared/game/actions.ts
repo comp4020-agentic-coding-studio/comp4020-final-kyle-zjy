@@ -9,6 +9,7 @@ import type { NpcId03 } from "./scenario03/story.ts";
 import type { MBTI, Zodiac } from "../characters/types.ts";
 import type { ItemId, PlayerId, ScenarioId } from "./state.ts";
 import type { LotId04 } from "./scenario04/types.ts";
+import type { HouseRuleId04 } from "./scenario04/types.ts";
 
 export type LobbyAction =
   | { type: "SET_NICKNAME"; nickname: string }
@@ -65,13 +66,16 @@ export type GameAction =
   | { type: "EXPOSE"; intelId: string }
   | { type: "RECOVER" }
   | { type: "USE_LOT"; lotId: LotId04; sourceLotId?: LotId04; targetId?: PlayerId; amount?: number }
+  | { type: "DECLARE_HOLDING"; itemId: LotId04 }
   | { type: "FINAL_CONVERT"; resource: "BLACK_CHIPS" | "SANITY" | "FATE" | "AP" | "ITEM"; lotId?: LotId04 }
   | { type: "FINAL_READY" }
   | { type: "FINAL_BID"; amount: number }
   | { type: "FINAL_SHOWDOWN_PICK"; cardIndex: number }
   | { type: "FINAL_CONTINUE" }
   | { type: "DEV_GRANT_LOT"; lotId: LotId04; counterfeit: boolean }
-  | { type: "DEV_GENERATE_POOL" };
+  | { type: "DEV_GENERATE_POOL" }
+  | { type: "DEV_SET_HOUSE_RULE"; ruleId: HouseRuleId04 }
+  | { type: "DEV_GENERATE_HOUSE_RULES" };
 
 export type GameActionType = GameAction["type"];
 

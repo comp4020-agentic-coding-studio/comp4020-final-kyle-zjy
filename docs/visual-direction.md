@@ -293,6 +293,13 @@ button while adding a compact auctioneer proclamation. Final Settlement opens
 with a distinct Exit Rights warning at 9 / 10; Ending and Results keep their
 original controls and statistics while adding collapse, personal fate, and the
 winning Final Bid to the results recap.
+The existing `data-s4-transition` region now has an auctioneer icon and a
+persistent House Rule card side by side at desktop widths. At phone widths they
+stack in reading order. The card shows the localized name, concise rule,
+auctioneer line, and an expandable explanation; a short reduced-motion-aware
+reveal marks each new round. Round 9 also places a private server-calculated
+preliminary settlement below the proclamation. The developer controls expose
+the current seeded order, generated preview, and targeted rule activation.
 Core BID/PASS actions, tactical actions, and the shared ability/item/end-turn
 row have distinct levels. Turn,
 leading, and passed states have text labels as well as color. On narrow

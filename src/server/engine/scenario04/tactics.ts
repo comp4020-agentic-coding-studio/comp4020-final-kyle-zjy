@@ -10,6 +10,7 @@ import { onRollOutcome, startRoll } from "../dice.ts";
 import { gainSanity, loseSanity } from "../players.ts";
 import { MAX_SANITY } from "../../../shared/game/scenario01/content.ts";
 import { confirmPassiveFake04, heldLot04 } from "./items.ts";
+import { houseRuleAt04 } from "../../../shared/game/scenario04/houseRules.ts";
 
 const otherPlayers = (s: GameState, p: PlayerGameState) => s.auction!.seatOrder.filter((id) => id !== p.playerId);
 
@@ -40,23 +41,28 @@ export const SABOTAGE04: Spec<Extract<GameAction, { type: "SABOTAGE" }>> = {
 
 export const BORROW04: Spec<Extract<GameAction, { type: "BORROW" }>> = {
   check: (s, p) => {
+    const rule = houseRuleAt04(s.auction, s.round);
+    if (rule === "creditFreeze") return fail("ILLEGAL_TARGET", m`Credit is frozen this round. No new loans are offered.`);
     const a = s.auction!.players[p.playerId];
     if (p.counters.s4BorrowedRound === s.round) return fail("ILLEGAL_TARGET", m`You have already borrowed this round.`);
     const ledger = heldLot04(s, p.playerId, "LOT_25");
     const extra = ledger && !s.auction!.itemInstances[ledger].counterfeit ? 1 : 0;
-    if (a.debt + AUCTION_CONFIG04.borrowDebt + extra > AUCTION_CONFIG04.maxDebt) return fail("ILLEGAL_TARGET", m`Your debt limit has been reached.`);
+    if (a.debt + (rule === "creditNight" ? 2 : AUCTION_CONFIG04.borrowDebt) + extra > AUCTION_CONFIG04.maxDebt) return fail("ILLEGAL_TARGET", m`Your debt limit has been reached.`);
     return null;
   },
   apply: (ctx, p) => {
     const a = ctx.s.auction!;
     const ledger = heldLot04(ctx.s, p.playerId, "LOT_25");
     const extra = ledger && !a.itemInstances[ledger].counterfeit ? 1 : 0;
-    a.players[p.playerId].blackChips += AUCTION_CONFIG04.borrowChips + extra;
-    a.players[p.playerId].debt += AUCTION_CONFIG04.borrowDebt + extra;
+    const creditNight = houseRuleAt04(a, ctx.s.round) === "creditNight";
+    const chips = (creditNight ? 3 : AUCTION_CONFIG04.borrowChips) + extra;
+    const debt = (creditNight ? 2 : AUCTION_CONFIG04.borrowDebt) + extra;
+    a.players[p.playerId].blackChips += chips;
+    a.players[p.playerId].debt += debt;
     if (ledger && !extra) confirmPassiveFake04(ctx, p.playerId, ledger);
     a.stats.borrows[p.playerId] = (a.stats.borrows[p.playerId] ?? 0) + 1;
     p.counters.s4BorrowedRound = ctx.s.round;
-    log(ctx, m`${p.nickname} borrows ${AUCTION_CONFIG04.borrowChips + extra} Black Chips and gains ${AUCTION_CONFIG04.borrowDebt + extra} Debt.`, "S4_BORROW", p.playerId);
+    log(ctx, m`${p.nickname} borrows ${chips} Black Chips and gains ${debt} Debt.`, "S4_BORROW", p.playerId);
     cue(ctx, "S4_BORROW", { playerId: p.playerId });
   },
 };

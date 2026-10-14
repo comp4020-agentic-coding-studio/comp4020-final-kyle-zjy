@@ -211,6 +211,7 @@ describe("Scenario 04 expanded item effects", () => {
 
   it("Expired Membership covers one zero-AP action; Black Invitation opens one out-of-turn deal", () => {
     let member = start();
+    member.auction!.houseRuleOrder = undefined; // Isolate the item's AP waiver from Round 1 opening courtesy.
     grant(member, "a", "LOT_28");
     member.players.a.ap = 0;
     member = act(member, "a", { type: "USE_LOT", lotId: "LOT_28" });

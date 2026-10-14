@@ -381,6 +381,26 @@ for the three full rounds after activating Red Contract (1 when Lost). It never
 refreshes on an additional bidding lap. Successful bids and passes remain on
 the same turn until END_TURN; one bid is allowed per turn.
 
+The server also persists a ten-entry `houseRuleOrder`. Round 1 is Opening
+Courtesy, rounds 2–9 are one seeded shuffle of eight distinct rules, including
+Credit Freeze, and round 10 is Final Settlement. An older saved auction
+without this field keeps its previous behavior. The current rule alone is
+projected in ordinary rooms; developer rooms can inspect and regenerate a
+seeded preview. Opening Courtesy waives only each player's first INVESTIGATE
+AP cost, preserving Dice Resolution. Anonymous Seat masks the live leader in
+public projections and bid logs until the lot resolves. Double Raise raises
+the minimum increment to two after the opening bid. Credit Night changes a
+legal Borrow to three chips and two Debt; Credit Freeze rejects new Borrow.
+Holding Disclosure records one owned item name per holder without authenticity;
+the server makes a seeded automatic selection if the holder ends their turn
+without declaring. Challenge Night pays a two-chip house bonus to the winner
+of the first completed, non-drawn Blackjack. Transparent Trade publishes only
+settled parties, public item names, and chip amounts. One Raise Only stores a
+per-player round counter that also binds Broken Stopwatch. Rule state, bonus
+claims, declarations, and trade receipts persist with the auction. The round 9
+preliminary settlement is calculated from server resources and projected only
+to its owner.
+
 A winner pays only at settlement. An armed Blank Cheque shifts one winning
 Black Chip into two Debt. Hollow Coin adds one to both the current effective
 bid and binding payment; if payment becomes unaffordable, that lot is

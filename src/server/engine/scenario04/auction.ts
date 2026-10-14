@@ -7,6 +7,14 @@ import { cue, log, type Ctx } from "../context.ts";
 import { nextTurn } from "../flow.ts";
 import { noticeAcquiredLot04 } from "./items.ts";
 import { openFinal04 } from "./final.ts";
+import { houseRuleAt04 } from "../../../shared/game/scenario04/houseRules.ts";
+import { autoDeclareHolding04 } from "./houseRules.ts";
+
+export function minimumBid04(s: GameState): number {
+  const a = s.auction!;
+  const step = houseRuleAt04(a, s.round) === "doubleRaise" && a.currentBidder ? 2 : 1;
+  return Math.max(lotForAuctionRound04(s, Math.max(1, s.round)).startingBid, a.currentBid + step);
+}
 
 export function openAuctionRound04(ctx: Ctx): void {
   const s = ctx.s;
@@ -34,6 +42,11 @@ export function openAuctionRound04(ctx: Ctx): void {
   auction.passedPlayers = [];
   auction.raiseBlockedPlayers = [];
   auction.hollowCoinOwner = null;
+  auction.houseChallengeBonusClaimed = false;
+  auction.holdingDeclarations = {};
+  auction.holdingPendingIds = houseRuleAt04(auction, s.round) === "holdingDisclosure"
+    ? auction.seatOrder.filter((id) => auction.players[id].items.length > 0) : [];
+  auction.publicTrades = [];
   for (const holder of Object.values(auction.players)) holder.bellArmed = false;
   auction.auctionOpen = true;
   auction.deal = null;
@@ -85,6 +98,7 @@ export function advanceAuction04(ctx: Ctx, from: PlayerId): void {
   const s = ctx.s;
   const a = s.auction!;
   if (!a.auctionOpen) return;
+  autoDeclareHolding04(ctx, from);
   a.raiseBlockedPlayers = (a.raiseBlockedPlayers ?? []).filter((id) => id !== from);
   a.bidThisTurn = null;
   const competitors = a.seatOrder.filter((id) => !a.passedPlayers.includes(id) && id !== a.currentBidder);
@@ -118,11 +132,11 @@ export const END_TURN04: Spec<Extract<GameAction, { type: "END_TURN" }>> = {
 export const BID04: Spec<Extract<GameAction, { type: "BID" }>> = {
   check: (s, p, action) => {
     const a = s.auction!;
-    if (!a.auctionOpen || a.passedPlayers.includes(p.playerId) || a.currentBidder === p.playerId || a.bidThisTurn === p.playerId || a.raiseBlockedPlayers?.includes(p.playerId)) return fail("ILLEGAL_TARGET", m`You cannot bid on this lot now.`);
+    if (!a.auctionOpen || a.passedPlayers.includes(p.playerId) || a.currentBidder === p.playerId || a.bidThisTurn === p.playerId || a.raiseBlockedPlayers?.includes(p.playerId) || houseRuleAt04(a, s.round) === "singleRaise" && p.counters.s4RaisedRound === s.round) return fail("ILLEGAL_TARGET", m`You cannot bid on this lot now.`);
     const bonus = 0;
     const chips = a.players[p.playerId].blackChips;
-    if (chips + bonus <= a.currentBid || chips + bonus < lotForAuctionRound04(s, s.round).startingBid) return fail("ILLEGAL_TARGET", m`You do not have enough Black Chips to bid.`);
-    if (action && (!Number.isSafeInteger(action.amount) || action.amount + bonus <= a.currentBid || action.amount + bonus < lotForAuctionRound04(s, s.round).startingBid)) return fail("INVALID", m`Choose a higher whole-number bid.`);
+    if (chips + bonus < minimumBid04(s)) return fail("ILLEGAL_TARGET", m`You do not have enough Black Chips to bid.`);
+    if (action && (!Number.isSafeInteger(action.amount) || action.amount + bonus < minimumBid04(s))) return fail("INVALID", m`Choose a higher whole-number bid.`);
     if (action && action.amount > chips) return fail("ILLEGAL_TARGET", m`You cannot bid more Black Chips than you hold.`);
     return null;
   },
@@ -130,7 +144,7 @@ export const BID04: Spec<Extract<GameAction, { type: "BID" }>> = {
     const a = s.auction!;
     const bonus = 0;
     const limit = a.players[p.playerId].blackChips;
-    const floor = Math.max(1, a.currentBid + 1 - bonus, lotForAuctionRound04(s, Math.max(1, s.round)).startingBid - bonus);
+    const floor = minimumBid04(s) - bonus;
     return Array.from({ length: Math.max(0, limit - floor + 1) }, (_, i) => floor + i);
   },
   apply: (ctx, p, action) => {
@@ -140,14 +154,20 @@ export const BID04: Spec<Extract<GameAction, { type: "BID" }>> = {
     a.currentBidReal = action.amount;
     a.currentBidder = p.playerId;
     a.bidThisTurn = p.playerId;
+    p.counters.s4RaisedRound = ctx.s.round;
     a.hollowCoinOwner = null;
     if (a.players[p.playerId].bellArmed) {
       a.players[p.playerId].bellArmed = false;
       a.raiseBlockedPlayers = a.seatOrder.filter((id) => id !== p.playerId && !a.passedPlayers.includes(id));
     }
     a.stats.highestBid = Math.max(a.stats.highestBid, action.amount);
-    log(ctx, m`${p.nickname} bids ${action.amount} Black Chips.`, "S4_BID", p.playerId);
-    cue(ctx, "S4_BID", { playerId: p.playerId, amount: action.amount });
+    if (houseRuleAt04(a, ctx.s.round) === "anonymousSeat") {
+      log(ctx, m`An anonymous bidder raises to ${action.amount} Black Chips.`, "S4_BID");
+      cue(ctx, "S4_BID", { amount: action.amount });
+    } else {
+      log(ctx, m`${p.nickname} bids ${action.amount} Black Chips.`, "S4_BID", p.playerId);
+      cue(ctx, "S4_BID", { playerId: p.playerId, amount: action.amount });
+    }
   },
 };
 

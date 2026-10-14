@@ -7,6 +7,7 @@ import { Avatar } from "../../components/Avatar.tsx";
 import { useLocale, useT } from "../../i18n/index.ts";
 import { debtTier04 } from "../../../shared/game/scenario04/debt.ts";
 import { Icon } from "../Icon.tsx";
+import { HouseRuleCard04 } from "./HouseRuleCard04.tsx";
 
 export function AuctionTable04({ g }: { g: PlayerView }) {
   const a = g.auction!;
@@ -21,20 +22,26 @@ export function AuctionTable04({ g }: { g: PlayerView }) {
   return <section aria-label={t("s4.table.aria")} className="mx-auto w-full max-w-6xl min-w-0 px-3 sm:px-4">
     <div className="relative overflow-hidden rounded-3xl border border-gold/30 bg-[#0b1028]/90 px-4 py-5 shadow-[inset_0_0_60px_#05060d] sm:px-8">
       <div className="pointer-events-none absolute inset-x-[14%] top-8 bottom-5 hidden rounded-[50%] border border-gold/15 lg:block" aria-hidden="true" />
-      <div className="relative mx-auto max-w-xl rounded-2xl border border-gold/30 bg-[#05060d]/80 p-4 text-center">
-        <div data-s4-transition={g.round} className="mb-3 border-b border-gold/20 pb-3 text-left" aria-live="polite">
-          <p className="label text-[10px] text-gold">{t("s4.host.label")}</p>
-          {last?.round === g.round - 1 && <p className="mt-1 text-xs text-mist">{t(last.winnerId ? "s4.host.lastSold" : "s4.host.lastUnsold")}</p>}
-          <p className="mt-1 text-sm text-moon">{t(hostLines[Math.min(8, Math.max(0, g.round - 1))])}</p>
+      <div className="relative mx-auto max-w-3xl rounded-2xl border border-gold/30 bg-[#05060d]/80 p-4 text-center">
+        <div data-s4-transition={g.round} className="mb-3 grid min-w-0 grid-cols-1 gap-3 border-b border-gold/20 pb-3 text-left md:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)]" aria-live="polite">
+          <div className="min-w-0"><div className="flex items-center gap-2"><span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/10 text-gold" aria-hidden="true"><Icon name="INSPECTOR" size={23} /></span><p className="label text-xs text-gold">{t("s4.host.label")}</p></div>
+            {last?.round === g.round - 1 && <p className="mt-2 text-xs text-mist">{t(last.winnerId ? "s4.host.lastSold" : "s4.host.lastUnsold")}</p>}
+            <p className="mt-2 text-sm text-moon">{t(hostLines[Math.min(8, Math.max(0, g.round - 1))])}</p>
+            {a.houseRule && <p className="mt-2 text-sm italic text-gold-bright">{t(`s4.house.${a.houseRule}.host` as import("../../i18n/index.ts").MessageKey)}</p>}
+          </div>
+          <HouseRuleCard04 round={g.round} rule={a.houseRule} />
         </div>
+        {a.houseRule === "holdingDisclosure" && !!Object.keys(a.holdingDeclarations ?? {}).length && <div className="mb-3 rounded-xl border border-gold/30 p-2 text-left text-xs"><p className="label text-gold">{t("s4.house.declarations")}</p>{Object.entries(a.holdingDeclarations ?? {}).map(([id, lotId]) => <p key={id} className="mt-1">{g.players[id]?.nickname} · {auctionLotText(locale, lotId).name}</p>)}</div>}
+        {a.houseRule === "transparentTrade" && !!a.publicTrades?.length && <div className="mb-3 rounded-xl border border-gold/30 p-2 text-left text-xs"><p className="label text-gold">{t("s4.house.trades")}</p>{a.publicTrades.map((trade, index) => <p key={index} className="mt-1">{g.players[trade.from]?.nickname} ⇄ {g.players[trade.to]?.nickname} · {trade.chips} / {trade.receiveChips} {t("s4.final.blackChips")} · {trade.giveItem ? auctionLotText(locale, trade.giveItem).name : "—"} / {trade.forItem ? auctionLotText(locale, trade.forItem).name : "—"}</p>)}</div>}
+        {g.round === 9 && a.preliminarySettlement && <div data-s4-preliminary className="mb-3 rounded-xl border border-gold/50 bg-gold/10 p-3 text-left text-sm"><p className="label text-gold">{t("s4.house.preliminary")}</p><div className="mt-2 grid grid-cols-2 gap-1 text-xs text-moon sm:grid-cols-3"><p>{t("s4.final.blackChips")} {a.preliminarySettlement.blackChips}</p><p>{t("s4.house.preliminaryItems")} +{a.preliminarySettlement.itemValue}</p><p>{t("s4.final.sanity")} +{a.preliminarySettlement.sanity}</p><p>{t("s4.final.fate")} +{a.preliminarySettlement.fate}</p><p>{t("s4.final.ap")} +{a.preliminarySettlement.ap}</p><p>{t("s4.table.debt", { n: a.players[g.viewerId].debt })} −{a.preliminarySettlement.debtPenalty}</p>{a.preliminarySettlement.finalModifier !== 0 && <p>{t("s4.house.preliminaryModifier")} +{a.preliminarySettlement.finalModifier}</p>}</div><p className="mt-2 border-t border-gold/20 pt-2 font-bold text-gold-bright">{t("s4.house.preliminaryTotal", { n: a.preliminarySettlement.total })}</p></div>}
         <p className="label text-signal">{t("s4.top.round", { n: Math.max(1, g.round) })} · {t("s4.table.lot")}</p>
         <div className="mx-auto mt-3 flex size-16 items-center justify-center rounded-2xl border border-gold/40 bg-gold/10 text-gold-bright" aria-hidden="true"><Icon name={LOT_ICON04[a.currentLot] ?? "USE_LOT"} size={36} /></div>
         <h1 className="mt-1 font-display text-3xl text-gold-bright sm:text-4xl">{lot.name}</h1>
         <p className="mt-2 text-sm italic text-mist">{lot.description}</p>
         {!!a.publicIntel.length && <div className="mt-3 rounded-xl border border-signal/30 p-2 text-left text-xs text-signal"><p className="label">{t("s4.table.publicIntel")}</p>{a.publicIntel.map((id) => <p key={id} className="mt-1">{auctionIntelText(locale, id)}</p>)}</div>}
         <div className="mt-4 grid grid-cols-1 gap-2 text-left sm:grid-cols-3">
-          <Stat label={t(a.currentBidder ? "s4.table.bid" : "s4.table.startingBid")} value={a.currentBidder ? String(a.currentBid) : String(startingBid)} />
-          <Stat label={t("s4.table.bidder")} value={who(a.currentBidder)} />
+          <Stat label={t(a.currentBid > 0 ? "s4.table.bid" : "s4.table.startingBid")} value={a.currentBid > 0 ? String(a.currentBid) : String(startingBid)} />
+          <Stat label={t("s4.table.bidder")} value={a.houseRule === "anonymousSeat" && a.currentBid > 0 && !a.currentBidder ? t("s4.house.anonymous") : who(a.currentBidder)} />
           <Stat label={t("s4.table.turn")} value={who(a.turnPlayerId)} />
         </div>
         {a.currentBidder && a.currentBidReal !== a.currentBid && <p className="mt-2 text-xs text-gold">{t("s4.table.realBid", { n: a.currentBidReal })}</p>}

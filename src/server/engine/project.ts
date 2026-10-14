@@ -8,6 +8,8 @@ import { availableActions } from "./actions.ts";
 import { publicCity } from "./scenario02/city.ts";
 import { teamInvestigations03 } from "./scenario03/progress.ts";
 import { finalBidModifier04 } from "../../shared/game/scenario04/debt.ts";
+import { houseRuleAt04 } from "../../shared/game/scenario04/houseRules.ts";
+import { preliminarySettlement04 } from "./scenario04/houseRules.ts";
 
 export function project(s: GameState, viewerId: PlayerId): PlayerView {
   const {
@@ -69,17 +71,23 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
     ...(s.auction ? { auction: {
       seatOrder: [...s.auction.seatOrder],
       ...(s.flags.developerCheck === 1 ? { debugPool: { seed: s.seed, order: [...(s.auction.lotOrder ?? [])], counterfeit: [...s.auction.counterfeitLots], preview: s.auction.debugPreview ?? null } } : {}),
+      ...(s.flags.developerCheck === 1 ? { debugHouseRules: { seed: s.seed, order: [...(s.auction.houseRuleOrder ?? [])], preview: s.auction.debugHouseRulePreview ?? null } } : {}),
+      houseRule: houseRuleAt04(s.auction, s.round),
+      preliminarySettlement: s.round === 9 ? preliminarySettlement04(s, viewerId) : null,
+      holdingDeclarations: { ...s.auction.holdingDeclarations },
+      holdingPendingIds: s.auction.holdingPendingIds?.includes(viewerId) ? [viewerId] : [],
+      publicTrades: [...(s.auction.publicTrades ?? [])],
       currentLot: s.auction.currentLot,
       currentBid: s.auction.currentBid,
       currentBidReal: s.auction.currentBidReal,
-      currentBidder: s.auction.currentBidder,
-      bidThisTurn: s.auction.bidThisTurn,
+      currentBidder: houseRuleAt04(s.auction, s.round) === "anonymousSeat" && s.auction.auctionOpen && s.auction.currentBidder !== viewerId ? null : s.auction.currentBidder,
+      bidThisTurn: houseRuleAt04(s.auction, s.round) === "anonymousSeat" && s.auction.currentBidder !== viewerId ? null : s.auction.bidThisTurn,
       turnPlayerId: s.auction.turnPlayerId,
       roundStartPlayerId: s.auction.roundStartPlayerId,
       passedPlayers: [...s.auction.passedPlayers],
       auctionOpen: s.auction.auctionOpen,
       raiseBlockedPlayers: [...(s.auction.raiseBlockedPlayers ?? [])],
-      hollowCoinOwner: s.auction.hollowCoinOwner ?? null,
+      hollowCoinOwner: houseRuleAt04(s.auction, s.round) === "anonymousSeat" && s.auction.currentBidder !== viewerId ? null : s.auction.hollowCoinOwner ?? null,
       auctionHistory: [...s.auction.auctionHistory],
       publicIntel: [...s.auction.publicIntel],
       stats: s.auction.stats,

@@ -8,15 +8,15 @@ import { useLocale, useT } from "../../i18n/index.ts";
 import { PeopleRow, type DockExtension } from "../Dock.tsx";
 import { Effects04 } from "./Effects04.tsx";
 
-function BidChoices({ bids, send }: { bids: number[]; send: (action: GameAction) => void }) {
+function BidChoices({ bids, send, g }: { bids: number[]; send: (action: GameAction) => void; g: PlayerView }) {
   const t = useT();
-  return bids.length ? <div data-s4-picker="BID" className="grid max-h-48 grid-cols-4 gap-2 overflow-y-auto sm:grid-cols-6">
+  return bids.length ? <div data-s4-picker="BID"><p className="mb-2 text-xs text-gold">{t("s4.house.bidStep", { n: bids[0] })}</p><div className="grid max-h-48 grid-cols-4 gap-2 overflow-y-auto sm:grid-cols-6">
     {bids.map((amount) => <button key={amount} className="btn btn-gold min-h-12 min-w-0" onClick={() => send({ type: "BID", amount })}>{amount}</button>)}
-  </div> : <p className="text-sm text-mist">{t("s4.dock.noBid")}</p>;
+  </div></div> : <p className="text-sm text-mist">{g.auction?.houseRule === "singleRaise" ? t("s4.house.singleRaise.description") : t("s4.dock.noBid")}</p>;
 }
 
 export const DOCK04: DockExtension = {
-  grid: ["BID", "PASS", "INVESTIGATE", "READ", "DEAL", "CHALLENGE", "SABOTAGE", "BORROW", "EXPOSE", "RECOVER"],
+  grid: ["BID", "PASS", "INVESTIGATE", "READ", "DEAL", "CHALLENGE", "SABOTAGE", "BORROW", "EXPOSE", "RECOVER", "DECLARE_HOLDING"],
   coreActions: ["BID", "PASS"],
   direct: new Set(["PASS", "INVESTIGATE", "BORROW", "RECOVER", "END_TURN"]),
   columns: "lg:grid-cols-5",
@@ -24,7 +24,8 @@ export const DOCK04: DockExtension = {
   hudClassName: "flex min-w-0 justify-center lg:justify-self-center",
   effectChips: (g, me) => <Effects04 g={g} me={me} />,
   picker: ({ g, mode, availability, send }) => {
-    if (mode === "BID") return { title: "s4.dock.pickBid", body: <BidChoices bids={(availability.targets ?? []).map(Number)} send={send} /> };
+    if (mode === "BID") return { title: "s4.dock.pickBid", body: <BidChoices bids={(availability.targets ?? []).map(Number)} send={send} g={g} /> };
+    if (mode === "DECLARE_HOLDING") return { title: "s4.house.chooseHolding", body: <HoldingChoices ids={(availability.targets ?? []).map(String)} send={send} /> };
     if (mode === "READ" || mode === "SABOTAGE") return { title: mode === "READ" ? "s4.dock.read" : "s4.dock.sabotage", body: <TargetChoice g={g} ids={(availability.targets ?? []).map(String)} send={send} mode={mode} /> };
     if (mode === "DEAL") return { title: "s4.dock.deal", body: <DealBuilder g={g} send={send} /> };
     if (mode === "CHALLENGE") return { title: "s4.dock.challenge", body: <ChallengeBuilder g={g} ids={(availability.targets ?? []).map(String)} send={send} /> };
@@ -33,6 +34,11 @@ export const DOCK04: DockExtension = {
     return null;
   },
 };
+
+function HoldingChoices({ ids, send }: { ids: string[]; send: (action: GameAction) => void }) {
+  const locale = useLocale();
+  return <div data-s4-picker="DECLARE_HOLDING" className="grid grid-cols-1 gap-2">{ids.map((id) => <button key={id} className="btn btn-ghost min-h-12 h-auto whitespace-normal" onClick={() => send({ type: "DECLARE_HOLDING", itemId: id as `LOT_${string}` })}>{auctionLotText(locale, id as `LOT_${string}`).name}</button>)}</div>;
+}
 
 function ItemChoices({ g, send }: { g: PlayerView; send: (action: GameAction) => void }) {
   const t = useT();
@@ -56,7 +62,7 @@ function ItemChoices({ g, send }: { g: PlayerView; send: (action: GameAction) =>
         <p className="text-xs text-mist">{auctionLotEffectText(locale, id)}</p>
         <p className="label mt-2">{t(base === "LOT_17" ? "s4.item.chooseRaise" : base === "LOT_18" || base === "LOT_21" ? "s4.item.choosePlayer" : "s4.item.copySource")}</p>
         <div className="mt-1 grid grid-cols-2 gap-2">{base === "LOT_17"
-          ? Array.from({ length: Math.max(0, Math.min(12, (mine.blackChips ?? 0) - a.currentBid)) }, (_, i) => a.currentBid + i + 1).map((amount) => <button key={amount} className="btn btn-ghost min-h-12" onClick={() => send({ type: "USE_LOT", lotId: id, amount })}>{amount}</button>)
+          ? Array.from({ length: Math.max(0, Math.min(12, (mine.blackChips ?? 0) - a.currentBid)) }, (_, i) => a.currentBid + i + 1).filter((amount) => amount >= a.currentBid + (a.houseRule === "doubleRaise" && a.currentBid > 0 ? 2 : 1)).map((amount) => <button key={amount} className="btn btn-ghost min-h-12" onClick={() => send({ type: "USE_LOT", lotId: id, amount })}>{amount}</button>)
           : base === "LOT_18" || base === "LOT_21"
             ? a.seatOrder.filter((playerId) => playerId !== g.viewerId).map((targetId) => <button key={targetId} className="btn btn-ghost min-h-12 h-auto whitespace-normal" onClick={() => send({ type: "USE_LOT", lotId: id, targetId })}>{g.players[targetId].nickname}</button>)
             : sources.map((source) => <button key={source} data-s4-copy={source} className="btn btn-ghost min-h-12 h-auto min-w-0 whitespace-normal text-xs" onClick={() => send({ type: "USE_LOT", lotId: id, sourceLotId: source })}>{auctionLotText(locale, source).name}</button>)}

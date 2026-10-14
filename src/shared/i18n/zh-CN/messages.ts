@@ -2,6 +2,12 @@
 // keyed by the English template. test/localization.test.ts checks every
 // template in src/ has an entry with the same placeholders.
 export const ZH_MESSAGES: Record<string, string> = {
+  "An anonymous bidder raises to {0} Black Chips.": "一位匿名竞买人出价 {0} 枚黑筹码。",
+  "Credit is frozen this round. No new loans are offered.": "本轮信用冻结，不再提供新的贷款。",
+  "This House Rule preview is available only in a Scenario 04 developer room.": "拍卖条例预览仅在第四副本的开发者房间可用。",
+  "You have no holding to declare this round.": "本轮没有需要申报的持仓。",
+  "Declare an item you currently hold.": "请选择当前持有的拍品申报。",
+  "Declare one held auction item before acting.": "行动前请先申报一件持有的拍品。",
   "Choose a known developer checkpoint.": "请选择有效的开发者测试节点。",
   "This command is only available in a developer test room.": "此操作仅适用于开发者测试房间。",
   "This item sandbox is available only in a Scenario 04 developer room.": "此拍品沙盒仅在第四副本的开发者房间可用。",

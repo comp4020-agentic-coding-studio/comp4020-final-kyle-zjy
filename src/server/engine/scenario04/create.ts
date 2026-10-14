@@ -6,6 +6,8 @@ import { log } from "../context.ts";
 import { createScenario01, type Seat } from "../create.ts";
 import { START_FATE, START_SANITY } from "../../../shared/game/scenario01/content.ts";
 import { generateAuctionPool04 } from "./pool.ts";
+import { SHUFFLED_HOUSE_RULES04 } from "../../../shared/game/scenario04/houseRules.ts";
+import { shuffle } from "../rng.ts";
 
 export function createScenario04(sessionId: string, seats: Seat[], seed: string, now: number): GameState {
   const s = createScenario01(sessionId, seats, seed, now);
@@ -29,8 +31,14 @@ export function createScenario04(sessionId: string, seats: Seat[], seed: string,
   s.log = [];
   s.logSeq = 0;
   const pool = generateAuctionPool04(s);
+  const houseRuleOrder = ["openingCourtesy", ...shuffle(s, SHUFFLED_HOUSE_RULES04), "finalSettlement"] as const;
   s.auction = {
     seatOrder: ordered,
+    houseRuleOrder: [...houseRuleOrder],
+    houseChallengeBonusClaimed: false,
+    holdingDeclarations: {},
+    holdingPendingIds: [],
+    publicTrades: [],
     lotOrder: pool.order,
     currentLot: pool.order[0],
     currentBid: 0,

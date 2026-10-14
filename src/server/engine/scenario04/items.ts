@@ -1,6 +1,7 @@
 import type { GameAction } from "../../../shared/game/actions.ts";
 import { AUCTION_CONFIG04 } from "../../../shared/game/scenario04/config.ts";
 import { GENUINE_ITEM_FINAL_VALUE04 } from "../../../shared/game/scenario04/debt.ts";
+import { houseRuleAt04 } from "../../../shared/game/scenario04/houseRules.ts";
 import { copyItemId04, itemLotId04, lotForAuctionRound04, LOTS04 } from "../../../shared/game/scenario04/lots.ts";
 import type { AuctionPlayer04, IntelId04, LotId04 } from "../../../shared/game/scenario04/types.ts";
 import type { GameState } from "../../../shared/game/state.ts";
@@ -69,7 +70,11 @@ function usable(s: GameState, playerId: string, action: Extract<GameAction, { ty
   if (base === "LOT_14") return !!a.deal && [a.deal.from, a.deal.to].includes(playerId);
   if (a.deal || s.pending.some((w) => w.blocksTable)) return false;
   if (base === "LOT_12") return s.round === 10 && a.final?.stage === "SETTLEMENT" && !a.final.players[playerId].ready;
-  if (base === "LOT_17") return s.round < 10 && a.auctionOpen && a.passedPlayers.includes(playerId) && a.bidThisTurn !== playerId && !a.raiseBlockedPlayers?.includes(playerId) && Number.isSafeInteger(action.amount) && action.amount! > a.currentBid && action.amount! >= lotForAuctionRound04(s, s.round).startingBid && action.amount! <= holder.blackChips;
+  if (base === "LOT_17") {
+    const rule = houseRuleAt04(a, s.round);
+    const minimum = Math.max(lotForAuctionRound04(s, s.round).startingBid, a.currentBid + (rule === "doubleRaise" && a.currentBidder ? 2 : 1));
+    return s.round < 10 && a.auctionOpen && a.passedPlayers.includes(playerId) && a.bidThisTurn !== playerId && !a.raiseBlockedPlayers?.includes(playerId) && !(rule === "singleRaise" && s.players[playerId].counters.s4RaisedRound === s.round) && Number.isSafeInteger(action.amount) && action.amount! >= minimum && action.amount! <= holder.blackChips;
+  }
   if (base === "LOT_18" || base === "LOT_21") return !!action.targetId && action.targetId !== playerId && a.seatOrder.includes(action.targetId);
   if (base === "LOT_15") return !!action.sourceLotId && a.auctionHistory.some((entry) => entry.lotId === action.sourceLotId && entry.round > instance.offeredRound && entry.winnerId && entry.winnerId !== playerId);
   if (base === "LOT_24") return !!action.sourceLotId && action.sourceLotId !== action.lotId && holder.items.includes(action.sourceLotId) && !holder.privateIntel.some((id) => id === `${itemLotId04(action.sourceLotId!)}_COUNTERFEIT` || id === `${itemLotId04(action.sourceLotId!)}_AUTHENTIC`);
@@ -150,14 +155,20 @@ export const USE_LOT04: Spec<Extract<GameAction, { type: "USE_LOT" }>> = {
       a.currentBidReal = action.amount!;
       a.currentBidder = p.playerId;
       a.bidThisTurn = p.playerId;
+      p.counters.s4RaisedRound = ctx.s.round;
       a.hollowCoinOwner = null;
       if (holder.bellArmed) {
         holder.bellArmed = false;
         a.raiseBlockedPlayers = a.seatOrder.filter((id) => id !== p.playerId && !a.passedPlayers.includes(id));
       }
       a.stats.highestBid = Math.max(a.stats.highestBid, action.amount!);
-      log(ctx, m`${p.nickname} bids ${action.amount!} Black Chips.`, "S4_BID", p.playerId);
-      cue(ctx, "S4_BID", { playerId: p.playerId, amount: action.amount! });
+      if (houseRuleAt04(a, ctx.s.round) === "anonymousSeat") {
+        log(ctx, m`An anonymous bidder raises to ${action.amount!} Black Chips.`, "S4_BID");
+        cue(ctx, "S4_BID", { amount: action.amount! });
+      } else {
+        log(ctx, m`${p.nickname} bids ${action.amount!} Black Chips.`, "S4_BID", p.playerId);
+        cue(ctx, "S4_BID", { playerId: p.playerId, amount: action.amount! });
+      }
     } else if (base === "LOT_18") {
       const n = a.players[action.targetId!].blackChips;
       (holder.privateObservations ??= []).push({ kind: "CHIP_BAND", targetId: action.targetId, value: n <= 3 ? "0–3" : n <= 6 ? "4–6" : "7+" });

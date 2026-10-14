@@ -9,6 +9,8 @@ import { Avatar } from "../../components/Avatar.tsx";
 import { getCharacterById } from "../../../shared/characters/roster/index.ts";
 import { useLocale, useT } from "../../i18n/index.ts";
 import { sendGame } from "../../store.ts";
+import { HouseRuleCard04 } from "./HouseRuleCard04.tsx";
+import { Icon } from "../Icon.tsx";
 
 export function FinalAuction04({ g }: { g: PlayerView }) {
   const t = useT();
@@ -39,9 +41,10 @@ export function FinalAuction04({ g }: { g: PlayerView }) {
 
   return <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-4 px-3 py-4 sm:px-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,340px)]">
     <div data-s4-final-overture className="min-w-0 rounded-2xl border border-ember/50 bg-[#1d1020]/90 px-4 py-3 lg:col-span-2">
-      <p className="label text-ember">{t("s4.final.overture.title")}</p>
-      <p className="mt-1 font-mono text-xs text-gold-bright">{t("s4.final.overture.pressure", { n: g.collapse, max: g.collapseMax })}</p>
-      <p className="mt-2 text-sm leading-relaxed text-moon">{t(`s4.final.overture.${final.stage === "SETTLEMENT" ? "settlement" : final.stage === "AUCTION" ? "auction" : final.stage === "REVEAL" ? tie ? "tie" : "reveal" : "showdown"}`)}</p>
+      <div data-s4-transition={g.round} className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)]"><div className="min-w-0"><p className="label text-ember">{t("s4.final.overture.title")}</p>
+        <p className="mt-1 font-mono text-xs text-gold-bright">{t("s4.final.overture.pressure", { n: g.collapse, max: g.collapseMax })}</p>
+        <p className="mt-2 text-sm leading-relaxed text-moon">{t(`s4.final.overture.${final.stage === "SETTLEMENT" ? "settlement" : final.stage === "AUCTION" ? "auction" : final.stage === "REVEAL" ? tie ? "tie" : "reveal" : "showdown"}`)}</p>
+        <div className="mt-3 flex items-center gap-2 text-gold"><span className="flex size-9 items-center justify-center rounded-full border border-gold/40 bg-gold/10" aria-hidden="true"><Icon name="INSPECTOR" size={23} /></span><p className="label text-xs">{t("s4.host.label")}</p></div><p className="mt-2 text-sm italic text-mist">{t("s4.house.finalSettlement.host")}</p></div><HouseRuleCard04 round={10} rule={a.houseRule} /></div>
     </div>
     <section className="min-w-0 rounded-3xl border-2 border-gold/60 bg-[#0b1028]/95 p-4 text-center shadow-[0_0_44px_#d7ae5130] sm:p-7" aria-label={t("s4.final.title")}>
       {final.stage !== "SETTLEMENT" && <><p className="label text-signal">{t(final.stage === "AUCTION" ? "s4.final.auction" : final.stage === "REVEAL" ? "s4.final.reveal" : "s4.showdown.title")}</p><h1 className="mt-2 font-display text-3xl text-gold-bright sm:text-5xl">{t(final.stage.startsWith("SHOWDOWN") ? "s4.showdown.title" : "s4.final.title")}</h1></>}

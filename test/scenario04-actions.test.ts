@@ -38,7 +38,7 @@ describe("Scenario 04 tactical actions", () => {
     s = settleRoll(act(s, "a", { type: "INVESTIGATE" }));
     expect(s.auction!.players.a.privateIntel).toEqual(expect.arrayContaining(["LOT_01_LIMIT", "LOT_01_PERFECT"]));
     expect(project(s, "b").auction!.players.a.privateIntel).toBeNull();
-    expect(s.players.a.ap).toBe(0);
+    expect(s.players.a.ap).toBe(1); // Round 1 opening courtesy waives the first investigation AP.
     s.players.a.ap = 1; // Red Contract permits a second tactical action in a turn.
     rigNextDie(s, 6);
     s = settleRoll(act(s, "a", { type: "READ", targetId: "b" }));

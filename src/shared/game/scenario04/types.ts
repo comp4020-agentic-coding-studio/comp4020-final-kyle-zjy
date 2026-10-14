@@ -2,6 +2,9 @@ import type { PlayerId } from "../state.ts";
 
 export type LotId04 = `LOT_${string}`;
 export type IntelId04 = `${LotId04}_${string}`;
+export type HouseRuleId04 = "openingCourtesy" | "anonymousSeat" | "doubleRaise" | "creditNight" | "holdingDisclosure" | "houseChallenge" | "transparentTrade" | "singleRaise" | "creditFreeze" | "finalSettlement";
+export type PublicTrade04 = { round: number; from: PlayerId; to: PlayerId; chips: number; receiveChips: number; giveItem: LotId04 | null; forItem: LotId04 | null };
+export type PreliminarySettlement04 = { blackChips: number; sanity: number; fate: number; ap: number; genuineItems: number; itemValue: number; debtPenalty: number; finalModifier: number; total: number };
 
 export type AuctionItemInstance04 = {
   itemInstanceId: LotId04;
@@ -81,6 +84,13 @@ export type FinalState04 = {
 
 export type AuctionState04 = {
   seatOrder: PlayerId[];
+  /** Seeded once at creation; absent in saved pre-House-Rule rooms. */
+  houseRuleOrder?: HouseRuleId04[];
+  houseChallengeBonusClaimed?: boolean;
+  holdingDeclarations?: Record<PlayerId, LotId04>;
+  holdingPendingIds?: PlayerId[];
+  publicTrades?: PublicTrade04[];
+  debugHouseRulePreview?: { seed: string; order: HouseRuleId04[] } | null;
   /** Persisted draw; absent in rooms created before the expanded pool. */
   lotOrder?: LotId04[];
   currentLot: LotId04;
@@ -180,8 +190,11 @@ export type PublicFinal04 = {
   };
 };
 
-export type PublicAuction04 = Omit<AuctionState04, "players" | "challenge" | "deal" | "final" | "counterfeitLots" | "itemInstances" | "nextItemInstanceNumber" | "lotOrder" | "debugPreview"> & {
+export type PublicAuction04 = Omit<AuctionState04, "players" | "challenge" | "deal" | "final" | "counterfeitLots" | "itemInstances" | "nextItemInstanceNumber" | "lotOrder" | "debugPreview" | "houseRuleOrder" | "debugHouseRulePreview"> & {
   debugPool?: { seed: string; order: LotId04[]; counterfeit: LotId04[]; preview?: { seed: string; order: LotId04[]; counterfeit: LotId04[] } | null };
+  debugHouseRules?: { seed: string; order: HouseRuleId04[]; preview: { seed: string; order: HouseRuleId04[] } | null };
+  houseRule: HouseRuleId04 | null;
+  preliminarySettlement: PreliminarySettlement04 | null;
   players: Record<PlayerId, PublicAuctionPlayer04>;
   final: PublicFinal04 | null;
   deal: AuctionState04["deal"];
