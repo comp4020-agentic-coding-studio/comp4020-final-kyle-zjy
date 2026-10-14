@@ -94,6 +94,7 @@ onResume("S4_DEAL", (ctx, _window, answers) => {
       forItem: deal.forItem ? itemLotId04(deal.forItem) : null });
   }
   a.stats.deals++;
+  for (const id of [deal.from, deal.to]) { const own = ctx.s.secrets[id]?.commission04; if (own) own.deals++; }
   log(ctx, m`The accepted deal settles in full.`, "S4_DEAL", deal.from);
   cue(ctx, "S4_DEAL", { from: deal.from, to: deal.to, pass: !!deal.forPass });
 });

@@ -7,7 +7,8 @@ import type { RoomId03, Year03 } from "./scenario03/map.ts";
 import type { S03ItemId } from "./scenario03/items.ts";
 import type { FactId03 } from "./scenario03/facts.ts";
 import type { EndingRoute03, StoryBeatId03 } from "./scenario03/story.ts";
-import type { AuctionState04, PublicAuction04 } from "./scenario04/types.ts";
+import type { Directive03 } from "./scenario03/directives.ts";
+import type { AuctionState04, CommissionId04, PublicAuction04 } from "./scenario04/types.ts";
 import type { ActionAvailability } from "./actions.ts";
 import type { Effect, StatusPolarity } from "./effects.ts";
 import type { Msg } from "../i18n/types.ts";
@@ -143,6 +144,10 @@ export type PublicTemporal03 = Omit<Temporal03, "baselinePresent" | "evidence" |
   worldItems: Omit<TemporalItem03, "ownerId" | "bootstrapOwnerId">[];
   myItems: Omit<TemporalItem03, "bootstrapOwnerId">[];
   myObligations: BootstrapObligation03[];
+  /** Per open final history, each condition and whether the server finds it met. */
+  routeConditions?: Partial<Record<EndingRoute03, { label: Msg; met: boolean }[]>>;
+  /** The viewer's own Administration directive (scenario03/directives.ts); after the run, everyone's with the verdict. */
+  directives?: { playerId: PlayerId; directive: Directive03; met: boolean | null }[];
 };
 
 // ---- scenario 01 -----------------------------------------------------------
@@ -289,7 +294,8 @@ export type Roll = {
   purpose: RollPurpose;
   label: Msg;
   raw: number;
-  modifiers: { source: Msg; delta: number }[];
+  /** `by`: the players behind a modifier (helpers), shown beside it. */
+  modifiers: { source: Msg; delta: number; by?: PlayerId[] }[];
   fateSpent: number;
   final: number;
   tier: RollTier;
@@ -435,8 +441,15 @@ export type PlayerSecrets = {
   peeks: { id: string; text: Msg; round: number }[];
   /** Latest owner-only Archive Scan direction; null IDs mean no unresolved lead. */
   archiveLead03?: { round: number; roomId: RoomId03 | null; year: Year03 | null; evidenceId: string | null };
+  /** Scenario 02: this player's private tie (derived from the seed, judged at the results). */
+  tie02?: Tie02;
   tasks: PlayerTask[];
+  /** Scenario 04: one private commission; `deals` counts accepted deals this player took part in. */
+  commission04?: { id: CommissionId04; deals: number };
 };
+
+/** A private tie in scenario 02: a small personal stake that never changes the shared outcome. */
+export type Tie02 = { kind: "RESCUE" | "ABOARD" | "RESTORE"; /** An NPC id (RESCUE) or facility id (RESTORE); null for ABOARD. */ target: string | null };
 
 /** The owner's secrets as sent to them. Messages and dream cards are always true. */
 export type ViewerSecrets = PlayerSecrets;
@@ -516,6 +529,10 @@ export type PlayerResult = {
   messages: { text: Msg }[];
   /** Scenario 02: how this player's run ended. */
   escape?: EscapeFate;
+  /** Scenario 02: the player's private tie, revealed with the results, and whether it was met. */
+  tie02?: Tie02 & { met: boolean };
+  /** Scenario 04: the secret commission, revealed with its verdict at the results. */
+  commission04?: { id: CommissionId04; met: boolean };
 };
 
 export type EscapeFate = "ESCAPED" | "ENGINEER" | "LEFT_BEHIND" | "DROWNED";
@@ -602,6 +619,16 @@ export type GameState = {
   results: PlayerResult[] | null;
   log: LogLine[];
   logSeq: number;
+  /** The run's story beats for the end-of-run recap (engine/chronicle.ts). Sent once the run has ended. */
+  chronicle?: ChronicleEntry[];
+};
+
+/** One beat of the run's story: who, when, and ids/numbers each locale words itself. */
+export type ChronicleEntry = {
+  round: number;
+  kind: string;
+  actors: PlayerId[];
+  data: Record<string, string | number | boolean>;
 };
 
 /** What one client receives. Server-only fields are gone; secrets are the viewer's own. */

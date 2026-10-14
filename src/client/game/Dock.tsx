@@ -462,13 +462,15 @@ function TradeBuilder({ g, me, partners, onSend }: { g: PlayerView; me: PublicPl
     <div className="space-y-2">
       <PeopleRow people={partners} selected={partner ? [partner] : []} onPick={(id) => { setPartner(id); setWant([]); setWantFate(0); }} />
       {them && (
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <TradeSide title={t("dock.youGive")} items={me.items} picked={give} onToggle={(i) => toggle(give, setGive, i)} fate={giveFate} maxFate={me.fate} setFate={setGiveFate} />
-          <TradeSide title={t("dock.theyGive", { name: them.nickname })} items={them.items} picked={want} onToggle={(i) => toggle(want, setWant, i)} fate={wantFate} maxFate={them.fate} setFate={setWantFate} />
+        <div className="relative grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 rounded-xl border border-gold/20 bg-[radial-gradient(ellipse_at_center,#16204a_0%,#0b1029_75%)] p-2 text-sm">
+          <span className="pointer-events-none absolute inset-y-3 left-1/2 w-px -translate-x-1/2 bg-gold/25" aria-hidden="true" />
+          <span className="pointer-events-none absolute top-1/2 left-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-gold/40 bg-[#0b1029] text-gold" aria-hidden="true"><Icon name="TRADE" size={14} /></span>
+          <TradeSide title={t("dock.youGive")} who={me} items={me.items} picked={give} onToggle={(i) => toggle(give, setGive, i)} fate={giveFate} maxFate={me.fate} setFate={setGiveFate} />
+          <TradeSide title={t("dock.theyGive", { name: them.nickname })} who={them} items={them.items} picked={want} onToggle={(i) => toggle(want, setWant, i)} fate={wantFate} maxFate={them.fate} setFate={setWantFate} />
         </div>
       )}
       {them && city && (
-        <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 text-sm">
           <CitySide parts={myParts} picked={giveParts} onToggle={(p) => togglePart(giveParts, setGiveParts, p)} passes={givePasses} maxPasses={myPasses} setPasses={setGivePasses} />
           <CitySide parts={PART_IDS} picked={wantParts} onToggle={(p) => togglePart(wantParts, setWantParts, p)} passes={wantPasses} maxPasses={9} setPasses={setWantPasses} hint={t("s2.trade.theyMayNot")} />
         </div>
@@ -521,16 +523,20 @@ function CitySide({ parts, picked, onToggle, passes, maxPasses, setPasses, hint 
   );
 }
 
-function TradeSide({ title, items, picked, onToggle, fate, maxFate, setFate }: { title: string; items: ItemId[]; picked: number[]; onToggle: (i: number) => void; fate: number; maxFate: number; setFate: (n: number) => void }) {
+function TradeSide({ title, who, items, picked, onToggle, fate, maxFate, setFate }: { title: string; who: PublicPlayerState; items: ItemId[]; picked: number[]; onToggle: (i: number) => void; fate: number; maxFate: number; setFate: (n: number) => void }) {
   const t = useT();
   const names = useItemText();
+  const ch = getCharacterById(who.characterId);
   return (
-    <div className="min-w-0 rounded-lg border border-indigo p-2">
-      <p className="label mb-1 truncate text-[10px]">{title}</p>
+    <div className="min-w-0 p-1">
+      <div className="mb-1.5 flex min-w-0 items-center gap-1.5">
+        <Avatar zodiac={ch.zodiac} mbti={ch.mbti} size={28} />
+        <p className="label min-w-0 truncate text-[10px]">{title}</p>
+      </div>
       <div className="flex flex-wrap gap-1">
         {items.length ? (
           items.map((item, i) => (
-            <button key={i} onClick={() => onToggle(i)} aria-pressed={picked.includes(i)} className={`rounded-full border px-2 py-1 text-xs ${picked.includes(i) ? "border-signal text-signal" : "border-gold/30 text-mist"}`}>
+            <button key={i} onClick={() => onToggle(i)} aria-pressed={picked.includes(i)} className={`min-h-12 max-w-full rounded-lg border px-2 py-1 text-left text-xs transition-transform ${picked.includes(i) ? "-translate-y-0.5 border-signal bg-signal/10 text-signal shadow-[0_4px_12px_rgb(92_225_230/0.15)]" : "border-gold/30 bg-[#121a3a]/70 text-mist"}`}>
               {names(item).name}
             </button>
           ))

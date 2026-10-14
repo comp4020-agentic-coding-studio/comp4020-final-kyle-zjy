@@ -11,6 +11,7 @@ import { log, type Ctx } from "../context.ts";
 import { emptyRoundRecord, emptyStats, type Seat } from "../create.ts";
 import { int, seedState, shuffle } from "../rng.ts";
 import { EVENT_IDS02 } from "../../../shared/game/scenario02/events.ts";
+import { tieFor } from "./ties.ts";
 import { applyFlood, generateCity, spawnZones } from "./city.ts";
 
 export const COLLAPSE_MAX = 12;
@@ -109,7 +110,7 @@ export function createScenario02(sessionId: string, seats: Seat[], seed: string,
       counters: {},
       stats: emptyStats(),
     };
-    s.secrets[seat.playerId] = { obsession: null, messages: [], allies: [], dreamCards: [], peeks: [], tasks: [] };
+    s.secrets[seat.playerId] = { obsession: null, messages: [], allies: [], dreamCards: [], peeks: [], tasks: [], tie02: tieFor(seed, seat.playerId, s.city.npcs.map((n) => n.id)) };
     s.city.holdings[seat.playerId] = { parts: [], passes: 0 };
     s.city.rescues[seat.playerId] = 0;
     s.city.contrib[seat.playerId] = 0;

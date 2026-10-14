@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { worldPressure } from "../fx/pressure.ts";
+import { useStageFx } from "../fx/useStageFx.ts";
+import "../../styles/stage.css";
 import { AudioControl } from "../../audio/AudioControl.tsx";
 import { audio } from "../../audio/manager.ts";
 import { gameplayScore } from "../../audio/score.ts";
@@ -26,6 +29,7 @@ export function ScenarioExperience({ children }: { children: ReactNode }) {
 
   // Acquire before child passive effects emit the first siren/paper cue.
   useLayoutEffect(() => audio.acquire(), []);
+  useStageFx(g);
   useEffect(() => { if (playing) rememberOpening(key); }, [key, playing]);
   useEffect(() => {
     // The cinematic owns its mix until handoff; background server phase changes
@@ -48,8 +52,9 @@ export function ScenarioExperience({ children }: { children: ReactNode }) {
   }, [hint]);
 
   const location = g.temporal?.locations[g.viewerId];
+  const pressure = worldPressure(g);
   return <>
-    <div ref={game} tabIndex={-1} inert={playing} aria-hidden={playing || undefined} className={`s3-game-entry game-entry-${definition.variant} ${playing ? handoff ? "is-entering" : "is-covered" : ""}`}>
+    <div ref={game} tabIndex={-1} inert={playing} aria-hidden={playing || undefined} data-pressure={pressure.band} style={{ "--pressure": pressure.level } as CSSProperties} className={`stage-root stage-${definition.variant} s3-game-entry game-entry-${definition.variant} ${playing ? handoff ? "is-entering" : "is-covered" : ""}`}>
       <div className="s3-game-audio"><AudioControl /></div>
       {hint && <aside className="s3-entry-hint" role="status">{location ? <><strong>{t("s3.open.started")}</strong><p>{t("s3.open.location", { year: t(`s3.year.short.${location.year}`), room: t(`s3.room.${location.roomId}`) })}</p><p>{t(definition.hint)}</p></> : <p>{t(definition.hint)}</p>}</aside>}
       {children}

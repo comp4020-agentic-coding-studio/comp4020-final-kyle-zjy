@@ -307,6 +307,13 @@ Lobby actions (`LobbyAction`): `SET_NICKNAME`, `PICK_ZODIAC`, `PICK_MBTI`,
 ### Fail (any)
 collapse reaches 12 · round 12 ends without escape · every player lost at once.
 
+Round 5's message pool also holds one partial truth about the viewer's own
+carriage: a middle carriage "will not stay where it is", the first car or the
+cab "will still be here at the end". Both are guaranteed by the round-7 fold
+(a derangement of the middle six), so two players can hold messages that
+sound contradictory and are both true. `test/act2.test.ts` checks them by
+running the fold.
+
 ## 11. Player-count tuning (tuned in PHASE 11)
 
 Values live in `tuningFor()` (`scenario01/content.ts`); the evidence is in
@@ -325,6 +332,45 @@ Collapse rises by 1 every round and is the real clock; restoring an anchor
 eases it by 1. Only key tasks raise it on a disaster (a botched repair or
 confrontation); a disastrous investigation or search costs the explorer
 Sanity, not the train Collapse, so exploring is never worse than idling.
+
+## Run chronicle
+
+`GameState.chronicle` (engine/chronicle.ts) records the run's story beats for
+the end-of-run recap: anchors held, locks engaged, the brake vote, the fold,
+facilities restored, boat capacity, boarding, causal rewrites, relic loops
+closed, lots sold, the final bid and showdown, and anyone lost. Each entry is
+`{ round, kind, actors, data }`, with ids and numbers only; clients word it from
+fixed templates (`recap.*`). It is derived after every engine step from the
+cues that step already broadcast, so no rule writes it and a replay rebuilds it
+exactly. Actor names can be secret mid-run (scenario 03's intruders), so the
+projection sends an empty chronicle until ENDING.
+
+A roll's `Help` modifier carries `by`: the players who helped, shown beside it.
+
+## Scenario 03 directives and route conditions
+
+Each traveller holds one private Administration directive (`STABILITY`,
+`HUMANE`, `PURGE`, `ARCHIVIST`, `TRUTH`), dealt by `directiveOf03` from the
+seed and turn-order seat: no generator draw, so replays are unchanged, and
+five or fewer players never share one. `directiveMet03` judges it from the
+final present (some pull against each other: PURGE needs the core shut down,
+STABILITY needs it running). The projection sends only the viewer's own
+directive during the run and everyone's, judged, once it has ended. It never
+affects the team's ending.
+
+**Time prediction** (`scenario03/prediction.ts`). Intervening on
+`PROTOTYPE_CORE`, `ACCIDENT_RECORD` or `STAFF_EVACUATION` first opens a
+secret vote for every other present traveller with Fate: "It will change",
+"Nothing will change" (each stakes 1 Fate) or "Stay out of it" (default).
+When it closes, stakes are taken, held in `flags.s3_bet_<id>` (server-only),
+and the intervention roll starts exactly as before. Bets settle when the roll
+resolves: "changed" is whether `causalRevision` rose (a real rewrite of the
+present); a failed roll counts as no change. Right pays 2 (the stake back
+plus 1). An ordinary decision, or nobody able to bet, rolls at once.
+
+`PublicTemporal03.routeConditions` sends, for each open final history, the
+server's own condition list (`routeConditions03`) with each one met or not;
+`routeTargets03` accepts a filing exactly when all are met.
 
 ## 12. Information visibility (projection)
 
@@ -472,6 +518,25 @@ Second Will annotates a personal ending without awarding another Exit Right.
 Developer-only item grant and pool preview actions require the developer-room
 flag; their seed and fake identities are never projected to ordinary rooms.
 
+### Scenario 04 secret commissions
+
+Each player gets one private commission at creation: `secrets[id].commission04 =
+{ id, deals }`. The id is `fnv1a(seed:commission04:playerId) mod 5` into
+`COLLECTOR | EXPOSER | GAMBLER | DEBTOR | DEALER`; it never touches the seeded RNG,
+so pools, house rules and replays are unchanged. `ownSecrets` already returns the
+viewer's own `PlayerSecrets` only, so the commission is private to its owner. It is
+judged once, in the scenario's `results`, from existing state:
+
+- Collector: at least two genuine lots won in rounds 1-9 (`auctionHistory` and the
+  server-only instance flag).
+- Exposer: the player's own `privateIntel` holds a `*_COUNTERFEIT` confirmation.
+- Gambler: `stats.challengesWon[id] >= 1`.
+- Debtor: closing `debt >= 2`.
+- Dealer: `commission04.deals >= 1` (incremented for both parties of an accepted deal).
+
+`PlayerResult.commission04 = { id, met }` reveals all of them at the results. A
+commission is a story verdict only and never changes Exit Rights or the ending.
+
 ## Developer checkpoints
 
 Developer runs use the same `GameState`, pending windows, seeded RNG, item
@@ -481,3 +546,13 @@ prepared snapshot as the replay initial state. `flags.developerCheck = 1`
 scopes manual seat presence and paused disconnect timers to these new rooms.
 Normal gameplay never sets the flag. Clients select only a preset ID, and
 cannot submit a state/round/die/phase. See [developer-check.md](developer-check.md).
+
+## Scenario 02 private ties
+
+Each player gets one private tie (`PlayerSecrets.tie02`, `src/server/engine/scenario02/ties.ts`):
+rescue a specific person placed this run, be aboard at launch, or put hands to
+a job (power, pumps, pier gate) that gets finished. It is derived from a hash
+of seed + player id, never from the run's RNG, so replays are unchanged.
+`project()` sends it only to its owner; the results reveal every tie with
+`met`. A tie never affects the shared outcome. The contribution ranking
+(`city.contrib`) is public and used by the seat rule; pass holdings are not.

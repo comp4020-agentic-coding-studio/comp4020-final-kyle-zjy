@@ -14,6 +14,7 @@ import type { S3Key } from "../../i18n/types.ts";
 import { Section } from "../SecretsDrawer.tsx";
 import { roomKey03 } from "./Map03.tsx";
 import { archiveLeadText03 } from "./archiveLead03.ts";
+import { CausalNetwork03, Directive03 } from "./Causal03.tsx";
 
 const EVIDENCE: Record<string, S3Key> = {
   ARCHIVIST_NOTE: "s3.npc.note",
@@ -54,6 +55,7 @@ export function Private03({ g }: { g: PlayerView }) {
   };
   return (
     <>
+      <Directive03 g={g} />
       <Section title={t("s3.secrets.evidence")} empty={t("s3.secrets.evidenceEmpty")} items={tp.myEvidence.map((id) => ({ id, text: t(EVIDENCE[id] ?? "s3.causal.evidenceA") }))} />
       {s?.archiveLead03 && <Section title={t("s3.scan.archive.title")} empty="" items={[{ id: "archive-lead", text: archiveLeadText03(t, s.archiveLead03), meta: t("secrets.round", { n: s.archiveLead03.round }) }]} />}
       <section className="tarot p-3">
@@ -95,6 +97,7 @@ export function Private03({ g }: { g: PlayerView }) {
         </p>
         <p className="mt-1 text-sm">{words.skillDescription}</p>
       </section>
+      <CausalNetwork03 g={g} />
       {s && s.peeks.length > 0 && <Section title={t("secrets.glimpses")} empty="" items={s.peeks.map((x) => ({ id: x.id, text: fmt(x.text), meta: t("secrets.round", { n: x.round }) }))} />}
 
       <p className="label border-b border-signal/20 pb-1 text-signal">{t("s3.secrets.publicGroup")}</p>

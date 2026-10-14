@@ -94,7 +94,7 @@ export function startRoll(ctx: Ctx, p: PlayerGameState, purpose: RollPurpose, la
     }
   }
   if (modifiable && p.helpBonus > 0) {
-    modifiers.push({ source: m`Help`, delta: p.helpBonus });
+    modifiers.push({ source: m`Help`, delta: p.helpBonus, ...(p.helpFrom.length ? { by: [...new Set(p.helpFrom)] } : {}) });
     p.helpBonus = 0;
     p.helpFrom = [];
   }

@@ -29,6 +29,7 @@ export function CityTopBar({ g, onLog, onSecrets, secretsCount }: { g: PlayerVie
       onSecrets={onSecrets}
       secretsCount={secretsCount}
       logLabel={t("s2.top.log")}
+      chapter={t(g.collapse >= 9 ? "chapter.s02.critical" : g.collapse >= 5 ? "chapter.s02.rising" : "chapter.s02.calm")}
     >
       <span className="label text-[10px] text-mist">{t("s2.top.boat")}</span>
       {flag(parts === 3, t("s2.top.parts", { n: parts }))}

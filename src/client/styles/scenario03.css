@@ -179,6 +179,7 @@
     transform-origin: bottom center;
     transform: rotate(35deg);
   }
+  .s3-jump-year { position: relative; z-index: 1; font-size: 3rem; letter-spacing: .12em; text-shadow: 0 0 18px currentColor; }
   .s3-jump-label {
     max-width: calc(100vw - 32px);
     color: currentColor;

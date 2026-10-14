@@ -15,9 +15,12 @@ export function RunTopBar({
   onSecrets,
   secretsCount,
   logLabel,
+  chapter,
 }: {
   act: string;
   round: string;
+  /** The scenario's own headline for the moment (CYCLE 07 · 2026, LOT 06 · current bid…). */
+  chapter?: ReactNode;
   /** The shared pressure: its label, value and maximum, and the colour of each filled step. */
   gauge: { label: string; value: number; max: number; fill: (step: number) => string };
   /** The scenario's chips under the gauge. */
@@ -31,14 +34,15 @@ export function RunTopBar({
   return (
     <header className="safe-top relative z-20 border-b border-gold/15 bg-[#05060d]/85 px-3 py-2 backdrop-blur-md sm:px-4">
       <div className="mx-auto flex max-w-6xl items-center gap-3">
-        <div className="min-w-0 max-w-[30%] shrink">
+        <div className="min-w-0 max-w-[38%] shrink sm:max-w-[30%]">
           <p className="label truncate text-[10px] text-signal">{act}</p>
-          <p className="font-mono text-lg leading-tight text-moon">{round}</p>
+          <p className="truncate font-mono text-lg leading-tight text-moon">{round}</p>
+          {chapter && <p className="truncate font-mono text-[10px] tracking-wider text-gold uppercase">{chapter}</p>}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="label text-[10px] text-mist">{gauge.label}</span>
-            <span className="font-mono text-sm text-moon">
+            <span className="label min-w-0 truncate text-[10px] text-mist">{gauge.label}</span>
+            <span className="shrink-0 font-mono text-sm whitespace-nowrap text-moon">
               {gauge.value} / {gauge.max}
             </span>
           </div>
@@ -47,7 +51,7 @@ export function RunTopBar({
               <span key={i} className={`h-1.5 rounded-sm ${i < gauge.value ? gauge.fill(i) : "bg-indigo"}`} />
             ))}
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-1">{children}</div>
+          <div className="mt-1 hidden flex-wrap items-center gap-1 sm:flex">{children}</div>
         </div>
         <button className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gold/30 text-mist hover:text-moon" onClick={onSecrets} aria-label={t("game.secretsAria", { n: secretsCount })}>
           <Icon name="SECRET" size={20} />
@@ -57,6 +61,8 @@ export function RunTopBar({
           <Icon name="LOG" size={20} />
         </button>
       </div>
+      {/* phones: the chips get their own full-width row instead of a narrow column */}
+      <div className="mx-auto mt-1.5 flex max-w-6xl flex-wrap items-center gap-1 sm:hidden">{children}</div>
     </header>
   );
 }

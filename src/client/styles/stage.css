@@ -1,0 +1,86 @@
+@layer components {
+  /* World pressure: set as --pressure (0–1) and data-pressure on the run root. */
+  .stage-root { position: relative; isolation: isolate; }
+  .stage-root::after {
+    content: ""; position: fixed; inset: 0; z-index: 15; pointer-events: none;
+    background: radial-gradient(ellipse 90% 70% at 50% 45%, transparent 55%, rgb(120 20 18 / calc(var(--pressure, 0) * 0.32)) 100%);
+    transition: background 1.2s var(--ease-in-out);
+  }
+  .stage-root[data-pressure="critical"]::after { animation: stage-pulse 3.2s ease-in-out infinite; }
+
+  /* Scenario 01: the train's lights grow unsteady as reality wears thin. */
+  .stage-train[data-pressure="uneasy"] .train-light { animation: train-flicker 6s steps(1) infinite; }
+  .stage-train[data-pressure="critical"] .train-light { animation: train-flicker 2.4s steps(1) infinite; }
+
+  /* Scenario 02: a tide line climbs the screen with the water. */
+  .stage-flood::before {
+    content: ""; position: fixed; inset-inline: 0; bottom: 0; z-index: 14; pointer-events: none;
+    height: calc(var(--pressure, 0) * 22vh);
+    background: linear-gradient(180deg, rgb(58 123 213 / 0) 0%, rgb(58 123 213 / 0.16) 40%, rgb(20 60 120 / 0.32) 100%);
+    border-top: 1px solid rgb(120 180 255 / calc(var(--pressure, 0) * 0.45));
+    transition: height 1.6s var(--ease-in-out);
+  }
+
+  /* Scenario 03: the other year bleeds through as stability fails. */
+  .stage-temporal[data-pressure="uneasy"] .era-ghost { opacity: .08; }
+  .stage-temporal[data-pressure="critical"] .era-ghost { opacity: .16; animation: era-slip 5s ease-in-out infinite; }
+
+  /* Scenario 04: the hall dims, round by round, to one spotlight. */
+  .stage-auction::before {
+    content: ""; position: fixed; inset: 0; z-index: 14; pointer-events: none;
+    background: radial-gradient(ellipse 55% 45% at 50% 42%, transparent 35%, rgb(0 0 0 / calc(var(--pressure, 0) * 0.55)) 100%);
+    transition: background 1.6s var(--ease-in-out);
+  }
+
+  @keyframes stage-pulse { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+  @keyframes train-flicker { 0%, 92%, 100% { opacity: 1; } 93% { opacity: .35; } 95% { opacity: .9; } 96% { opacity: .2; } }
+  @keyframes era-slip { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(2px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stage-root::after, .stage-train .train-light, .stage-temporal .era-ghost { animation: none !important; }
+    .stage-flood::before, .stage-auction::before { transition: none; }
+  }
+}
+
+@layer components {
+  /* Scenario 01 scenes: numbers that won't stay still, a blackout that flickers before it holds, a fold that tears. */
+  .stage-train[data-pressure="critical"] .carriage-no { animation: number-jitter 3.6s steps(1) infinite; }
+  .scene-blackout { animation: blackout-flicker 1.1s steps(1) both; }
+  .scene-fold::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgb(156 134 255 / 0.07) 0 2px, transparent 2px 5px); animation: fold-tear 2.4s ease-out both; }
+  .brake-shake { animation: brake-shake .5s cubic-bezier(.36,.07,.19,.97) both; }
+
+  @keyframes number-jitter { 0%, 88%, 100% { transform: none; opacity: 1; } 89% { transform: translateX(2px); opacity: .4; } 91% { transform: translateX(-1px); opacity: .8; } }
+  @keyframes blackout-flicker { 0% { opacity: 1; } 15% { opacity: .2; } 25% { opacity: 1; } 40% { opacity: .1; } 55% { opacity: 1; } 100% { opacity: 1; } }
+  @keyframes fold-tear { 0% { transform: translateX(-30px) skewX(8deg); opacity: 1; } 60% { transform: translateX(18px) skewX(-4deg); opacity: .8; } 100% { transform: none; opacity: .25; } }
+  @keyframes brake-shake { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-8px); } 40%, 60% { transform: translateX(8px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .carriage-no, .scene-blackout, .scene-fold::after, .brake-shake { animation: none !important; }
+  }
+}
+
+@layer components {
+  /* Scenario 04, round 10: the hall goes dark except the centre; the last lot sits in the light. */
+  .stage-auction[data-pressure="critical"]::before {
+    background: radial-gradient(ellipse 42% 34% at 50% 42%, transparent 20%, rgb(0 0 0 / 0.62) 100%);
+  }
+  .stage-auction[data-pressure="critical"] [data-s4-lot-card] { box-shadow: 0 0 46px #d7ae5140; }
+  [data-s4-bid-chip] { will-change: transform, opacity; }
+
+  /* The debt ending: the room dims around a suited figure who has one more thing to say. */
+  .s4-debt-ending > :not(.s4-debt-figure) { opacity: .62; transition: opacity 1.4s var(--ease-in-out); }
+  .s4-debt-figure { animation: s4-figure-in 1.6s var(--ease-in-out) both; box-shadow: 0 0 36px rgb(0 0 0 / .7); }
+  @keyframes s4-figure-in { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: none; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .s4-debt-figure { animation: none; }
+    .s4-debt-ending > :not(.s4-debt-figure) { transition: none; }
+  }
+}
+
+@layer components {
+  /* Scenario 01 identity check: a passenger file whose name doesn't quite hold still. */
+  .identity-file .identity-name { animation: record-jitter 1.2s steps(1) 1; }
+  @keyframes record-jitter { 0%, 100% { opacity: 1; transform: none; } 18% { opacity: .55; transform: translateX(1px); } 22% { opacity: 1; } 47% { opacity: .7; transform: translateX(-1px); } 50% { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .identity-file .identity-name { animation: none; } }
+}

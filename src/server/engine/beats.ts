@@ -80,6 +80,10 @@ export function secretMessage(ctx: Ctx, p: PlayerGameState): Msg {
   const asleep = s.carriages.filter((c) => c.identity !== "START" && c.identity !== "CAB" && !s.flags[`core_${c.identity}`]);
   truths.push(asleep.length ? m`A core memory is still asleep in the ${ref.carriage(pick(s, asleep).identity)}.` : m`Every core memory on this train is awake.`);
   truths.push(present(ctx).every((x) => x.sanity >= 2) ? m`Nobody on this train is close to getting lost. Yet.` : m`Someone on this train is about to get lost.`);
+  // Partial truths that seem to contradict each other: the round-7 fold moves
+  // every middle carriage (a derangement) and leaves the first car and the cab.
+  const here = s.carriages[p.carriageIndex]?.identity;
+  if (here) truths.push(MIDDLE.includes(here) ? m`The ${ref.carriage(here)} you are standing in will not stay where it is.` : m`The ${ref.carriage(here)} you are standing in will still be here at the end.`);
   return truths[int(s, truths.length)];
 }
 

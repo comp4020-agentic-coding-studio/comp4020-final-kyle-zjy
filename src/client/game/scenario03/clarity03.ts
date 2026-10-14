@@ -29,7 +29,14 @@ export function actSteps03(g: PlayerView): GuideStep03[] {
   return [];
 }
 
+/** The route's checklist; whether each step is met is the server's verdict (routeConditions) when sent. */
 export function routeSteps03(g: PlayerView, route: EndingRoute03): GuideStep03[] {
+  const steps = routeStepsLocal03(g, route);
+  const server = g.temporal?.routeConditions?.[route];
+  return server && server.length === steps.length ? steps.map((step, i) => ({ ...step, done: server[i].met })) : steps;
+}
+
+function routeStepsLocal03(g: PlayerView, route: EndingRoute03): GuideStep03[] {
   if (g.act < 4 || !g.temporal?.story.availableRoutes.includes(route)) return [];
   const tp = g.temporal;
   const p = tp.present;

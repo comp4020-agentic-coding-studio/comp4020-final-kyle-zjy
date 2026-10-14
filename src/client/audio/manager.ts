@@ -21,7 +21,22 @@ export const SFX = {
   invitation_open: [300, 130, .45], door_unlock: [180, 120, .18], door_close: [78, 35, .5],
   chip_drop: [1500, 830, .12], lot_reveal: [220, 293.7, .8],
   card_flip: [220, 110, .18], chip_slide: [640, 250, .4], auction_gavel: [140, 46, .24],
+  // gameplay: interface clicks stay quiet, story beats carry weight (GAIN below)
+  ui_click: [520, 480, .05], ui_open: [330, 440, .12], ui_close: [440, 330, .1], ui_confirm: [392, 587, .16],
+  ui_lock: [196, 98, .22], ui_error: [180, 140, .2], ui_warning: [300, 220, .35], private_message: [740, 988, .4],
+  dice_roll: [260, 180, .5], dice_land: [150, 90, .12], roll_perfect: [523, 1047, .9], roll_success: [392, 523, .45],
+  roll_fail: [220, 165, .45], roll_disaster: [90, 36, 1.1], item_gain: [587, 880, .3], item_use: [440, 220, .3],
+  help_link: [349, 466, .4], trade_offer: [494, 392, .25], trade_done: [392, 659, .4],
+  turn_start: [330, 392, .2], turn_end: [392, 294, .2], danger_rise: [80, 52, 1.2], fanfare: [262, 523, 1.6],
 } as const satisfies Record<string, readonly [number, number, number]>;
+
+const GAIN: Partial<Record<keyof typeof SFX, number>> = {
+  low_impact: .12, auction_gavel: .12, fluorescent_hum: .014,
+  ui_click: .02, ui_open: .025, ui_close: .02, ui_confirm: .035, ui_lock: .05, ui_error: .04, ui_warning: .045,
+  dice_land: .08, roll_perfect: .08, roll_disaster: .11, danger_rise: .1, fanfare: .08,
+};
+const TEXTURED = new Set<keyof typeof SFX>(["radio_static", "station_announcement", "invitation_open", "ticket_flip", "card_flip", "chip_slide", "dice_roll", "trade_offer"]);
+const SINE = new Set<keyof typeof SFX>(["chip_drop", "private_message", "roll_perfect", "item_gain", "help_link", "fanfare"]);
 
 function readMute() {
   try { return localStorage.getItem("fate:muted") === "true"; } catch { return false; }
@@ -183,8 +198,8 @@ class AudioManager {
     // Never queue muted/blocked effects to play unexpectedly after unmuting.
     if (this.muted || document.hidden || !this.owners || this.context?.state !== "running") return;
     const [from, to, seconds] = SFX[cue];
-    if (["radio_static", "station_announcement", "invitation_open", "ticket_flip", "card_flip", "chip_slide"].includes(cue)) this.texture("paper", true);
-    this.tone(from, to, seconds, cue === "low_impact" || cue === "auction_gavel" ? .12 : cue === "fluorescent_hum" ? .014 : .065, true, cue === "chip_drop" ? "sine" : undefined);
+    if (TEXTURED.has(cue)) this.texture("paper", true);
+    this.tone(from, to, seconds, GAIN[cue] ?? .065, true, SINE.has(cue) ? "sine" : undefined);
   }
 }
 

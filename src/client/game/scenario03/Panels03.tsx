@@ -30,6 +30,7 @@ export function TopBar03({ g, onLog, onSecrets, secretsCount }: { g: PlayerView;
       onSecrets={onSecrets}
       secretsCount={secretsCount}
       logLabel={t("s3.top.log")}
+      chapter={t("chapter.s03", { n: String(Math.max(1, g.round)).padStart(2, "0"), year: t(`s3.year.short.${year}`), stability: g.collapseMax - g.collapse, max: g.collapseMax })}
     >
       <span className={`${chip} ${year === "Y1996" ? "border-gold/60 text-gold-bright" : "border-signal/60 text-signal"}`}>{t(`s3.year.short.${year}`)}</span>
       <span className="font-mono text-[10px] text-mist">{t("s3.causal.revision", { n: tp.causalRevision })}</span>

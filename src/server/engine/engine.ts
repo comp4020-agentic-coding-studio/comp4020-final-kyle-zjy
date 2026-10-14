@@ -5,6 +5,7 @@ import type { GameAction } from "../../shared/game/actions.ts";
 import type { GameState, PlayerId } from "../../shared/game/state.ts";
 import type { GameEvent } from "../../shared/protocol.ts";
 import { applyAction } from "./actions.ts";
+import { recordChronicle } from "./chronicle.ts";
 import { activePlayerId, log, RuleError, type Ctx } from "./context.ts";
 import { advance, endTurn, tick } from "./flow.ts";
 import { closeTop } from "./windows.ts";
@@ -20,6 +21,7 @@ export type Step = { state: GameState; events: GameEvent[] };
 function run(state: GameState, now: number, body: (ctx: Ctx) => void): Step {
   const ctx: Ctx = { s: structuredClone(state), now, events: [] };
   body(ctx);
+  recordChronicle(ctx.s, ctx.events);
   ctx.s.version++;
   return { state: ctx.s, events: ctx.events };
 }

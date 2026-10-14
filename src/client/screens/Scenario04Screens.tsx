@@ -1,5 +1,7 @@
 import { AnimatePresence } from "motion/react";
 import { useState } from "react";
+import { StoryRecap } from "../game/StoryRecap.tsx";
+import { EndingPoster } from "../game/EndingPoster.tsx";
 import type { PublicPlayerState } from "../../shared/game/state.ts";
 import { Banner } from "../game/Banner.tsx";
 import { CueFeed } from "../game/CueFeed.tsx";
@@ -98,8 +100,9 @@ export function Scenario04Ending() {
   const personal = !winner ? "unclaimed" : winner !== g.viewerId ? "trapped" : type === "debt" ? "winnerDebt" : own.lost || own.sanity <= 1 ? "winnerFrayed" : "winner";
   const beneficiary = g.auction?.players[g.viewerId].secondWillBeneficiaryId;
   const acked = g.sequence?.acks.includes(g.viewerId) ?? false;
-  return <Frame><section className="tarot mx-auto mt-16 max-w-xl p-6 text-center">
+  return <Frame><section className={`tarot mx-auto mt-16 max-w-xl p-6 text-center ${type === "debt" ? "s4-debt-ending" : ""}`}>
     <h1 className="font-display text-4xl text-gold-bright">{t(`s4.ending.${type}.title`)}</h1>
+    {type === "debt" && <div data-s4-debt-figure className="s4-debt-figure mx-auto mt-4 rounded-xl border border-ember/40 bg-[#05060d]/90 p-4 text-left"><p className="label text-ember">{t("s4.ending.debt.figureLabel")}</p><p className="mt-2 font-display text-xl italic text-moon">{t("s4.ending.debt.figure")}</p><p className="mt-2 font-mono text-xs tracking-widest text-ember uppercase">{t("s4.ending.debt.follows")}</p></div>}
     <p className="mt-4 text-mist">{t(`s4.ending.${type}.body`)}</p>
     <p className="mt-4 font-mono text-sm text-ember">{t("s4.ending.collapse", { n: g.collapse, max: g.collapseMax })}</p>
     <div className="mt-6 rounded-xl border border-gold/30 bg-night/70 p-4 text-left"><p className="label text-gold">{t("s4.ending.personal.label")}</p><p className="mt-2 leading-relaxed text-moon">{t(`s4.ending.personal.${personal}`)}</p>{beneficiary && beneficiary === winner && winner !== g.viewerId && <p className="mt-2 text-sm text-gold-bright">{t("s4.ending.secondBeneficiary", { name: g.players[beneficiary].nickname })}</p>}</div>
@@ -115,12 +118,14 @@ export function Scenario04Results() {
   if (!g?.auction) return null;
   const winner = g.auction.final?.winnerId;
   const summary = !winner ? t("s4.results.storyUnclaimed") : t(g.outcome === "S04_DEBT" ? "s4.results.storyDebt" : "s4.results.storyExit", { name: g.players[winner].nickname });
-  return <Frame><section className="tarot mx-auto mt-16 max-w-xl p-6 text-center">
-    <h1 className="font-display text-4xl text-gold-bright">{t("s4.results")}</h1>
+  const type = g.outcome === "S04_DEBT" ? "debt" : g.outcome === "S04_UNSOLD" ? "unsold" : "exit";
+  return <Frame><div className="mx-auto mt-10 max-w-xl"><EndingPoster g={g} won={g.outcome === "S04_EXIT"} kicker={t("s4.results")} title={t(`s4.ending.${type}.title`)} /></div>
+    <section className="tarot mx-auto mt-4 max-w-xl p-6 text-center">
     <div className="mt-5 rounded-xl border border-gold/30 bg-night/70 p-4 text-left"><p className="label text-gold">{t("s4.results.storyTitle")}</p><p className="mt-2 leading-relaxed">{summary}</p>{winner && <p className="mt-2 font-mono text-xs text-gold-bright">{t("s4.results.winningBid", { bid: g.auction.final?.players[winner].bid ?? 0, effective: g.auction.final?.players[winner].effectiveBid ?? 0 })}</p>}</div>
+    <div className="mt-5"><StoryRecap g={g} /></div>
     <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{g.results?.map((result) => {
       const fate = !winner ? "unclaimed" : winner !== result.playerId ? "trapped" : g.outcome === "S04_DEBT" ? "winnerDebt" : "winner";
-      return <div key={result.playerId} className="min-w-0 rounded-xl border border-gold/20 p-3 text-left text-sm"><p className="text-gold-bright">{g.players[result.playerId].nickname} · {fmt(result.title)}</p><p className="mt-2 text-moon">{t(`s4.results.fate.${fate}`)}</p>{result.highlights.map((line, index) => <p key={index} className="mt-1 text-mist">{fmt(line)}</p>)}</div>;
+      return <div key={result.playerId} className="min-w-0 rounded-xl border border-gold/20 p-3 text-left text-sm"><p className="text-gold-bright">{g.players[result.playerId].nickname} · {fmt(result.title)}</p><p className="mt-2 text-moon">{t(`s4.results.fate.${fate}`)}</p>{result.commission04 && <p data-s4-commission-result={result.commission04.met ? "met" : "missed"} className={`mt-2 rounded-lg border px-2 py-1 text-xs ${result.commission04.met ? "border-moss/60 text-moss" : "border-ember/50 text-ember"}`}><span className="label">{t("s4.commission.revealTitle")}</span> · {t(`s4.commission.${result.commission04.id}.name`)} · {t(result.commission04.met ? "s4.commission.met" : "s4.commission.missed")}</p>}{result.highlights.map((line, index) => <p key={index} className="mt-1 text-mist">{fmt(line)}</p>)}</div>;
     })}</div>
     {me?.isHost ? <button className="btn btn-gold mt-8 w-full" onClick={() => void sendLobby({ type: "RESTART" })}>{t("s4.results.back")}</button> : <p className="mt-8 text-sm text-mist">{t("s4.results.wait")}</p>}
   </section></Frame>;

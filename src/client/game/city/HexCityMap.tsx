@@ -8,10 +8,12 @@ import { R, center, corners, bounds } from "./geometry.ts";
 // On a phone the map keeps a minimum width and scrolls inside its own frame,
 // so every zone stays big enough to tap.
 import { motion } from "motion/react";
+import { useEffect, useState } from "react";
 import { getCharacterById } from "../../../shared/characters/roster/index.ts";
 import { ZONES, type FacilityId } from "../../../shared/game/scenario02/map.ts";
 import type { PlayerView, PublicZone } from "../../../shared/game/state.ts";
 import { useScenario02Text, useT } from "../../i18n/index.ts";
+import { useStore } from "../../store.ts";
 
 const GROUND = { HIGH: "#3b4a3a", MEDIUM: "#2c3546", LOW: "#232838" } as const;
 // plain marks every font has (no emoji)
@@ -26,6 +28,8 @@ export function HexCityMap({ g, selected, onSelect, moveTargets = [], onMove }: 
   const me = g.players[g.viewerId];
   const here = (i: number) => g.turnOrder.map((id) => g.players[id]).filter((p) => p.carriageIndex === i);
   const statusWord = (z: PublicZone) => t(`s2.status.${z.status}`);
+  const active = g.step === "PLAYER_TURNS" ? g.turnOrder[g.activeIndex] : null;
+  const sunkNow = useJustSunk();
 
   return (
     <section aria-label={t("s2.map.aria")} className="no-scrollbar overflow-x-auto overscroll-x-contain px-2">
@@ -55,6 +59,14 @@ export function HexCityMap({ g, selected, onSelect, moveTargets = [], onMove }: 
             />
           ),
         )}
+
+        {/* broken roads: a jagged red crack where the link used to be */}
+        {city.edges.filter((e) => e.broken).map((e) => {
+          const a = center(e.a), b = center(e.b);
+          const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = (b.x - a.x) / 6, dy = (b.y - a.y) / 6;
+          const nx = -dy * 0.7, ny = dx * 0.7;
+          return <polyline key={`x-${e.a}-${e.b}`} data-testid="cracked-road" points={`${mx - dx * 1.2},${my - dy * 1.2} ${mx - dx * 0.5 + nx},${my - dy * 0.5 + ny} ${mx - nx * 0.4},${my - ny * 0.4} ${mx + dx * 0.5 + nx * 0.6},${my + dy * 0.5 + ny * 0.6} ${mx + dx * 1.2},${my + dy * 1.2}`} fill="none" stroke="#e2563f" strokeOpacity=".75" strokeWidth="1.4" strokeLinejoin="bevel" pointerEvents="none" />;
+        })}
 
         {city.zones.map((z, i) => {
           const { x, y } = center(i);
@@ -92,7 +104,8 @@ export function HexCityMap({ g, selected, onSelect, moveTargets = [], onMove }: 
                 animate={{ fill: sunk ? "#071225" : GROUND[def.elevation], opacity: sunk ? 0.55 : 1 }}
                 transition={{ duration: 1.2 }}
               />
-              {z.status === "FLOODED" && <polygon points={corners(x, y, R - 2)} fill="#1d4f8a" fillOpacity=".45" pointerEvents="none" />}
+              {(z.status === "FLOODED" || sunk) && <motion.polygon points={corners(x, y, R - 2)} fill={sunk ? "#0b2d63" : "#1d4f8a"} initial={false} animate={{ fillOpacity: sunk ? 0.8 : 0.42 }} transition={{ duration: 1.4 }} pointerEvents="none" />}
+              {sunkNow.has(i) && <motion.polygon points={corners(x, y, R - 1)} fill="none" stroke="#9fd0ff" strokeWidth="3" initial={{ opacity: 1 }} animate={{ opacity: [1, 0.15, 1, 0] }} transition={{ duration: 3.2 }} pointerEvents="none" />}
               {(z.status === "FLOODED" || sunk) && <polygon points={corners(x, y, R - 2)} fill="url(#waves)" pointerEvents="none" />}
               {z.status === "BLOCKED" && <polygon points={corners(x, y, R - 2)} fill="url(#debris)" pointerEvents="none" />}
               {z.warning && (
@@ -114,29 +127,61 @@ export function HexCityMap({ g, selected, onSelect, moveTargets = [], onMove }: 
                   <title>{waiting.map((n) => text.npcs[n.id].name).join(", ")}</title>
                 </motion.circle>
               )}
-              {people.slice(0, 4).map((p, k) => {
-                const ch = getCharacterById(p.characterId);
-                const px = x - 12 + (k % 2) * 13 + (people.length === 1 ? 6 : 0);
-                const py = y + 8 + Math.floor(k / 2) * 9;
-                return (
-                  <g key={p.playerId} pointerEvents="none">
-                    <clipPath id={`clip-${p.playerId}`}>
-                      <circle cx={px + 5} cy={py + 5} r="5" />
-                    </clipPath>
-                    <image href={ch.avatar} x={px} y={py} width="10" height="10" clipPath={`url(#clip-${p.playerId})`} opacity={p.lost || p.away ? 0.45 : 1} />
-                    <circle cx={px + 5} cy={py + 5} r="5.5" fill="none" stroke={p.playerId === g.viewerId ? "#e8c97f" : city.boat.aboard.includes(p.playerId) ? "#5ce1e6" : "#ffffff55"} strokeWidth="1" />
-                  </g>
-                );
-              })}
-              {people.length > 4 && (
-                <text x={x + 13} y={y + 24} fontSize="6" fill="#cfd6f2" pointerEvents="none" aria-hidden="true">
-                  +{people.length - 4}
-                </text>
-              )}
             </g>
+          );
+        })}
+
+        {/* players: one layer on top so a token glides from zone to zone */}
+        {g.turnOrder.map((id) => {
+          const p = g.players[id];
+          const zone = p.carriageIndex;
+          const group = here(zone);
+          const k = group.findIndex((q) => q.playerId === id);
+          const { x, y } = center(zone);
+          const px = x - 12 + (k % 2) * 13 + (group.length === 1 ? 6 : 0);
+          const py = y + 8 + Math.floor(k / 2) * 9;
+          if (k > 3) return null;
+          const ch = getCharacterById(p.characterId);
+          const aboard = city.boat.aboard.includes(id);
+          const isActive = id === active;
+          return (
+            <motion.g key={id} initial={false} animate={{ x: px, y: py }} transition={{ type: "spring", stiffness: 140, damping: 20 }} pointerEvents="none" data-testid="map-token">
+              <clipPath id={`clip-${id}`}>
+                <circle cx="5" cy="5" r="5" />
+              </clipPath>
+              {isActive && <motion.circle cx="5" cy="5" r="7.5" fill="none" stroke="#e8c97f" strokeWidth="1.2" animate={{ opacity: [0.3, 1, 0.3], r: [6.5, 8, 6.5] }} transition={{ duration: 1.4, repeat: Infinity }} />}
+              <image href={ch.avatar} width="10" height="10" clipPath={`url(#clip-${id})`} opacity={p.lost || p.away ? 0.45 : 1} />
+              <circle cx="5" cy="5" r="5.5" fill="none" stroke={id === g.viewerId ? "#e8c97f" : aboard ? "#5ce1e6" : "#ffffff55"} strokeWidth="1" />
+            </motion.g>
+          );
+        })}
+        {city.zones.map((_, i) => {
+          const n = here(i).length;
+          if (n <= 4) return null;
+          const { x, y } = center(i);
+          return (
+            <text key={`more-${i}`} x={x + 13} y={y + 24} fontSize="6" fill="#cfd6f2" pointerEvents="none" aria-hidden="true">
+              +{n - 4}
+            </text>
           );
         })}
       </svg>
     </section>
   );
+}
+
+/** Zones that went under in the last few seconds (the SUNK cue), so the map can flash them. */
+function useJustSunk(): Set<number> {
+  const cues = useStore((st) => st.cues);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const live = cues.some((c) => c.kind === "SUNK" && Date.now() - c.at < 3400);
+    if (!live) return;
+    const id = setInterval(() => setNow(Date.now()), 600);
+    const stop = setTimeout(() => clearInterval(id), 3600);
+    return () => { clearInterval(id); clearTimeout(stop); };
+  }, [cues]);
+  const out = new Set<number>();
+  for (const c of cues) if (c.kind === "SUNK" && now - c.at < 3200) for (const z of (c.payload.zones as number[]) ?? []) out.add(z);
+  return out;
 }

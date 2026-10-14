@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { motion } from "motion/react";
-import { debtTier04, GENUINE_ITEM_FINAL_VALUE04 } from "../../../shared/game/scenario04/debt.ts";
+import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { audio } from "../../audio/manager.ts";
+import { debtPenalty04, debtTier04, GENUINE_ITEM_FINAL_VALUE04 } from "../../../shared/game/scenario04/debt.ts";
 import { itemLotId04, LOTS04 } from "../../../shared/game/scenario04/lots.ts";
 import type { LotId04 } from "../../../shared/game/scenario04/types.ts";
 import type { PlayerView } from "../../../shared/game/state.ts";
@@ -18,6 +19,7 @@ export function FinalAuction04({ g }: { g: PlayerView }) {
   const a = g.auction!;
   const final = a.final!;
   const own = final.players[g.viewerId];
+  const conv = own.converted ?? { blackChips: 0, sanity: 0, fate: 0, ap: 0, items: [] };
   const me = a.players[g.viewerId];
   const player = g.players[g.viewerId];
   const [bidText, setBidText] = useState("0");
@@ -44,7 +46,7 @@ export function FinalAuction04({ g }: { g: PlayerView }) {
       <div data-s4-transition={g.round} className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)]"><div className="min-w-0"><p className="label text-ember">{t("s4.final.overture.title")}</p>
         <p className="mt-1 font-mono text-xs text-gold-bright">{t("s4.final.overture.pressure", { n: g.collapse, max: g.collapseMax })}</p>
         <p className="mt-2 text-sm leading-relaxed text-moon">{t(`s4.final.overture.${final.stage === "SETTLEMENT" ? "settlement" : final.stage === "AUCTION" ? "auction" : final.stage === "REVEAL" ? tie ? "tie" : "reveal" : "showdown"}`)}</p>
-        <div className="mt-3 flex items-center gap-2 text-gold"><span className="flex size-9 items-center justify-center rounded-full border border-gold/40 bg-gold/10" aria-hidden="true"><Icon name="INSPECTOR" size={23} /></span><p className="label text-xs">{t("s4.host.label")}</p></div><p className="mt-2 text-sm italic text-mist">{t("s4.house.finalSettlement.host")}</p></div><HouseRuleCard04 round={10} rule={a.houseRule} /></div>
+        <div className="mt-3 flex items-center gap-2 text-gold"><span className="flex size-9 items-center justify-center rounded-full border border-gold/40 bg-gold/10" aria-hidden="true"><Icon name="INSPECTOR" size={23} /></span><p className="label text-xs">{t("s4.host.label")}</p></div><HostLine04 settlement={final.stage === "SETTLEMENT"} /></div><HouseRuleCard04 round={10} rule={a.houseRule} /></div>
     </div>
     <section className="min-w-0 rounded-3xl border-2 border-gold/60 bg-[#0b1028]/95 p-4 text-center shadow-[0_0_44px_#d7ae5130] sm:p-7" aria-label={t("s4.final.title")}>
       {final.stage !== "SETTLEMENT" && <><p className="label text-signal">{t(final.stage === "AUCTION" ? "s4.final.auction" : final.stage === "REVEAL" ? "s4.final.reveal" : "s4.showdown.title")}</p><h1 className="mt-2 font-display text-3xl text-gold-bright sm:text-5xl">{t(final.stage.startsWith("SHOWDOWN") ? "s4.showdown.title" : "s4.final.title")}</h1></>}
@@ -81,7 +83,7 @@ export function FinalAuction04({ g }: { g: PlayerView }) {
               </div>;
             })}
           </div>
-          {!!own.converted?.items.length && <div className="mt-3 text-left text-sm text-mist"><p className="label">{t("s4.final.invested")}</p>{own.converted.items.map(({ id, gain }) => <p key={id}>{auctionLotText(locale, id).name} · +{gain}</p>)}</div>}
+          {!!own.converted?.items.length && <div className="mt-3 text-left text-sm text-mist"><p className="label">{t("s4.final.invested")}</p>{conv.items.map(({ id, gain }) => <p key={id}>{auctionLotText(locale, id).name} · +{gain}</p>)}</div>}
           {!!me.finalItemModifiers?.length && <div className="mt-3 rounded-xl border border-gold/40 p-3 text-left text-sm"><p className="label">{t("s4.final.specialModifiers")}</p>{me.finalItemModifiers.map((entry, index) => <p key={`${entry.lotId}-${index}`}>{auctionLotText(locale, entry.lotId).name} · +{entry.amount}{entry.burnedItemId && <span className="block text-xs text-mist">{t("s4.final.burnSummary", { item: auctionLotText(locale, entry.burnedItemId).name, value: entry.burnedValue ?? GENUINE_ITEM_FINAL_VALUE04, match: entry.amount, net: entry.amount - (entry.burnedValue ?? GENUINE_ITEM_FINAL_VALUE04) })}</span>}</p>)}</div>}
           <button data-final-ready className="btn btn-gold mt-6 min-h-14 w-full" onClick={() => void sendGame({ type: "FINAL_READY" })}>{t("s4.final.ready")}</button>
         </> : <p className="mt-6 rounded-xl border border-moss/50 p-4 text-moss">{t("s4.final.readyLocked", { n: own.usable ?? 0 })}</p>}
@@ -89,28 +91,33 @@ export function FinalAuction04({ g }: { g: PlayerView }) {
       {final.stage === "AUCTION" && <div className="mx-auto mt-8 max-w-lg">
         <p className="font-display text-6xl text-gold-bright" data-final-usable>{own.usable}</p>
         <p className="mt-2 text-mist">{t("s4.final.usable")}</p>
+        <div data-s4-breakdown className="mt-5 rounded-xl border border-gold/30 bg-night/70 p-3 text-left text-sm"><p className="label text-gold">{t("s4.final.breakdown")}</p>
+          <dl className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 font-mono text-xs text-moon">
+            <dt>{t("s4.final.blackChips")}</dt><dd>+{conv.blackChips}</dd>
+            <dt>{t("s4.final.sanity")}</dt><dd>+{conv.sanity}</dd>
+            <dt>{t("s4.final.fate")}</dt><dd>+{conv.fate}</dd>
+            <dt>{t("s4.final.ap")}</dt><dd>+{conv.ap}</dd>
+            <dt>{t("s4.final.breakdown.genuine", { n: conv.items.filter((entry) => entry.gain > 0).length })}</dt><dd>+{conv.items.reduce((sum, entry) => sum + entry.gain, 0)}</dd>
+            <dt>{t("s4.final.breakdown.counterfeit", { n: conv.items.filter((entry) => entry.gain === 0).length })}</dt><dd>+0</dd>
+            <dt>{t("s4.final.breakdown.debt")}</dt><dd>−{debtPenalty04(me.debt)}</dd>
+            {!!me.finalItemModifiers?.length || me.activeCrown ? <><dt>{t("s4.final.breakdown.modifier")}</dt><dd>+{(me.finalItemModifiers ?? []).reduce((sum, entry) => sum + entry.amount, 0) + (me.activeCrown ? 2 : 0)}</dd></> : null}
+          </dl>
+          <p className="mt-2 flex justify-between border-t border-gold/20 pt-2 font-bold text-gold-bright"><span>{t("s4.final.breakdown.total")}</span><span>{own.usable ?? 0}</span></p>
+        </div>
         {!!me.finalItemModifiers?.length && <p className="mt-2 text-xs text-gold-bright">{t("s4.final.effectiveBonus", { n: me.finalItemModifiers.reduce((sum, entry) => sum + entry.amount, 0) + (me.activeCrown ? 2 : 0) })}</p>}
-        {own.status === "BID_SUBMITTED" ? <p className="mt-8 rounded-xl border border-moss/50 p-4 text-moss">{t("s4.final.bidLocked")}</p> : <>
+        {own.status === "BID_SUBMITTED" ? <p data-final-locked role="status" className="mt-8 rounded-xl border-2 border-moss/60 bg-moss/10 p-4 font-semibold text-moss">{t("s4.final.lockedState", { n: own.bid ?? 0 })}<span className="mt-1 block text-xs font-normal">{t("s4.final.bidLocked")}</span></p> : <>
           <label className="label mt-7 block text-left" htmlFor="s4-final-bid">{t("s4.final.yourBid")}</label>
           <input id="s4-final-bid" data-final-bid type="number" min={0} max={own.usable ?? 0} step={1} inputMode="numeric" className="mt-2 min-h-14 w-full rounded-xl border border-gold/60 bg-night px-4 text-center font-display text-3xl" value={bidText} onChange={(event) => setBidText(event.target.value)} />
-          <button data-final-submit className="btn btn-gold mt-4 min-h-14 w-full" disabled={!legalBid} onClick={() => void sendGame({ type: "FINAL_BID", amount: bid })}>{t("s4.final.submitSecret")}</button>
+          <HoldToLock label={t("s4.final.hold")} holding={t("s4.final.holding")} hint={t("s4.final.holdHint")} disabled={!legalBid} onLock={() => void sendGame({ type: "FINAL_BID", amount: bid })} />
         </>}
       </div>}
-      {final.stage === "REVEAL" && <>
-        {tie ? <div data-final-tie className="mt-5 rounded-2xl border-2 border-ember bg-ember/10 p-4"><h2 className="font-display text-4xl text-ember">{t("s4.showdown.tie")}</h2><p className="mt-1 text-sm text-moon">{t("s4.showdown.tieHint")}</p></div>
-          : <h2 className="mt-5 font-display text-3xl text-gold-bright">{final.winnerId ? t("s4.final.winner", { name: g.players[final.winnerId].nickname }) : t("s4.final.noWinner")}</h2>}
-        <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{a.seatOrder.map((id) => <div key={id} className={`rounded-xl border p-3 text-left ${id === final.winnerId || tie && final.tiedPlayerIds.includes(id) ? "border-gold-bright bg-gold/10" : "border-indigo"}`}>
-          <p className="font-bold">{g.players[id].nickname}</p>
-          <p className="mt-1 text-sm">{t("s4.final.revealLine", { bid: final.players[id].bid ?? 0, modifier: final.players[id].modifier ?? 0, effective: final.players[id].effectiveBid ?? 0 })}</p>
-        </div>)}</div>
-        <button data-final-continue className="btn btn-gold mt-6 min-h-14 w-full" disabled={own.continued} onClick={() => void sendGame({ type: "FINAL_CONTINUE" })}>{own.continued ? t("s4.waiting") : t(tie ? "s4.showdown.enter" : "s4.final.continue")}</button>
-      </>}
+      {final.stage === "REVEAL" && <BidReveal g={g} />}
       {final.stage === "SHOWDOWN_PICK" && showdown && <div data-final-showdown-pick className="mx-auto mt-5 max-w-xl">
         <p className="font-display text-xl text-moon">{t("s4.showdown.round", { n: showdown.showdownRound })}</p>
         <p className="mt-2 text-sm text-mist">{t("s4.showdown.subtitle")}</p>
         {inShowdown ? <>
           <p className="mt-1 text-sm text-moon">{t("s4.showdown.choose")}</p>
-          <div className="mt-5 grid grid-cols-5 gap-1 sm:gap-3">{showdown.cardSlots.map((_, index) => <button key={index} data-showdown-card={index} aria-label={t("s4.showdown.hiddenCard", { n: index + 1 })} className={`min-h-24 min-w-0 rounded-xl border-2 bg-[#111936] text-3xl transition-transform ${selectedHere === index ? "-translate-y-2 border-gold-bright text-gold-bright shadow-lg shadow-gold/30" : "border-indigo text-gold"}`} disabled={showdown.myLocked || selectedHere !== null} onClick={() => { setSelectedSlot({ round: showdown.showdownRound, index }); void sendGame({ type: "FINAL_SHOWDOWN_PICK", cardIndex: index }); }}>?</button>)}</div>
+          <div className="mt-5 grid grid-cols-5 gap-1 sm:gap-3">{showdown.cardSlots.map((_, index) => <button key={index} data-showdown-card={index} aria-label={t("s4.showdown.hiddenCard", { n: index + 1 })} className={`min-h-24 min-w-0 rounded-xl border-2 bg-[repeating-linear-gradient(45deg,#111936_0_6px,#17214a_6px_12px)] text-3xl transition-transform ${selectedHere === index ? "-translate-y-2 border-gold-bright text-gold-bright shadow-lg shadow-gold/30" : "border-indigo text-gold"}`} disabled={showdown.myLocked || selectedHere !== null} onClick={() => { setSelectedSlot({ round: showdown.showdownRound, index }); void sendGame({ type: "FINAL_SHOWDOWN_PICK", cardIndex: index }); }}>?</button>)}</div>
           <p className={`mt-5 rounded-xl border p-3 text-sm font-semibold ${showdown.myLocked ? "border-moss/50 text-moss" : "border-gold/30 text-moon"}`}>{showdown.myLocked ? t("s4.showdown.lockedWaiting") : selectedHere !== null ? t("s4.showdown.locking") : t("s4.showdown.blind")}</p>
         </> : <div className="mt-6 rounded-xl border border-indigo p-5"><p className="font-display text-2xl text-gold-bright">{t("s4.showdown.spectator")}</p><p className="mt-2 text-sm text-mist">{t("s4.showdown.spectatorWait")}</p></div>}
         <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{showdown.participatingPlayerIds.map((id) => <p key={id} className="rounded-xl border border-indigo/70 p-2 text-sm">{g.players[id].nickname} · {t(showdown.lockedPlayerIds.includes(id) ? "s4.showdown.chosen" : "s4.showdown.awaiting")}</p>)}</div>
@@ -118,9 +125,7 @@ export function FinalAuction04({ g }: { g: PlayerView }) {
       {final.stage === "SHOWDOWN_REVEAL" && showdown?.revealedCard && <div data-final-showdown-reveal className="mx-auto mt-5 max-w-xl">
         <p className="font-display text-xl text-moon">{t("s4.showdown.round", { n: showdown.showdownRound })}</p>
         <p className="mt-1 text-sm text-mist">{t("s4.showdown.flip")}</p>
-        <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{showdown.participatingPlayerIds.map((id) => <motion.div key={`${showdown.showdownRound}-${id}`} initial={{ rotateY: -90, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} transition={{ duration: 0.45 }} className={`rounded-xl border-2 p-4 ${showdown.advancingPlayerIds.includes(id) ? "border-gold-bright bg-gold/10" : "border-indigo"}`}>
-          <p className="text-sm font-bold">{g.players[id].nickname}</p><p className="mt-1 font-display text-5xl text-gold-bright">{cardRank(showdown.revealedCard![id])}</p>
-        </motion.div>)}</div>
+        <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{showdown.participatingPlayerIds.map((id) => <FlipCard key={`${showdown.showdownRound}-${id}`} at={0} hot={showdown.advancingPlayerIds.includes(id)} label={g.players[id].nickname} face={cardRank(showdown.revealedCard![id])} />)}</div>
         {showdown.winnerId ? <div className="mt-5 rounded-2xl border-2 border-gold-bright bg-gold/10 p-4"><h2 className="font-display text-3xl text-gold-bright">{t("s4.final.winner", { name: g.players[showdown.winnerId].nickname })}</h2><p className="mt-2 text-sm text-moon">{t("s4.showdown.winnerStory")}</p></div>
           : <div className="mt-5 rounded-2xl border border-ember/60 p-4"><h2 className="font-display text-2xl text-ember">{t("s4.showdown.again")}</h2><p className="mt-1 text-sm text-mist">{t("s4.showdown.againHint")}</p></div>}
         <button data-final-continue className="btn btn-gold mt-6 min-h-14 w-full" disabled={own.continued} onClick={() => void sendGame({ type: "FINAL_CONTINUE" })}>{own.continued ? t("s4.waiting") : t(showdown.winnerId ? "s4.final.continue" : "s4.showdown.next")}</button>
@@ -138,5 +143,92 @@ export function FinalAuction04({ g }: { g: PlayerView }) {
       })}</div>
       <p className="mt-4 text-sm text-mist">{t(final.stage === "SETTLEMENT" ? "s4.final.privacySettlement" : final.stage === "AUCTION" ? "s4.final.privacyBid" : final.stage === "SHOWDOWN_PICK" ? "s4.showdown.privacyPick" : final.stage === "SHOWDOWN_REVEAL" ? "s4.showdown.privacyReveal" : "s4.final.revealed")}</p>
     </aside>
+  </div>;
+}
+
+/** Press and hold (~700 ms) to confirm a sealed bid; letting go early cancels. Keyboard: hold Space or Enter. */
+function HoldToLock({ label, holding, hint, disabled, onLock }: { label: string; holding: string; hint: string; disabled: boolean; onLock: () => void }) {
+  const reduce = useReducedMotion();
+  const [progress, setProgress] = useState(0);
+  const frame = useRef<number | null>(null);
+  const started = useRef(0);
+  const locked = useRef(false);
+  const stop = () => { if (frame.current !== null) cancelAnimationFrame(frame.current); frame.current = null; if (!locked.current) setProgress(0); };
+  const tick = () => {
+    const p = Math.min(1, (performance.now() - started.current) / HOLD_MS);
+    setProgress(p);
+    if (p >= 1) { locked.current = true; frame.current = null; audio.play("ui_lock"); onLock(); return; }
+    frame.current = requestAnimationFrame(tick);
+  };
+  const start = () => { if (disabled || locked.current || frame.current !== null) return; started.current = performance.now(); frame.current = requestAnimationFrame(tick); };
+  useEffect(() => () => { if (frame.current !== null) cancelAnimationFrame(frame.current); }, []);
+  return <div className="mt-4">
+    <button type="button" data-final-submit data-hold-progress={progress.toFixed(2)} disabled={disabled}
+      className="btn btn-gold relative min-h-14 w-full touch-none select-none overflow-hidden"
+      onPointerDown={start} onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop} onContextMenu={(event) => event.preventDefault()}
+      onKeyDown={(event) => { if ((event.key === " " || event.key === "Enter") && !event.repeat) { event.preventDefault(); start(); } }}
+      onKeyUp={(event) => { if (event.key === " " || event.key === "Enter") stop(); }}>
+      <span aria-hidden="true" className="absolute inset-y-0 left-0 bg-ember/60" style={{ width: `${progress * 100}%`, transition: reduce ? "none" : undefined }} />
+      <span className="relative">{progress > 0 && progress < 1 ? holding : label}</span>
+    </button>
+    <p className="mt-2 text-xs text-mist">{hint}</p>
+  </div>;
+}
+
+const HOLD_MS = 700;
+
+/** A card that starts face down and turns over; every card in a group shares `at` so they flip together. */
+function FlipCard({ face, label, hot, at }: { face: string; label: string; hot: boolean; at: number }) {
+  const reduce = useReducedMotion();
+  return <div className="min-w-0 [perspective:700px]">
+    <motion.div initial={{ rotateY: reduce ? 0 : 180 }} animate={{ rotateY: 0 }} transition={{ duration: 0.6, delay: reduce ? 0 : at }} style={{ transformStyle: "preserve-3d" }} className={`relative rounded-xl border-2 p-4 ${hot ? "border-gold-bright bg-gold/10" : "border-indigo"}`}>
+      <p className="text-sm font-bold">{label}</p>
+      <p className="mt-1 font-display text-5xl text-gold-bright">{face}</p>
+    </motion.div>
+  </div>;
+}
+
+/** The host's last call: the line lands first, then the lot card. Settled on later stages. */
+function HostLine04({ settlement }: { settlement: boolean }) {
+  const t = useT();
+  const reduce = useReducedMotion();
+  return <div data-s4-host-last className="mt-2">
+    <motion.p initial={{ opacity: reduce || !settlement ? 1 : 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="text-sm italic text-mist">{t("s4.house.finalSettlement.host")}</motion.p>
+    <motion.p initial={{ opacity: reduce || !settlement ? 1 : 0, y: reduce || !settlement ? 0 : 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: reduce || !settlement ? 0 : 1.6 }} className="mt-1 font-display text-2xl text-gold-bright">{t("s4.final.host.lot")}</motion.p>
+  </div>;
+}
+
+/** Bids come out of the envelope one bidder at a time; after a beat of silence a tie is named. Tap to skip. */
+function BidReveal({ g }: { g: PlayerView }) {
+  const t = useT();
+  const reduce = useReducedMotion();
+  const a = g.auction!;
+  const final = a.final!;
+  const own = final.players[g.viewerId];
+  const tie = final.tiedPlayerIds.length > 1;
+  const total = a.seatOrder.length;
+  const [count, setCount] = useState(reduce ? total : 0);
+  const [verdict, setVerdict] = useState(!!reduce);
+  useEffect(() => {
+    if (count < total) { const timer = setTimeout(() => { audio.play("chip_drop"); setCount((n) => n + 1); }, count === 0 ? 500 : 1000); return () => clearTimeout(timer); }
+    if (!verdict) { const timer = setTimeout(() => { setVerdict(true); audio.play(tie ? "ui_warning" : "auction_gavel"); }, 1400); return () => clearTimeout(timer); }
+  }, [count, total, verdict, tie]);
+  const done = count >= total && verdict;
+  return <div onClick={done ? undefined : () => { setCount(total); setVerdict(true); }}>
+    <div className="mt-5 min-h-24">
+      {done && (tie ? <div data-final-tie className="rounded-2xl border-2 border-ember bg-ember/10 p-4"><h2 className="font-display text-4xl text-ember">{t("s4.showdown.tie")}</h2><p className="mt-1 text-sm text-moon">{t("s4.showdown.tieHint")}</p></div>
+        : <h2 className="font-display text-3xl text-gold-bright">{final.winnerId ? t("s4.final.winner", { name: g.players[final.winnerId].nickname }) : t("s4.final.noWinner")}</h2>)}
+      {!done && <p role="status" className="font-display text-xl text-mist">{t("s4.final.bidderRevealed", { n: count, total })}</p>}
+    </div>
+    <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{a.seatOrder.map((id, index) => {
+      const open = index < count;
+      const lit = done && (id === final.winnerId || tie && final.tiedPlayerIds.includes(id));
+      return <motion.div key={id} initial={false} animate={{ opacity: open ? 1 : 0.6 }} className={`rounded-xl border p-3 text-left ${lit ? "border-gold-bright bg-gold/10" : "border-indigo"}`}>
+        <p className="font-bold">{g.players[id].nickname}</p>
+        <p className="mt-1 text-sm">{open ? t("s4.final.revealLine", { bid: final.players[id].bid ?? 0, modifier: final.players[id].modifier ?? 0, effective: final.players[id].effectiveBid ?? 0 }) : t("s4.final.sealed")}</p>
+      </motion.div>;
+    })}</div>
+    {done && <button data-final-continue className="btn btn-gold mt-6 min-h-14 w-full" disabled={own.continued} onClick={() => void sendGame({ type: "FINAL_CONTINUE" })}>{own.continued ? t("s4.waiting") : t(tie ? "s4.showdown.enter" : "s4.final.continue")}</button>}
+    {!done && <p className="mt-4 text-center text-xs text-ash">{t("s4.bj.skip")}</p>}
   </div>;
 }

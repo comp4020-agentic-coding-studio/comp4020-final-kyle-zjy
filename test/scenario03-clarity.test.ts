@@ -160,6 +160,23 @@ describe("Scenario 03 player guidance", () => {
     expect(routeSteps03(project(s, a), "OFFICIAL_HISTORY").every((step) => step.done)).toBe(true);
   });
 
+  it("final-route checklists are the server's verdict, step for step, and agree with what can be filed", () => {
+    const s = start(2);
+    const [a] = s.turnOrder;
+    finalAct(s);
+    for (const record of ["OFFICIAL", "CONTROLLED", "ERASED"] as const) {
+      s.temporal!.present.accidentRecord = record;
+      const view = project(s, a);
+      for (const route of view.temporal!.story.availableRoutes) {
+        const server = view.temporal!.routeConditions![route]!;
+        // the client's localized steps line up one for one with the server's conditions
+        expect(routeSteps03(view, route).map((step) => step.done)).toEqual(server.map((c) => c.met));
+        // every condition met exactly when the server would accept the filing
+        expect(server.every((c) => c.met)).toBe(routeTargets03(s).includes(route));
+      }
+    }
+  });
+
   it("keeps act-specific leads and keeper assignments behind their real gates", () => {
     const s = start();
     const id = s.turnOrder[s.activeIndex];

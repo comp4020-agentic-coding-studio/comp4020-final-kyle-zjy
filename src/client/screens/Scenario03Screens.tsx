@@ -3,6 +3,9 @@
 // drawer), the identity and third-route scenes, the ending and the results.
 // Its client opening is owned by game/scenario03/opening/Experience03.tsx.
 import { useEffect, useRef, useState } from "react";
+import { StoryRecap } from "../game/StoryRecap.tsx";
+import { EndingPoster } from "../game/EndingPoster.tsx";
+import { DirectiveResults03, TimelineShift03 } from "../game/scenario03/Causal03.tsx";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { RoomId03, Year03 } from "../../shared/game/scenario03/map.ts";
 import type { PlayerView, PublicPlayerState } from "../../shared/game/state.ts";
@@ -73,7 +76,7 @@ export function Scenario03Game() {
     const year = jumpCue.payload.year;
     if (year !== "Y1996" && year !== "Y2026") return;
     setJumpFlash({ key: jumpCue.key, year });
-    const timer = setTimeout(() => setJumpFlash(null), 650);
+    const timer = setTimeout(() => setJumpFlash(null), 1000);
     return () => clearTimeout(timer);
   }, [jumpCue]);
   if (!g?.temporal || !current) return null;
@@ -144,6 +147,7 @@ export function Scenario03Game() {
       <Dock g={g} mode={mode} setMode={setMode} extension={DOCK03} />
 
       <CueFeed g={g} />
+      <TimelineShift03 />
       <AnimatePresence>
         {jumpFlash && <motion.div
           key={jumpFlash.key}
@@ -153,6 +157,9 @@ export function Scenario03Game() {
           role="status" aria-live="polite"
         >
           <motion.div className="s3-jump-clock" initial={reduceMotion ? false : { scale: 0.75, rotate: -25 }} animate={reduceMotion ? {} : { scale: 1.08, rotate: 20 }} transition={{ duration: 0.52, ease: "easeOut" }} aria-hidden="true" />
+          <motion.p className="s3-jump-year font-mono" initial={reduceMotion ? false : { opacity: 1 }} animate={reduceMotion ? {} : { opacity: [1, 0.2, 1] }} transition={{ duration: 0.5 }} aria-hidden="true">
+            <motion.span initial={reduceMotion ? false : { y: 0 }} animate={reduceMotion ? {} : { y: [0, -14, 0] }} transition={{ duration: 0.5 }} className="inline-block">{jumpFlash.year === "Y1996" ? "1996" : "2026"}</motion.span>
+          </motion.p>
           <p className="s3-jump-label">{t("s3.jump.arrival", { year: t(`s3.year.short.${jumpFlash.year}`) })}</p>
         </motion.div>}
       </AnimatePresence>
@@ -223,12 +230,12 @@ export function Scenario03Results() {
   if (!g?.temporal) return null;
   const ending = g.outcome === "S03_OFFICIAL_HISTORY" || g.outcome === "S03_NO_TOMORROW" || g.outcome === "S03_DECEIVE_HISTORY" ? g.outcome : "FAILED";
   return <Frame>
-    <section className={`tarot s3-scene-card s3-ending-card s3-ending-${ending} mx-auto mt-16 max-w-xl p-6 text-center`}>
-      <p className="label text-signal">{t("s3.development")}</p>
-      <h1 className="mt-4 font-display text-4xl">{t("s3.results.title")}</h1>
-      <p className="mt-4 text-xl text-gold-bright">{t(`s3.ending.${ending}.title`)}</p>
+    <div className="mx-auto mt-10 max-w-xl"><EndingPoster g={g} won={ending !== "FAILED" && ending !== "S03_NO_TOMORROW"} kicker={t("s3.results.title")} title={t(`s3.ending.${ending}.title`)} /></div>
+    <section className={`tarot s3-scene-card s3-ending-card s3-ending-${ending} mx-auto mt-4 max-w-xl p-6 text-center`}>
       <p className="mt-3 text-mist">{t(`s3.ending.${ending}.body`)}</p>
       <p className="mt-4 text-sm">{t("s3.results.relics", { n: g.temporal.bootstrapProgress.placed, total: g.temporal.bootstrapProgress.total })}</p>
+      <div className="mt-5"><StoryRecap g={g} /></div>
+      <DirectiveResults03 g={g} />
       <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{g.results?.map((result) => <div key={result.playerId} className="min-w-0 rounded-xl border border-gold/20 p-3 text-left text-sm"><p className="text-gold-bright">{t("s3.results.player", { name: g.players[result.playerId].nickname, title: fmt(result.title) })}</p>{result.highlights.map((line, index) => <p key={index} className="mt-1 text-mist">{fmt(line)}</p>)}</div>)}</div>
       {me?.isHost ? <button className="btn btn-gold mt-8 w-full" onClick={() => void sendLobby({ type: "RESTART" })}>{t("s3.results.back")}</button> : <p className="mt-8 text-sm text-mist">{t("s3.results.wait")}</p>}
     </section>

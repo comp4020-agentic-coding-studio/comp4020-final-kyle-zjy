@@ -2,6 +2,7 @@ import type { PlayerId } from "../state.ts";
 
 export type LotId04 = `LOT_${string}`;
 export type IntelId04 = `${LotId04}_${string}`;
+export type CommissionId04 = "COLLECTOR" | "EXPOSER" | "GAMBLER" | "DEBTOR" | "DEALER";
 export type HouseRuleId04 = "openingCourtesy" | "anonymousSeat" | "doubleRaise" | "creditNight" | "holdingDisclosure" | "houseChallenge" | "transparentTrade" | "singleRaise" | "creditFreeze" | "finalSettlement";
 export type PublicTrade04 = { round: number; from: PlayerId; to: PlayerId; chips: number; receiveChips: number; giveItem: LotId04 | null; forItem: LotId04 | null };
 export type PreliminarySettlement04 = { blackChips: number; sanity: number; fate: number; ap: number; genuineItems: number; itemValue: number; debtPenalty: number; finalModifier: number; total: number };

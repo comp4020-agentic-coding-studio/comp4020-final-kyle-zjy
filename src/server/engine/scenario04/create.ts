@@ -8,6 +8,7 @@ import { START_FATE, START_SANITY } from "../../../shared/game/scenario01/conten
 import { generateAuctionPool04 } from "./pool.ts";
 import { SHUFFLED_HOUSE_RULES04 } from "../../../shared/game/scenario04/houseRules.ts";
 import { shuffle } from "../rng.ts";
+import { commissionFor04 } from "./commissions.ts";
 
 export function createScenario04(sessionId: string, seats: Seat[], seed: string, now: number): GameState {
   const s = createScenario01(sessionId, seats, seed, now);
@@ -78,6 +79,7 @@ export function createScenario04(sessionId: string, seats: Seat[], seed: string,
     secret.peeks = [];
     secret.tasks = [];
   }
+  for (const id of ordered) s.secrets[id].commission04 = { id: commissionFor04(seed, id), deals: 0 };
   log({ s, now, events: [] }, m`The underground auction opens.`, "STORY");
   return s;
 }

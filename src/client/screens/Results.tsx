@@ -7,6 +7,8 @@ import { SCENARIO } from "../../shared/game/scenario01/content.ts";
 import type { PlayerResult, PlayerView } from "../../shared/game/state.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { endingKey, endingWon } from "../game/ending.ts";
+import { StoryRecap } from "../game/StoryRecap.tsx";
+import { EndingPoster } from "../game/EndingPoster.tsx";
 import { useCharacterText, useFormat, useScenarioText, useT } from "../i18n/index.ts";
 import { navigate } from "../router.ts";
 import { sendLobby, useGame, useMe } from "../store.ts";
@@ -25,12 +27,10 @@ export function Results() {
   return (
     <main className="night-sky min-h-dvh px-4 py-8 sm:py-12">
       <div className="mx-auto grid max-w-3xl grid-cols-1 gap-6">
-        <header className="text-center">
-          <p className={`label ${text.won ? "text-gold-bright" : "text-ember"}`}>{text.kicker}</p>
-          <h1 className="mt-2 font-display text-4xl font-semibold text-moon sm:text-5xl">{text.title}</h1>
-          <Summary g={g} />
-        </header>
+        <EndingPoster g={g} kicker={text.kicker} title={text.title} won={text.won} />
+        <Summary g={g} />
 
+        <StoryRecap g={g} />
         {mine && <PlayerCard g={g} r={mine} highlight />}
         {others.length > 0 && (
           <section aria-label={t("results.others")} className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
@@ -74,7 +74,7 @@ function Summary({ g }: { g: PlayerView }) {
     [t("results.core"), `${g.coreMemories} / 6`],
   ];
   return (
-    <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
+    <dl className="grid grid-cols-2 gap-2 sm:grid-cols-5">
       {items.map(([k, v]) => (
         <div key={k} className="min-w-0 rounded-xl border border-gold/20 px-2 py-2">
           <dt className="label text-[10px] text-mist">{k}</dt>

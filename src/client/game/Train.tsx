@@ -116,8 +116,9 @@ function CarriageCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; ta
       transition={target ? { duration: 1.4, repeat: Infinity } : { duration: 0.3 }}
     >
       {/* roof light strip */}
-      <div className="h-1 w-full" style={{ background: info.accent, opacity: c.locked ? 0.25 : 0.8 }} />
-      <div className="px-2.5 pt-1.5">
+      <div className="train-light h-1 w-full" style={{ background: info.accent, opacity: c.locked ? 0.25 : 0.8 }} />
+      <span className="carriage-no absolute top-1.5 right-2 font-mono text-[9px] text-ash" aria-hidden="true">{String(c.index + 1).padStart(2, "0")}</span>
+      <div className="px-2.5 pt-1.5 pr-6">
         <AnimatePresence mode="wait">
           <motion.p key={c.identity} className="font-display text-[15px] leading-tight font-semibold text-moon sm:text-base" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
             {info.name}
@@ -146,7 +147,7 @@ function CarriageCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; ta
       )}
 
       {/* occupants */}
-      <div className="relative flex flex-1 flex-wrap content-end items-end gap-1 px-2 pb-2">
+      <div className="relative flex flex-1 flex-wrap content-end items-end gap-1 px-2 pb-3">
         {here.map((p) => {
           const ch = getCharacterById(p.characterId);
           return (
@@ -159,6 +160,7 @@ function CarriageCard({ g, c, target, onPick }: { g: PlayerView; c: Carriage; ta
             >
               <img src={ch.avatar} alt={p.nickname} className={`h-full w-full rounded-full ${p.lost || p.away ? "opacity-50 grayscale" : ""}`} draggable={false} />
               {p.playerId === activeId && <span className="absolute -top-1 -right-1 h-2.5 w-2.5 animate-pulse rounded-full bg-signal" />}
+              {p.playerId === activeId && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/3 rounded-full bg-signal px-1 text-[7px] leading-tight font-bold tracking-wider whitespace-nowrap text-[#04141a]">{t("train.acting")}</span>}
             </motion.span>
           );
         })}

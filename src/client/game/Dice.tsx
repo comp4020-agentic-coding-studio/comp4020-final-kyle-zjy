@@ -5,6 +5,8 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import type { RollTier } from "../../shared/characters/types.ts";
 import type { PlayerView, PublicWindow } from "../../shared/game/state.ts";
+import { getCharacterById } from "../../shared/characters/roster/index.ts";
+import { Avatar } from "../components/Avatar.tsx";
 import { useFormat, useT } from "../i18n/index.ts";
 import { sendGame } from "../store.ts";
 
@@ -39,6 +41,8 @@ export function Die({ value, size = 84, color = "#f4ecd6" }: { value: number; si
 }
 
 const HOLD_MS = 2600;
+/** Between each line of the chain (raw → each modifier → total): the whole reveal stays near a second. */
+const STEP_MS = 160;
 
 export function DiceOverlay({ g }: { g: PlayerView }) {
   const roll = g.roll;
@@ -68,13 +72,26 @@ export function DiceOverlay({ g }: { g: PlayerView }) {
     };
   }, [rollId, raw, reduce]);
 
+  // after the die lands, the chain appears one line at a time; a tap shows it all
+  const lines = (roll?.modifiers.length ?? 0) + (roll?.fateSpent ? 1 : 0) + 1;
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    if (!rollId || tumbling) return;
+    if (reduce) return setShown(99);
+    setShown(0);
+    let n = 0;
+    const t = setInterval(() => { setShown(++n); if (n > lines) clearInterval(t); }, STEP_MS);
+    return () => clearInterval(t);
+  }, [rollId, tumbling, reduce, lines]);
+  const revealed = shown > lines;
+
   // a finished roll lingers, then the overlay clears
   const [hiddenId, setHiddenId] = useState<string | null>(null);
   useEffect(() => {
-    if (!roll?.done) return;
+    if (!roll?.done || !revealed) return;
     const t = setTimeout(() => setHiddenId(roll.id), HOLD_MS);
     return () => clearTimeout(t);
-  }, [roll?.done, roll?.id]);
+  }, [roll?.done, roll?.id, revealed]);
 
   const fateWindow = g.pending.find((w) => w.kind === "FATE_SPEND");
   const visible = !!roll && roll.id !== hiddenId && (roll.purpose !== "EVENT");
@@ -93,32 +110,37 @@ export function DiceOverlay({ g }: { g: PlayerView }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -12 }}
         >
-          <div className="tarot pointer-events-auto w-full max-w-sm p-4 text-center" role="dialog" aria-label={t("dice.theirs", { name: roller.nickname, label })} aria-live="polite">
+          <div className="tarot pointer-events-auto w-full max-w-sm p-4 text-center" onClick={() => setShown(99)} role="dialog" aria-label={t("dice.theirs", { name: roller.nickname, label })} aria-live="polite">
             <p className="label">{heading}</p>
             <div className="mt-3 flex items-center justify-center gap-4">
               <motion.div animate={tumbling ? { rotate: [0, 90, 200, 320, 360], scale: [1, 0.9, 1.05, 0.95, 1] } : { rotate: 0 }} transition={{ duration: 0.7 }}>
                 <Die value={tumbling ? face : roll.raw} />
               </motion.div>
               {!tumbling && (
-                <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="text-left">
+                <div className="min-w-0 text-left">
                   <p className="font-mono text-sm text-mist">{t("dice.raw", { n: roll.raw })}</p>
-                  {roll.modifiers.map((m, i) => (
-                    <p key={i} className={`font-mono text-sm ${m.delta >= 0 ? "text-signal" : "text-ember"}`}>
-                      {m.delta >= 0 ? "+" : ""}
-                      {m.delta} {fmt(m.source)}
-                    </p>
+                  {roll.modifiers.slice(0, shown).map((m, i) => (
+                    <motion.p key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className={`flex items-center gap-1 font-mono text-sm ${m.delta >= 0 ? "text-signal" : "text-ember"}`}>
+                      <span>{m.delta >= 0 ? "+" : ""}{m.delta} {fmt(m.source)}</span>
+                      {m.by?.map((id) => {
+                        const helper = g.players[id];
+                        if (!helper) return null;
+                        const ch = getCharacterById(helper.characterId);
+                        return <span key={id} className="inline-flex items-center gap-1" title={helper.nickname}><Avatar zodiac={ch.zodiac} mbti={ch.mbti} size={20} /><span className="max-w-[6rem] truncate font-sans text-xs text-mist">{helper.nickname}</span></span>;
+                      })}
+                    </motion.p>
                   ))}
-                  {roll.fateSpent > 0 && <p className="font-mono text-sm text-gold-bright">{t("dice.fate", { n: roll.fateSpent })}</p>}
-                  <p className="mt-1 font-mono text-3xl text-moon">= {roll.final}</p>
-                </motion.div>
+                  {roll.fateSpent > 0 && shown > roll.modifiers.length && <motion.p initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="font-mono text-sm text-gold-bright">{t("dice.fate", { n: roll.fateSpent })}</motion.p>}
+                  {revealed && <motion.p initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} className="mt-1 font-mono text-3xl text-moon">= {roll.final}</motion.p>}
+                </div>
               )}
             </div>
-            {!tumbling && (
+            {!tumbling && revealed && (
               <motion.p initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="mt-2 font-display text-3xl font-semibold" style={{ color: tier.color }}>
                 {roll.done ? tier.word : `${tier.word}…`}
               </motion.p>
             )}
-            {!tumbling && fateWindow && <FateChoice g={g} w={fateWindow} />}
+            {!tumbling && revealed && fateWindow && <FateChoice g={g} w={fateWindow} />}
           </div>
         </motion.div>
       )}

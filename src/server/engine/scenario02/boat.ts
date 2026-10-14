@@ -25,6 +25,7 @@ import { shuffle } from "../rng.ts";
 import { onResume, openWindow } from "../windows.ts";
 import { partSite } from "./city.ts";
 import { ensurePassContest } from "./passes.ts";
+import { tieMet } from "./ties.ts";
 
 const harbour = () => zoneIndex(HARBOUR_ZONE);
 const nick = (s: GameState, id: PlayerId) => s.players[id].nickname;
@@ -93,6 +94,9 @@ export function checkBoatLost(ctx: Ctx): boolean {
     if (city.boat.installed.includes(part) || Object.values(city.holdings).some((h) => h.parts.includes(part))) continue;
     const site = partSite(city, part);
     if (site >= 0 && city.zones[site].status !== "SUBMERGED") continue;
+    // public once it happens: which part, and the zone that took it
+    s.flags.s2_lostPart = BOAT_PARTS.indexOf(part) + 1;
+    s.flags.s2_lostSite = site + 1;
     log(ctx, m`The ${ref.part(part)} goes down with ${ref.zone(ZONES[site].id)}. Without it, no boat will ever leave this city.`, "STORY");
     startEnding(ctx, "FAILED", "BOAT_LOST");
     return true;
@@ -156,6 +160,7 @@ function board(ctx: Ctx): void {
   const askers = atPier(ctx).filter((p) => s.city!.holdings[p.playerId].passes > 0 && !b.aboard.includes(p.playerId));
   if (!askers.length || seats <= 0) return;
   log(ctx, seats === 1 ? m`Boarding. 1 seat left.` : m`Boarding. ${seats} seats left.`, "BOAT");
+  cue(ctx, "BOARDING_OPEN", { seats });
   openWindow(ctx, {
     kind: "VOTE",
     title: m`Board the boat?`,
@@ -275,7 +280,8 @@ export function results02(ctx: Ctx): PlayerResult[] {
             : m`Went down with the city.`;
     const highlights: Msg[] = [line, contrib === 1 ? m`1 point of public work` : m`${contrib} points of public work`];
     if (city.rescues[id]) highlights.push(city.rescues[id] === 1 ? m`1 rescue` : m`${city.rescues[id]} rescues`);
-    return { playerId: id, obsession: null, obsessionMet: false, title, highlights, messages: [], escape: fate };
+    const tie = s.secrets[id]?.tie02;
+    return { playerId: id, obsession: null, obsessionMet: false, title, highlights, messages: [], escape: fate, ...(tie ? { tie02: { ...tie, met: tieMet(s, id, tie) } } : {}) };
   });
 }
 

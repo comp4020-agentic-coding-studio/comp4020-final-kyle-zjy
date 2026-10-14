@@ -2,7 +2,7 @@
 // a real browser without walking the whole product each time.
 //
 //   node scripts/ui-play.ts --until act2|act3|end [--out /tmp/fate-play]
-//                           [--kyle Scorpio/ENTP] [--bea Pisces/ISFJ] [--skills] [--phone 390]
+//                           [--kyle Scorpio/ENTP] [--bea Pisces/ISFJ] [--skills] [--phone 390] [--reduced-motion]
 //
 // Every screenshot is also checked for content clipped past the right edge
 // and for touch targets under 48 px; the run fails if any are found.
@@ -30,8 +30,10 @@ mkdirSync(out, { recursive: true });
 
 const browser = await chromium.launch();
 const phoneWidth = Number(arg("phone", "390"));
-const phone = await (await browser.newContext({ viewport: { width: phoneWidth, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })).newPage();
-const desk = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
+// --reduced-motion: both browsers ask for reduced motion, as an OS setting would
+const reducedMotion = process.argv.includes("--reduced-motion") ? "reduce" as const : "no-preference" as const;
+const phone = await (await browser.newContext({ viewport: { width: phoneWidth, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, reducedMotion })).newPage();
+const desk = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion })).newPage();
 const pages: [Page, string][] = [
   [phone, "phone"],
   [desk, "desktop"],

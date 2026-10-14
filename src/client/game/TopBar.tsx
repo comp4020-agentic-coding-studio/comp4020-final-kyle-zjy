@@ -25,6 +25,7 @@ export function TopBar({ g, onLog, onSecrets, secretsCount }: { g: PlayerView; o
           <p className="font-mono text-lg leading-tight whitespace-nowrap text-moon sm:text-xl">
             {rich(t("game.round", { n: Math.max(1, g.round) }), { of: <span className="text-ash">/{SCENARIO.rounds}</span> })}
           </p>
+          <p className="font-mono text-[10px] tracking-wider whitespace-nowrap text-gold uppercase">{chapter01(g, t)}</p>
         </div>
 
         <div className="min-w-0 flex-1" role="meter" aria-label={t("game.collapse")} aria-valuenow={g.collapse} aria-valuemin={0} aria-valuemax={g.collapseMax}>
@@ -66,6 +67,12 @@ export function TopBar({ g, onLog, onSecrets, secretsCount }: { g: PlayerView; o
       </div>
     </header>
   );
+}
+
+/** 00:17 · and the night's named beat, when the round has one. */
+function chapter01(g: PlayerView, t: ReturnType<typeof useT>): string {
+  const beat = g.round === 4 ? "blackout" : g.round === 5 ? "message" : g.round === 6 ? "brake" : g.round === 7 ? "fold" : g.round >= 8 ? "cab" : null;
+  return beat ? t("chapter.s01", { beat: t(`chapter.s01.${beat}`) }) : t("chapter.s01.clock");
 }
 
 function Anchors({ g }: { g: PlayerView }) {

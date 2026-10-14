@@ -2,11 +2,17 @@
 // leaves with some and without others, so each player first sees how their
 // own run ended, then everyone's.
 import { motion } from "motion/react";
+import { Card } from "../game/cards/Card.tsx";
+import { BOAT_PARTS } from "../../shared/game/scenario02/items.ts";
+import { ZONES } from "../../shared/game/scenario02/map.ts";
+import { StoryRecap } from "../game/StoryRecap.tsx";
+import { EndingPoster } from "../game/EndingPoster.tsx";
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import type { EscapeFate, PlayerResult, PlayerView } from "../../shared/game/state.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { HostSkip } from "../game/HostSkip.tsx";
 import { notYet } from "../game/waiting.ts";
+import { tieText } from "../game/city/tieText.ts";
 import { useCharacterText, useFormat, useScenario02Text, useScenarioText, useT, type MessageKey } from "../i18n/index.ts";
 import { navigate } from "../router.ts";
 import { sendGame, sendLobby, useMe } from "../store.ts";
@@ -94,6 +100,11 @@ export function CityEnding({ g }: { g: PlayerView }) {
             {l}
           </motion.p>
         ))}
+        {fate === "ENGINEER" && (
+          <motion.p className="mx-auto mt-4 w-fit rounded-full border border-gold/50 px-3 py-1 font-mono text-xs text-gold-bright" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3 }}>
+            {t("s2.results.marker.ENGINEER")}
+          </motion.p>
+        )}
         <motion.p className="mt-4 font-mono text-sm text-gold" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3.4 }}>
           {g.outcome === "S02_EVACUATED" ? t("s2.results.evacuated", { n: g.city!.boat.aboard.length, total: g.turnOrder.length }) : t("s2.results.none")}
         </motion.p>
@@ -109,10 +120,13 @@ export function CityEnding({ g }: { g: PlayerView }) {
 export function CityResults({ g }: { g: PlayerView }) {
   const t = useT();
   const me = useMe();
+  const text = useScenario02Text();
   if (!g.results) return null;
   const mine = g.results.find((r) => r.playerId === g.viewerId);
   const others = g.results.filter((r) => r.playerId !== g.viewerId);
   const b = g.city!.boat;
+  const lostPart = BOAT_PARTS[(g.flags.s2_lostPart ?? 0) - 1];
+  const lostSite = ZONES[(g.flags.s2_lostSite ?? 0) - 1];
   const summary: [string, string][] = [
     [t("results.rounds"), String(g.round)],
     [t("results.collapse"), `${g.collapse} / ${g.collapseMax}`],
@@ -122,10 +136,14 @@ export function CityResults({ g }: { g: PlayerView }) {
   return (
     <main className="night-sky min-h-dvh px-4 py-8 sm:py-12">
       <div className="mx-auto grid max-w-3xl grid-cols-1 gap-6">
+        <EndingPoster g={g} won={g.outcome === "S02_EVACUATED"} kicker={g.outcome === "S02_EVACUATED" ? t("s2.results.evacuated", { n: b.aboard.length, total: g.turnOrder.length }) : t("s2.results.none")} title={t(`s2.end.${mine?.escape ?? "DROWNED"}.title`)} />
         <header className="text-center">
-          <p className={`label ${g.outcome === "S02_EVACUATED" ? "text-gold-bright" : "text-ember"}`}>{g.outcome === "S02_EVACUATED" ? t("s2.results.evacuated", { n: b.aboard.length, total: g.turnOrder.length }) : t("s2.results.none")}</p>
-          <h1 className="mt-2 font-display text-4xl font-semibold text-moon sm:text-5xl">{t(`s2.end.${mine?.escape ?? "DROWNED"}.title`)}</h1>
-          {g.failReason === "BOAT_LOST" && <p className="mt-2 text-sm text-mist">{t("s2.results.boatLost")}</p>}
+          {g.failReason === "BOAT_LOST" && (
+            <div className="mt-2 text-sm text-mist">
+              {lostPart && lostSite && <p className="font-semibold text-ember">{t("s2.results.partLost", { part: text.parts[lostPart].name, zone: text.zones[lostSite.id].name })}</p>}
+              <p>{t("s2.results.boatLost")}</p>
+            </div>
+          )}
           <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {summary.map(([k, v]) => (
               <div key={k} className="min-w-0 rounded-xl border border-gold/20 px-2 py-2">
@@ -135,6 +153,7 @@ export function CityResults({ g }: { g: PlayerView }) {
             ))}
           </dl>
         </header>
+        <StoryRecap g={g} />
         {mine && <FateCard g={g} r={mine} highlight />}
         {others.length > 0 && (
           <section aria-label={t("results.others")} className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
@@ -172,6 +191,7 @@ function FateCard({ g, r, highlight = false }: { g: PlayerView; r: PlayerResult;
   const ch = getCharacterById(p.characterId);
   const charTitle = useCharacterText()(ch.id).title;
   const fate = r.escape ?? "DROWNED";
+  const text = useScenario02Text();
   return (
     <article className={`tarot min-w-0 p-5 ${highlight ? "ring-1 ring-gold/60" : ""}`} aria-label={t("results.cardAria", { name: p.nickname, title: fmt(r.title) })}>
       <div className="flex min-w-0 items-center gap-3">
@@ -183,11 +203,18 @@ function FateCard({ g, r, highlight = false }: { g: PlayerView; r: PlayerResult;
         </div>
         <span className={`ml-auto shrink-0 rounded-full px-2 py-1 font-mono text-[10px] font-bold ${fate === "ESCAPED" ? "bg-moss/20 text-moss" : fate === "ENGINEER" ? "bg-gold/20 text-gold-bright" : "bg-ember/15 text-ember"}`}>{t(`s2.results.fate.${fate}`)}</span>
       </div>
+      {fate === "ENGINEER" && <p className="mt-2 w-fit rounded-full border border-gold/50 px-2 py-0.5 font-mono text-[11px] text-gold-bright">{t("s2.results.marker.ENGINEER")}</p>}
       <ul className="mt-3 space-y-1 text-sm text-mist">
         {r.highlights.map((h, i) => (
           <li key={i}>· {fmt(h)}</li>
         ))}
       </ul>
+      {r.tie02 && (
+        <p className={`mt-2 flex min-w-0 items-start gap-2 text-xs ${r.tie02.met ? "text-moss" : "text-ash"}`}>
+          <span className="shrink-0 rounded border border-current px-1 font-mono text-[10px] font-bold">{t(r.tie02.met ? "s2.tie.met" : "s2.tie.unmet")}</span>
+          <span className="min-w-0">{tieText(r.tie02, t, text)}</span>
+        </p>
+      )}
     </article>
   );
 }

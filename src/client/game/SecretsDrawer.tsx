@@ -1,10 +1,13 @@
 // What only you know: your obsession, dream cards, the round-5 message and
 // anything your ability let you peek at. Sent to you and nobody else.
+import { motion } from "motion/react";
 import type { ReactNode } from "react";
 import type { PlayerView } from "../../shared/game/state.ts";
 import { useFormat, useScenario02Text, useScenarioText, useT } from "../i18n/index.ts";
 import { ZONES } from "../../shared/game/scenario02/map.ts";
 import { NPCS } from "../../shared/game/scenario02/npcs.ts";
+import { Card } from "./cards/Card.tsx";
+import { tieText } from "./city/tieText.ts";
 import { Drawer } from "./Drawer.tsx";
 
 /** `sections`: a scenario's own contents (scenario 03), in place of scenario 01's and 02's. */
@@ -18,6 +21,10 @@ export function SecretsDrawer({ g, onClose, sections }: { g: PlayerView; onClose
     <Drawer title={t("secrets.title")} onClose={onClose}>
       {s && (
         <div className="space-y-4">
+          <p className="flex items-center gap-2 rounded-lg border border-ember/40 bg-ember/5 px-3 py-2 text-xs text-mist">
+            <span className="shrink-0 -rotate-6 rounded border border-ember/60 px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-ember uppercase">{t("card.onlyYou")}</span>
+            {t("secrets.dossierNote")}
+          </p>
           {s.obsession && (
             <section className="tarot p-3">
               <p className="label text-gold">{t("secrets.obsession")}</p>
@@ -30,6 +37,9 @@ export function SecretsDrawer({ g, onClose, sections }: { g: PlayerView; onClose
             sections
           ) : g.city ? (
             <>
+              {s.tie02 && (
+                <Card variant="intel" private kicker={t("s2.tie.kicker")} title={tieText(s.tie02, t, city)} meta={t("s2.tie.note")} />
+              )}
               <section className="tarot p-3">
                 <p className="label text-gold">{t("s2.secrets.passes")}</p>
                 <p className="mt-1 font-display text-2xl text-gold-bright">{g.city.holdings[g.viewerId]?.passes ?? 0}</p>
@@ -85,17 +95,18 @@ export function SecretsDrawer({ g, onClose, sections }: { g: PlayerView; onClose
   );
 }
 
+/** A heading and the viewer's private notes under it, each as an "only you" intel card. */
 export function Section({ title, empty, items }: { title: string; empty: string; items: { id: string; text: string; meta?: string }[] }) {
   return (
     <section>
       <p className="label">{title}</p>
       {items.length ? (
-        <ul className="mt-1 space-y-1.5">
+        <ul className="mt-1 grid grid-cols-1 gap-1.5">
           {items.map((i) => (
-            <li key={i.id} className="rounded-lg border border-violet/30 bg-violet/5 px-3 py-2 text-sm">
+            <motion.li key={i.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="min-w-0 rounded-lg border border-violet/30 bg-[linear-gradient(165deg,#1a1033,#0a0618)] px-3 py-2 text-sm">
               {i.text}
               {i.meta && <span className="ml-2 font-mono text-[10px] text-ash">{i.meta}</span>}
-            </li>
+            </motion.li>
           ))}
         </ul>
       ) : (

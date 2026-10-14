@@ -363,6 +363,14 @@ describe("act 2: round 5 secret messages", () => {
     if (text.startsWith("Every core memory")) return middle.every((c) => s.flags[`core_${c.identity}`]);
     if (text.startsWith("Nobody on this train")) return Object.values(s.players).every((p) => p.sanity >= 2);
     if (text.startsWith("Someone on this train")) return Object.values(s.players).some((p) => p.sanity < 2);
+    // a promise about the round-7 fold: run the fold on a copy and see
+    if ((m = text.match(/^The (.+) you are standing in will (not stay where it is|still be here at the end)\.$/))) {
+      const node = s.players.a.carriageIndex;
+      if (CARRIAGES[s.carriages[node].identity].name !== m[1]) return false;
+      const after = structuredClone(s);
+      realityFold(ctxOf(after));
+      return (after.carriages[node].identity === s.carriages[node].identity) === (m[2] === "still be here at the end");
+    }
     throw new Error(`unknown message: ${text}`);
   }
 

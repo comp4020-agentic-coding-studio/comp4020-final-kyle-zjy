@@ -3,6 +3,7 @@
 // The addressee gets a card with the options and a countdown ring; everyone
 // else sees who the table is waiting for.
 import { AnimatePresence, motion } from "motion/react";
+import { useState } from "react";
 import { getCharacterById } from "../../shared/characters/roster/index.ts";
 import { EVENT_BY_ID } from "../../shared/game/events.ts";
 import { auctionIntelText, auctionLotText } from "../../shared/i18n/scenario04.ts";
@@ -12,6 +13,7 @@ import { Avatar } from "../components/Avatar.tsx";
 import { useCharacterText, useFormat, useLocale, useT } from "../i18n/index.ts";
 import { sendGame } from "../store.ts";
 import { EventArt } from "./EventArt.tsx";
+import { Blackjack04 } from "./scenario04/Blackjack04.tsx";
 
 export function DecisionLayer({ g }: { g: PlayerView }) {
   const w = g.pending.at(-1);
@@ -21,11 +23,6 @@ export function DecisionLayer({ g }: { g: PlayerView }) {
 }
 
 const blackjackCard = (card: number) => card === 1 ? "A" : card === 11 ? "J" : card === 12 ? "Q" : card === 13 ? "K" : String(card);
-function blackjackScore(cards: number[]) {
-  let total = cards.reduce((sum, card) => sum + (card === 1 ? 1 : Math.min(card, 10)), 0);
-  for (const card of cards) if (card === 1 && total + 10 <= 21) total += 10;
-  return total;
-}
 
 function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
   // an event's vote happens while it is open; a later vote (the boat's departure) is its own decision
@@ -38,6 +35,16 @@ function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
   const fmt = useFormat();
   const charText = useCharacterText();
   const ownerSkill = owner ? charText(owner.skill.borrowed ?? owner.characterId) : null;
+  // the boarding window: choosing Board asks once more, because it can't be undone
+  const boarding = w.options.some((o) => o.id === "BOARD") && g.city !== null;
+  const [confirming, setConfirming] = useState(false);
+  // Blackjack windows keep their buttons locked until the card reveal has played (or been skipped)
+  const [bjDone, setBjDone] = useState(w.kind !== "S4_BLACKJACK" && w.kind !== "S4_BLACKJACK_RESULT");
+  const bjLocked = (w.kind === "S4_BLACKJACK" || w.kind === "S4_BLACKJACK_RESULT") && !bjDone;
+  const answer = (optionId: string) => {
+    if (boarding && optionId === "BOARD" && !confirming) return setConfirming(true);
+    void sendGame({ type: "RESPOND", windowId: w.id, optionId });
+  };
   return (
     <motion.div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-3 backdrop-blur-[2px] sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.div
@@ -73,7 +80,14 @@ function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
               </div>
             </div>
           )}
+          {boarding && !confirming && <p className="label mt-2 text-ember">{t("s2.board.open")}</p>}
           <p className="mt-3 text-sm leading-relaxed text-mist">{fmt(w.prompt)}</p>
+          {boarding && confirming && (
+            <div role="alert" className="mt-3 rounded-xl border-2 border-ember/70 bg-ember/10 p-3">
+              <p className="font-display text-lg text-moon">{t("s2.board.confirmTitle")}</p>
+              <p className="mt-1 text-sm text-mist">{t("s2.board.warn")}</p>
+            </div>
+          )}
           {w.kind === "S4_DEAL" && g.auction?.deal && (() => {
             const deal = g.auction.deal;
             const asset = deal.forPass ? t("s4.decision.pass") : deal.giveIntel ? auctionIntelText(locale, deal.giveIntel) : deal.forIntel ? auctionIntelText(locale, deal.forIntel) : deal.giveItem ? auctionLotText(locale, deal.giveItem).name : deal.forItem ? auctionLotText(locale, deal.forItem).name : "·";
@@ -83,30 +97,28 @@ function DecisionCard({ g, w }: { g: PlayerView; w: PublicWindow }) {
             const scissors = g.auction.players[g.viewerId].items.find((id) => itemLotId04(id) === "LOT_14");
             return scissors ? <button className="btn btn-ghost mt-2 min-h-12 w-full" onClick={() => void sendGame({ type: "USE_LOT", lotId: scissors })}>{t("s4.decision.cutDeal")}</button> : null;
           })()}
-          {(w.kind === "S4_BLACKJACK" || w.kind === "S4_BLACKJACK_RESULT") && g.auction?.challenge && <div className="mt-2 grid gap-1 rounded-xl border border-gold/30 p-3 text-sm">
-            {([g.auction.challenge.target, g.auction.challenge.challenger] as const).map((id) => {
-              const hand = id === g.auction!.challenge!.target ? g.auction!.challenge!.targetHand : g.auction!.challenge!.challengerHand;
-              return <p key={id}>{t("s4.decision.hand", { name: g.players[id].nickname, cards: hand.map(blackjackCard).join(" "), total: blackjackScore(hand) })}</p>;
-            })}
-          </div>}
-          {w.kind === "S4_BLACKJACK_RESULT" && g.auction?.challenge?.bust && <div role="status" aria-live="assertive" className="mt-3 rounded-xl border-2 border-ember bg-ember/15 p-3 text-center">
-            <p className="label text-ember">{t("s4.decision.bust")}</p>
-            <p className="mt-1 text-sm text-moon">{t("s4.decision.bustCard", { name: g.players[g.auction.challenge.bust.playerId].nickname, card: blackjackCard(g.auction.challenge.bust.card), total: g.auction.challenge.bust.total })}</p>
-            <p className="mt-2 font-display text-2xl font-semibold text-gold-bright">{t(g.auction.challenge.bust.playerId === g.viewerId ? "s4.decision.youLost" : "s4.decision.opponentBustWon")}</p>
-          </div>}
+          {(w.kind === "S4_BLACKJACK" || w.kind === "S4_BLACKJACK_RESULT") && g.auction?.challenge && <Blackjack04 g={g} onDone={setBjDone} />}
           {g.auction?.challenge?.burntReplacement && (w.kind === "S4_BLACKJACK" || w.kind === "S4_BLACKJACK_RESULT") && <p role="status" className="mt-2 rounded-xl border border-ember/60 p-2 text-sm">{t("s4.decision.burntCard", { old: blackjackCard(g.auction.challenge.burntReplacement.discarded), fresh: blackjackCard(g.auction.challenge.burntReplacement.replacement) })}</p>}
+          {boarding && confirming ? (
+            <div className="mt-4 grid gap-2">
+              <button className="btn btn-gold min-h-14 rounded-xl px-4" onClick={() => answer("BOARD")}>{t("s2.board.confirm")}</button>
+              <button className="btn btn-ghost min-h-14 rounded-xl px-4" onClick={() => setConfirming(false)}>{t("s2.board.notYet")}</button>
+            </div>
+          ) : (
           <div className="mt-4 grid gap-2">
             {w.options.filter((o) => o.id !== "BURN" || g.auction?.challenge?.bust?.playerId === g.viewerId).map((o, i) => (
               <button
                 key={o.id}
                 className={`btn min-h-14 flex-col items-start gap-0 rounded-xl px-4 py-2 text-left ${i === 0 ? "btn-gold" : "btn-ghost"}`}
-                onClick={() => void sendGame({ type: "RESPOND", windowId: w.id, optionId: o.id })}
+                disabled={bjLocked}
+                onClick={() => answer(o.id)}
               >
                 <span className="text-base">{fmt(o.label)}</span>
                 {o.detail && <span className="text-xs font-normal opacity-80">{fmt(o.detail)}</span>}
               </button>
             ))}
           </div>
+          )}
           {w.kind === "VOTE" && (
             <p className="mt-2 text-center text-xs text-ash">
               {t("decision.voted", { n: w.answeredBy.length, of: w.addressees.length })}

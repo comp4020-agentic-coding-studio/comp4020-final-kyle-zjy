@@ -9,6 +9,7 @@ import { skipAuctionTurn04 } from "./auction.ts";
 import { createScenario04 } from "./create.ts";
 import { startFinalSettlement04 } from "./final.ts";
 import { changeCollapse } from "../effects.ts";
+import { commissionMet04 } from "./commissions.ts";
 
 registerScenario({
   id: "S04_UNDERGROUND_AUCTION",
@@ -46,6 +47,7 @@ registerScenario({
       title: a.auctionHistory.at(-1)?.winnerId === p.playerId ? m`Exit Rights Holder` : wins ? m`Auction Winner` : m`Auction Witness`,
       highlights: [wins === 1 ? m`1 lot won` : m`${wins} lots won`, m`${held.debt} Debt at closing`],
       messages: [],
+      ...(ctx.s.secrets[p.playerId].commission04 ? { commission04: { id: ctx.s.secrets[p.playerId].commission04!.id, met: commissionMet04(ctx.s, p.playerId) } } : {}),
     };
   }),
   announceEnding: (ctx) => log(ctx, ctx.s.outcome === "S04_EXIT" ? m`Exit Rights are claimed; the winner leaves the table.` : ctx.s.outcome === "S04_DEBT" ? m`Exit Rights are claimed, but the debt follows the winner.` : m`Exit Rights are withdrawn. Nobody leaves the table.`, "STORY"),

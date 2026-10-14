@@ -31,6 +31,8 @@ async function shot(page: Page, tag: string, name: string) {
   if (small.length) problems.push(`${key}: small targets ${small.join(", ")}`);
 }
 async function tap(locator: Locator) { try { await locator.first().click({ timeout: 1500 }); return true; } catch { return false; } }
+/** Press and hold: the sealed bid locks after ~700 ms of pressure. */
+async function hold(locator: Locator) { try { const box = await locator.first().boundingBox(); if (!box) return false; await locator.first().dispatchEvent("pointerdown"); await locator.first().page().waitForTimeout(900); await locator.first().dispatchEvent("pointerup"); return true; } catch { return false; } }
 async function visible(locator: Locator) { return locator.first().isVisible().catch(() => false); }
 async function enabled(locator: Locator) { return await visible(locator) && await locator.first().getAttribute("aria-disabled") !== "true"; }
 async function pick(page: Page, sign: string, mbti: RegExp) {
@@ -165,7 +167,7 @@ try {
           if (await visible(page.locator('[data-final-submit]'))) {
             const usable = Number(await page.locator('[data-final-usable]').innerText());
             await page.locator('[data-final-bid]').fill(String(showdownWalkthrough ? 0 : tag === "phone" ? usable : 0));
-            acted = await tap(page.locator('[data-final-submit]'));
+            acted = await hold(page.locator('[data-final-submit]'));
             if (acted) { done.add(`${tag}:finalBid`); await shot(page, tag, "final-sealed"); }
           }
           continue;

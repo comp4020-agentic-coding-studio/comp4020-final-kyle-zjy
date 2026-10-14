@@ -5,6 +5,9 @@ import { AnimatePresence } from "motion/react";
 import { useState } from "react";
 import type { PublicPlayerState } from "../../shared/game/state.ts";
 import { Banner } from "../game/Banner.tsx";
+import { Broadcast } from "../game/city/Broadcast.tsx";
+import { AboardWatch, FinalStartup } from "../game/city/BoatPanels.tsx";
+import { Triage } from "../game/city/Triage.tsx";
 import { CityObjective, CityTopBar } from "../game/city/CityTopBar.tsx";
 import { HexCityMap } from "../game/city/HexCityMap.tsx";
 import { ZonePanel } from "../game/city/ZonePanel.tsx";
@@ -19,12 +22,10 @@ import { PlayerSheet } from "../game/PlayerSheet.tsx";
 import { PlayersStrip } from "../game/PlayersStrip.tsx";
 import { SecretsDrawer } from "../game/SecretsDrawer.tsx";
 import { SequenceOverlay } from "../game/Sequence.tsx";
-import { useT } from "../i18n/index.ts";
 import { sendGame, useGame } from "../store.ts";
 
 export function CityGame() {
   const g = useGame();
-  const t = useT();
   const [mode, setMode] = useState<Mode>(null);
   const [drawer, setDrawer] = useState<null | "log" | "secrets">(null);
   const [sheet, setSheet] = useState<PublicPlayerState | null>(null);
@@ -43,6 +44,7 @@ export function CityGame() {
       <CityTopBar g={g} onLog={() => setDrawer("log")} onSecrets={() => setDrawer("secrets")} secretsCount={secrets} />
       <Banner g={g} />
       <CityObjective g={g} />
+      <Broadcast g={g} />
       <div className="flex min-h-0 flex-1 flex-col justify-center gap-1 py-1">
         <HexCityMap
           g={g}
@@ -55,18 +57,13 @@ export function CityGame() {
             void sendGame({ type: "MOVE", toCarriage: z });
           }}
         />
+        <FinalStartup g={g} />
+        <Triage g={g} />
         <ZonePanel g={g} zone={looking ?? mine} onBack={() => setLooking(null)} />
         <EventPanel g={g} />
         <PlayersStrip g={g} onOpen={setSheet} />
       </div>
-      {aboard ? (
-        <section className="safe-bottom sticky bottom-0 z-20 border-t border-gold/20 bg-[#05060d]/90 px-4 py-4 text-center backdrop-blur-md" role="status">
-          <p className="label text-moss">{t("s2.aboard.title")}</p>
-          <p className="mx-auto mt-1 max-w-xl text-sm text-moon">{t("s2.aboard.notice")}</p>
-        </section>
-      ) : (
-        <Dock g={g} mode={mode} setMode={setMode} />
-      )}
+      {aboard ? <AboardWatch g={g} /> : <Dock g={g} mode={mode} setMode={setMode} />}
 
       <CueFeed g={g} />
       <DiceOverlay g={g} />

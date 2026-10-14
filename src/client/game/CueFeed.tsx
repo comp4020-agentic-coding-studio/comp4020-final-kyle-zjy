@@ -8,10 +8,11 @@ import { characterSkill } from "../../shared/game/skills.ts";
 import type { AnchorId, FragmentType, ItemId, PlayerView } from "../../shared/game/state.ts";
 import type { SkillVfx } from "../../shared/skills/types.ts";
 import type { ScenarioText } from "../../shared/i18n/content-types.ts";
-import { useCharacterText, useItemText, useScenarioText, useT, type TFunction } from "../i18n/index.ts";
+import { useCharacterText, useItemText, useLocale, useScenarioText, useT, type TFunction } from "../i18n/index.ts";
 import { useStore, type Cue } from "../store.ts";
 import { Icon } from "./Icon.tsx";
 import { archiveLeadText03 } from "./scenario03/archiveLead03.ts";
+import { describeCue04 } from "./scenario04/cues04.ts";
 
 const SHOW_MS = 4200;
 
@@ -113,6 +114,8 @@ function describe(c: Cue, g: PlayerView, t: TFunction, text: ScenarioText, skill
     }
     case "S3_CAUSAL_REWRITE":
       return { icon: "ANCHOR", text: t("s3.cue.rewrite"), tone: "text-signal border-signal/50" };
+    case "S3_PREDICTION":
+      return (p.winners as string[]).includes(g.viewerId) ? { icon: "DICE", text: t("s3.cue.predictionWon"), tone: "text-gold-bright border-gold/60" } : { icon: "DICE", text: t("s3.cue.prediction", { names: (p.winners as string[]).map(who).join(t("common.andSep")) }), tone: "text-signal border-signal/50" };
     case "S3_CAUSAL_DECISION":
       return { icon: "ANCHOR", text: t("s3.cue.preserved"), tone: "text-mist border-ash/50" };
     case "S3_ACTION_RESOLVED": {
@@ -143,12 +146,13 @@ export function CueFeed({ g }: { g: PlayerView }) {
   const text = useScenarioText();
   const charText = useCharacterText();
   const items = useItemText();
+  const locale = useLocale();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(t);
   }, []);
-  const live = cues.filter((c) => now - c.at < SHOW_MS).map((c) => ({ c, d: describe(c, g, t, text, (id) => charText(id).skillName, (id) => items(id).name) })).filter((x) => x.d).slice(-4);
+  const live = cues.filter((c) => now - c.at < SHOW_MS).map((c) => ({ c, d: describeCue04(c, g, t, locale) ?? describe(c, g, t, text, (id) => charText(id).skillName, (id) => items(id).name) })).filter((x) => x.d).slice(-4);
   return (
     <div className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+250px)] z-30 flex flex-col items-center gap-1.5 px-4" aria-live="polite">
       <AnimatePresence>

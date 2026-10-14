@@ -40,7 +40,7 @@ export function SequenceOverlay({ g }: { g: PlayerView }) {
   return (
     <motion.div
       key={seq.kind}
-      className="fixed inset-0 z-[55] flex items-center justify-center px-6"
+      className={`fixed inset-0 z-[55] flex items-center justify-center overflow-y-auto px-6 py-6 ${kind === "BLACKOUT" ? "scene-blackout" : kind === "FOLD" ? "scene-fold" : ""}`}
       style={{ background: `radial-gradient(circle at 50% 40%, ${scene.tint}ee, #000000f5 70%)` }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -50,6 +50,7 @@ export function SequenceOverlay({ g }: { g: PlayerView }) {
       aria-label={scene.title}
     >
       {seq.kind === "FOLD" && !seq.fold && <FoldLines />}
+      {kind === "BLACKOUT" && <Punches />}
       <div className="relative max-w-md text-center">
         <motion.p className="label text-signal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
           {scene.kicker}
@@ -117,6 +118,20 @@ function FoldMap({ g, before, after }: { g: PlayerView; before: CarriageIdentity
         );
       })}
     </ol>
+  );
+}
+
+/** Round 4: in the dark, a ticket punch, three times. */
+function Punches() {
+  const t = useT();
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-[12%] flex justify-center gap-6 font-display text-2xl text-ash" aria-hidden="true">
+      {[0, 1, 2].map((i) => (
+        <motion.span key={i} initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0.35] }} transition={{ delay: 0.5 + i * 0.55, duration: 0.5 }}>
+          {t("scene.BLACKOUT.punch")}
+        </motion.span>
+      ))}
+    </div>
   );
 }
 

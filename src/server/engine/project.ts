@@ -7,6 +7,8 @@ import type { GameState, PlayerId, PlayerSecrets, PlayerView, PublicPlayerState,
 import { availableActions } from "./actions.ts";
 import { publicCity } from "./scenario02/city.ts";
 import { teamInvestigations03 } from "./scenario03/progress.ts";
+import { routeConditions03 } from "./scenario03/ending.ts";
+import { directiveMet03, directiveOf03 } from "./scenario03/directives.ts";
 import { finalBidModifier04 } from "../../shared/game/scenario04/debt.ts";
 import { houseRuleAt04 } from "../../shared/game/scenario04/houseRules.ts";
 import { preliminarySettlement04 } from "./scenario04/houseRules.ts";
@@ -30,6 +32,7 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
     city: _city,
     temporal: _temporal,
     auction: _auction,
+    chronicle,
     ...shared
   } = s;
   const over = s.phase === "RESULTS" || s.phase === "ENDING";
@@ -59,6 +62,7 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
   return {
     ...shared,
     ...(s.auction?.final ? { log: s.log.filter((line) => line.seq < s.auction!.final!.logStartSeq || !["S4_ITEM", "SANITY", "LOST", "FATE"].includes(line.kind) || line.actorId === viewerId) } : {}),
+    chronicle: over ? (chronicle ?? []) : [],
     viewerId,
     mySecrets: secrets[viewerId] ? ownSecrets(secrets[viewerId], over) : null,
     players: publicPlayers,
@@ -173,6 +177,9 @@ export function project(s: GameState, viewerId: PlayerId): PlayerView {
       worldItems: Object.values(s.temporal.storedItems).filter((item) => item.status === "AVAILABLE_2026" || item.status === "STORED").map(({ ownerId: _ownerId, bootstrapOwnerId: _bootstrapOwnerId, ...item }) => item),
       myItems: Object.values(s.temporal.storedItems).filter((item) => item.ownerId === viewerId).map(({ bootstrapOwnerId: _bootstrapOwnerId, ...item }) => item),
       myObligations: s.temporal.bootstrap.filter((item) => item.assignedTo === viewerId),
+      routeConditions: Object.fromEntries(s.temporal.story.availableRoutes.map((route) => [route, routeConditions03(s, route)])),
+      // your own directive during the run (no verdict yet); everyone's, judged, once it is over
+      directives: (over ? s.turnOrder : s.turnOrder.filter((id) => id === viewerId)).map((id) => ({ playerId: id, directive: directiveOf03(s, id), met: over ? directiveMet03(s, directiveOf03(s, id)) : null })),
     } } : {}),
   };
 }

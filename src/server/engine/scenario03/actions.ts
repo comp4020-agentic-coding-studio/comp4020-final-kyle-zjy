@@ -14,8 +14,9 @@ import { isSuccess, onRollOutcome, startRoll } from "../dice.ts";
 import type { ActionSet } from "../scenario.ts";
 import { onResume, openWindow } from "../windows.ts";
 import { reveal03 } from "./story.ts";
+import { interveneWithPrediction03, settlePredictions03 } from "./prediction.ts";
 import { recordTrace03 } from "./surveillance.ts";
-import { bootstrapClosed03, resolveHistory03, routeTargets03 } from "./ending.ts";
+import { bootstrapClosed03, resolveHistory03, routeConditions03, routeTargets03 } from "./ending.ts";
 
 export const canEnter03 = (s: GameState, room: RoomId03, year: Year03 = "Y2026"): boolean =>
   !(room === "POWER_ROOM" && year === "Y2026" && !s.temporal?.present.powerRoomExists) &&
@@ -406,28 +407,7 @@ function investigationReason03(s: GameState, p: PlayerGameState): Msg {
 }
 
 function missingForRoute03(s: GameState, route: EndingRoute03): Msg[] {
-  const p = s.temporal!.present;
-  const stopped = s.temporal!.interventions.some((entry) => entry.nodeId === "PROTOTYPE_CORE" && entry.choiceId === "SHUT_DOWN");
-  const loops = bootstrapClosed03(s);
-  if (route === "OFFICIAL_HISTORY") return [
-    ...(p.accidentRecord !== "OFFICIAL" ? [m`record the official accident`] : []),
-    ...(stopped ? [m`keep the prototype core running`] : []),
-    ...(p.staffEvacuated ? [m`leave the staff in the official record`] : []),
-    ...(p.jiStaged ? [m`do not stage Ji's disappearance`] : []),
-    ...(p.prototypeHidden ? [m`do not hide the prototype`] : []),
-    ...(!loops ? [m`complete both numbered relic time loops`] : []),
-  ];
-  if (route === "NO_TOMORROW") return [
-    ...(p.accidentRecord !== "ERASED" ? [m`erase the accident record`] : []),
-    ...(!stopped ? [m`shut down the prototype core`] : []),
-  ];
-  return [
-    ...(p.accidentRecord !== "CONTROLLED" ? [m`record a controlled accident`] : []),
-    ...(!p.staffEvacuated ? [m`evacuate the staff`] : []),
-    ...(!p.jiStaged ? [m`stage Ji's official death`] : []),
-    ...(!p.prototypeHidden ? [m`hide the prototype`] : []),
-    ...(!loops ? [m`complete both numbered relic time loops`] : []),
-  ];
+  return routeConditions03(s, route).filter((c) => !c.met).map((c) => c.label);
 }
 
 function missingHistoryReason03(s: GameState, requested?: EndingRoute03): Msg {
@@ -562,13 +542,15 @@ const INTERVENE03: Spec<Extract<GameAction, { type: "INTERVENE" }>> = {
   },
   hint: () => m`Attempt a 1996 decision. Success changes its 2026 consequences.`,
   apply: (ctx, p, action) => {
-    startRoll(ctx, p, "S3_INTERVENE", m`historical intervention`, { kind: "S3_INTERVENE", carriageIndex: p.carriageIndex, scenario03: { nodeId: action.nodeId, choiceId: action.choiceId } });
+    interveneWithPrediction03(ctx, p, action.nodeId, action.choiceId);
   },
 };
 
 onRollOutcome("S3_INTERVENE", (ctx, p, roll, rc) => {
-  if (!resolveActionRoll03(ctx, p, roll, "S3_INTERVENE")) return;
+  if (!resolveActionRoll03(ctx, p, roll, "S3_INTERVENE")) return settlePredictions03(ctx, false);
+  const revision = ctx.s.temporal!.causalRevision;
   completeIntervention03(ctx, p, rc.scenario03!.nodeId!, rc.scenario03!.choiceId!);
+  settlePredictions03(ctx, ctx.s.temporal!.causalRevision > revision);
 });
 
 function completeIntervention03(ctx: Ctx, p: PlayerGameState, nodeId: CausalNodeId03, choiceId: string): void {

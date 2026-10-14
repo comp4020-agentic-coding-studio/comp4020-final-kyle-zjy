@@ -244,7 +244,8 @@ describe("engine: help, stabilise, trade", () => {
     t.act(a, { type: "END_TURN" });
     rejects(() => applyGameAction(t.state, b, { type: "HELP", targetId: b }, t.now), "ILLEGAL_TARGET");
     t.act(b, { type: "SEARCH" });
-    expect(t.state.roll!.modifiers).toContainEqual({ source: m`Help`, delta: 2 });
+    // the helper is named on the modifier, so the roll can show who it came from
+    expect(t.state.roll!.modifiers).toContainEqual({ source: m`Help`, delta: 2, by: [a] });
     expect(t.state.players[b].helpBonus).toBe(0);
   });
 

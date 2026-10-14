@@ -215,11 +215,116 @@ that, the sign sigil or an empty seat). The ticket card pairs the portrait
 with a sigil badge. In the reveal, the sigil draws itself and then the
 portrait rises out of the dark inside it.
 
-## 11. Sound (interface only)
+## 11. Sound
 
-`audio/` exposes `play(cue)` for `ambient | train | door | dice | skill |
-alarm | ending`. No assets until we have licensed or self-made ones; the mute
-toggle is always visible in the top bar and remembered per device.
+Music is the 27 licensed recordings in `public/audio/music/`, chosen per
+public stage by `audio/score.ts` (cue sheet: `docs/music-direction.md`).
+Foley is synthesized in `audio/manager.ts` (`SFX`), so there are no sound files
+to go missing. Interface clicks are near-silent; story beats (a perfect roll,
+a rising danger, an ending) carry weight (`GAIN`). `game/fx/stageFx.ts` is the
+one table from a server cue to its sound, played once per fresh cue by
+`useStageFx` (at most three per burst). Another player's private result never
+makes a sound for anyone else. The mute toggle is always visible and
+remembered per device.
+
+## 11a. World pressure and stage feedback
+
+The run root (`ScenarioExperience`) carries `--pressure` (0–1) and
+`data-pressure="calm|uneasy|critical"`, from `game/fx/pressure.ts`: Collapse
+over its maximum, or the auction round in scenario 04. `styles/stage.css`
+turns it into each world's atmosphere (an ember vignette everywhere; a rising
+tide line in the city; a dimming hall at the auction; hooks `.train-light` and
+`.era-ghost` for scenarios 01 and 03). Exact numbers stay on screen; the
+atmosphere is there so the table feels the danger without reading them.
+Reduced motion keeps the colour and drops the pulses.
+
+- **Rolls** reveal as a chain: die, then each modifier in turn (a helper's
+  portrait beside "Help"), then the total and tier. A tap shows it all.
+- **Cards** (`game/cards/Card.tsx`): one physical card for items, clues,
+  memories, relics, lots and intel; private ones carry an "Only you" stamp.
+- **Only you know** (the secrets drawer) opens with that stamp, and each
+  private note is an intel card.
+- **Trades** are a two-sided table: your portrait and offer on the left, theirs
+  on the right, the exchange mark between.
+- **Round headers** carry each scenario's own line: `00:17 · Emergency brake`,
+  `City broadcast · water rising`, `Cycle 07 · 1996 · stability 6/12`,
+  `Lot 06 · current bid 4`.
+- **The story of this run** (`game/StoryRecap.tsx`) opens every results screen.
+- **Run top bar on phones**: the scenario chips (boat parts, year, loops)
+  take their own full-width row under the round and gauge, instead of a
+  narrow column beside them.
+- **Irreversible choices** are checked by clicking them: `scripts/ui-interactions.ts`
+  boards in scenario 02 (Board → confirm, "Not yet" backs out) and locks a
+  sealed bid in scenario 04 (a short press is ignored; holding locks it).
+- **Ending poster** (`game/EndingPoster.tsx`): every results screen opens
+  with a title card on the scenario's backdrop (rails, rain lines, CRT
+  scanlines, a single spotlight), the run's last round and the whole cast,
+  composed to read as one screenshot. The words are each scenario's own
+  ending text.
+
+### Scenario 01 in play
+
+- **Memory Board** (`game/MemoryBoard.tsx`, opened under the Inspector line):
+  six fragment cards pinned with the carriage they came from (unfound ones say
+  where to look), and the outline of a person that lights one piece per core
+  memory. It never says whose memory a fragment is.
+- **Escape sequence** (`game/EscapeSequence.tsx`, act 3): the three locks big,
+  "n / 3 this round", who carries each key. When the third holds, a beat of
+  silence, then the door.
+- **Train**: carriage numbers (`.carriage-no`) jitter and roof lights
+  (`.train-light`) flicker as pressure rises; the acting passenger wears ACTING.
+- **Scenes**: the blackout flickers before it holds and three "click."s sound
+  in the dark; the fold tears with scanlines; after the brake vote a short
+  scene (`game/Moments01.tsx`) shows the count and the consequences one by one
+  (a shake when braking); the last choice is preceded by the six memories
+  assembling into one figure. All of these are tap-to-dismiss and only show
+  what the server already decided.
+- **Identity verification** (`game/IdentityCheck01.tsx`): when a ticket-check
+  roll starts, a cold-white passenger file slides over the dice: IDENTITY
+  VERIFICATION, the name (with a scan line and a brief record jitter), one
+  record the whole table can already see (an anchor they restored, a key they
+  carry, or the carriage they were last confirmed in), their list status, and
+  a stamp that reads CHECKING until the server's roll resolves, then VERIFIED
+  or WAVERING. It never reads a message, an obsession or an ordinary item, and
+  the brake scene steps aside if braking sends the Inspector straight to a check.
+
+### Scenario 02 in play
+
+- **Map** (`game/city/HexCityMap.tsx`): player tokens are one top layer, so they
+  glide between zones; the acting player pulses gold. Flooded zones carry a
+  water tint, sunk ones a deeper one; zones that went under in the last seconds
+  (SUNK cue) flash once. Broken roads show a red crack where the link was.
+- **Emergency broadcast** (`city/Broadcast.tsx`): one amber line under the top
+  bar, rotating through public facts only: zones that go under at the next
+  rise (`warning`), people still waiting, standing tunnels and bridges, roads
+  lost, flooded districts. The ROUND cue plays radio static (stageFx).
+- **Evacuation triage** (`city/Triage.tsx`, once seats are known): people
+  ranked by public work, tagged ABOARD / AT THE PIER / IN THE CITY. Pass
+  holdings are never shown.
+- **Boarding**: the window opens with a horn (BOARDING_OPEN cue) and an
+  EVACUATION WINDOW OPEN label; choosing Board asks once more. Aboard players
+  get a calm observer panel; while the boat waits for its generator everyone
+  sees FINAL STARTUP REQUIRED.
+- **Endings**: the engineer's fate is "The Last Light" (marked Not evacuated
+  / Key sacrifice). A BOAT_LOST ending names the part and the zone that took
+  it (public flags `s2_lostPart`, `s2_lostSite`).
+
+### Scenario 03 in play
+
+- **Time jump**: the existing veil now flips the year itself (2026 ⇄ 1996)
+  for about a second with the rewind sound.
+- **Timeline shift** (`scenario03/Causal03.tsx`): after a successful
+  intervention, a panel lists which 2026 rooms changed, derived from the
+  rewrite cue's before/after, never what they became: the table has to go and look.
+- **Causal network** (in "Only you know"): every 1996 decision open this act,
+  its recorded choice and the 2026 rooms it touches; undecided ones show ???.
+- **Administration directive**: the viewer's private directive as an "Only
+  you" card; after the run, everyone's with ✓/✗ under the story.
+- **Final archive**: the route checklist's ticks are the server's
+  `routeConditions`, not a client re-derivation.
+- **Time prediction**: before a major intervention (prototype core, accident
+  record, staff evacuation), the other travellers with Fate secretly bet 1 on
+  whether 2026 will change; the feed names who called it right.
 
 ## 12. Accessibility
 
@@ -337,6 +442,39 @@ spectators see only selection progress. A locked choice stays face down until
 all tied bidders choose, then the selected ranks flip together. Further ties
 repeat within this board; a unique winner receives the Exit Rights announcement
 and only then the outcome control appears.
+
+### Scenario 04 in play
+
+- **Table and lot card.** The current lot is a Lot Card at the centre: `LOT nn`, icon,
+  name, one vague line, price, high bidder, turn and "n of N still in". It never
+  prints the use effect or authenticity (effect text appears only in the holder's
+  own inventory and final settlement). Each new bid drops a chip toward the card
+  (`S4_BID` cue, `chip_drop`). Seats show a chip stack: chip counts are private, so
+  only the viewer's own stack is true (with its number); every other seat shows a
+  dashed, covered stack labelled "Chips hidden".
+- **Counterfeit use.** Other players get the floating cue "X used <lot>" (cue
+  carries only who and which lot). The user, after about a second, gets a private
+  intel Card (`only you` stamp): "Counterfeit - nothing happens. You now know this
+  lot is fake."
+- **Pressure.** At round 10 (`data-pressure="critical"`) the vignette closes to a
+  small centre and the lot card glows; everything else falls into the dark.
+- **Blackjack.** `Blackjack04` deals cards one at a time (only newly drawn cards
+  animate), counts each total up, pauses, then shows BUST/settlement. The decision
+  buttons stay disabled until that finishes; tapping the table skips. Totals are the
+  server's hands; nothing is recomputed for the outcome.
+- **Round 10.** The host says "Ladies and gentlemen. The last lot." and then
+  `LOT 10 - Exit Rights` lands. The private breakdown lists black chips, Sanity,
+  Fate, AP, genuine items, counterfeits, debt penalty and bonuses from server data
+  (own view only). LOCK BID is press-and-hold (700 ms, progress fill, release
+  cancels; Space/Enter also work), then a locked state that has no undo. The reveal
+  shows bidders one at a time, waits, then names a TIE. The five-card showdown keeps
+  face-down patterned cards; revealed cards flip in together.
+- **Debt ending.** The ending screen dims around a suited figure: "Congratulations
+  on leaving. Now let's discuss what you owe." with "Debt follows you".
+- **Secret commission.** One private Card in the secrets drawer; the Results screen
+  reveals every player's commission with a met/missed mark.
+- Reduced motion removes the chip travel, card flips, staged deals and fades; the
+  information is the same.
 
 ## Developer / Assignment Check
 
