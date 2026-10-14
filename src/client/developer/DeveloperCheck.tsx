@@ -7,6 +7,7 @@ import { LanguageSwitch } from "../components/LanguageSwitch.tsx";
 import { useLocale, useT, type MessageKey } from "../i18n/index.ts";
 import { navigate } from "../router.ts";
 import { checkPath, launchCheck, savedChecks } from "./session.ts";
+import { EndingPreview } from "./EndingPreview.tsx";
 import "../styles/developer.css";
 
 export default function DeveloperCheck() {
@@ -48,6 +49,7 @@ export default function DeveloperCheck() {
         <div className="developer-grid developer-replays">{([1, 2, 3, 4] as const).map((n) => <button key={n} className="btn btn-ghost" disabled={busy} onClick={() => void start(`s${n}.start`)}>{t("developer.replay", { n: String(n).padStart(2, "0") })}</button>)}</div>
         <div className="developer-grid developer-replays">{([['phase','s1.fold'],['ending','s1.ending'],['recap','s3.recap'],['private','s4.private'],['dice','s3.dice'],['trade','s1.trade']] as const).map(([key, id]) => <button key={key} className="btn btn-ghost" disabled={busy} onClick={() => void start(id)}>{t(`developer.${key}`)}</button>)}</div>
       </section>
+      <EndingPreview />
     </div>
   </main>;
 }

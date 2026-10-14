@@ -20,6 +20,7 @@ export function EndingPoster({ g, kicker, title, won }: { g: PlayerView; kicker:
   const look = BACKDROP[g.scenarioId];
   return (
     <motion.header
+      data-ending-poster
       className="relative min-w-0 overflow-hidden rounded-2xl border px-5 pt-8 pb-6 text-center shadow-[var(--shadow-card)]"
       style={{ background: look.bg, borderColor: `${look.accent}55` }}
       initial={{ opacity: 0, scale: 0.98 }}

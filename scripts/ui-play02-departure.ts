@@ -196,6 +196,14 @@ try {
       const waitingScene = await visible(p.getByRole("button", { name: /^Waiting for/ }));
       if (waitingScene && (/answered/.test(pill) || (await decision.count()) > 1)) fail(`${tag}: a scene's "waiting" button over an open decision [${pill.slice(0, 80)}]`);
 
+      // the ending cinematic: a frame of it, then skip to the recap
+      const film = p.getByRole("button", { name: "Skip Ending" });
+      if (await visible(film)) {
+        await p.waitForTimeout(2500);
+        await shotOnce(p, tag, "ending-film");
+        acted = await tap(film);
+        continue;
+      }
       // the results
       const results = p.getByRole("button", { name: "See the results" });
       if (await visible(results)) {

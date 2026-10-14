@@ -226,11 +226,14 @@ try {
   await archiveActor.page.getByRole("button", { name: archiveZh ? "确定这段历史 · 1 行动点 · 阻止事故，失去管理局" : "Commit this history · 1 AP · Prevent it and lose the Administration" }).click();
   if (readState().outcome !== "S03_NO_TOMORROW") issues.push("validated final record did not produce no-tomorrow ending");
   if (!(Object.values(readState().temporal.storedItems) as { status: string }[]).every((item) => item.status === "ERASED")) issues.push("numbered relics were not erased from the no-tomorrow timeline");
+  // the shared route film, checked on its card, then skipped to the recap
   for (const { page, tag } of pages) {
-    await page.getByRole("heading", { name: tag === "phone320" ? "不存在的明天" : "A TOMORROW THAT NEVER EXISTED" }).waitFor();
+    await page.locator('[data-ending="s03_no_tomorrow"]').waitFor();
+    await page.locator('[data-scene="card"]').waitFor({ timeout: 60_000 });
+    await page.getByRole("heading", { name: tag === "phone320" ? "从未存在的明天" : "A Tomorrow That Never Existed" }).waitFor();
     await check(page, `${tag}-ending`);
   }
-  for (const { page, tag } of pages) await page.getByRole("button", { name: tag === "phone320" ? "查看结果" : "View results" }).click();
+  for (const { page, tag } of pages) await page.getByRole("button", { name: tag === "phone320" ? "跳过结局动画" : "Skip Ending" }).click();
   for (const { page, tag } of pages) {
     await page.getByRole("heading", { name: tag === "phone320" ? "第零号事故 · 结果" : "Incident Zero · Results" }).waitFor();
     await check(page, `${tag}-results`);

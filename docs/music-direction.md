@@ -39,6 +39,9 @@ a new subtitle, turn, bid, or snapshot does not restart the piece.
 | 04 exit / results | Comfortable Mystery 2 | A short electric-piano coda leaves the room quieter. |
 | Failure / no tomorrow / unsold exit | Aftermath | A subdued piano soundscape acknowledges loss rather than continuing an action cue. |
 
+Ending cinematics reuse these recordings scene by scene before the results cue
+returns; their score plan is in `docs/ending-cinematics.md`.
+
 The train's first station beats, invitation paper, corrupted-record pause, and
 auctioneer's initial strike retain deliberate silence. Otherwise, transitions
 are between authored recordings, with a 2.4-second linear crossfade. The old

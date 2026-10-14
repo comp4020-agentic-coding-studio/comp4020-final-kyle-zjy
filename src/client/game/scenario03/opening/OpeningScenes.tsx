@@ -5,7 +5,7 @@ import type { OpeningScene } from "./timeline.ts";
 const FEEDS: RoomId03[] = ["CENTRAL_HALL", "ARCHIVES", "PROTOTYPE_ROOM", "RESEARCH_WING"];
 
 /** The same physical shell, with digital equipment or paper/analogue instruments. */
-function RoomFeed({ past = false, room = "CENTRAL_HALL" }: { past?: boolean; room?: RoomId03 }) {
+export function RoomFeed({ past = false, room = "CENTRAL_HALL" }: { past?: boolean; room?: RoomId03 }) {
   return <div className={`s3-film-feed ${past ? "s3-film-analogue" : ""}`}>
     <svg viewBox="0 0 640 320" role="presentation" aria-hidden="true">
       <path className="film-wall" d="M0 0H640V320H0Z" />

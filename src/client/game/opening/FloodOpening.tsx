@@ -26,7 +26,7 @@ function FloodMap({ elapsed = 0, distress = false }: { elapsed?: number; distres
   </div>;
 }
 
-function Boat() {
+export function Boat() {
   return <svg className="opening-boat" viewBox="0 0 600 240" aria-hidden="true">
     <path className="boat-water" d="M0 183q35-15 70 0t70 0 70 0 70 0 70 0 70 0 70 0 70 0 70 0V240H0Z" />
     <g className="boat-hull"><path d="M100 142H490L450 188H155Z" /><path d="M180 142V108H270V65H383V142M271 111H383" /><path d="M274 65V42H316M300 42V20M183 94H253M398 120H453V141" />

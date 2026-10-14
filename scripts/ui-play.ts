@@ -124,6 +124,14 @@ for (let step = 0; step < 600; step++) {
   if (await reached(phone)) break;
   let acted = false;
   for (const [p, tag] of pages) {
+    // the ending cinematic: a frame of it, then skip to the recap
+    const film = p.getByRole("button", { name: "Skip Ending" });
+    if (await film.isVisible().catch(() => false)) {
+      await p.waitForTimeout(2500);
+      await shotOnce(p, tag, "ending-film");
+      acted = await tap(film);
+      continue;
+    }
     // the ending scene, then the results
     const results = p.getByRole("button", { name: "See the results" });
     if (await results.isVisible().catch(() => false)) {

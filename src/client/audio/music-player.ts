@@ -63,9 +63,10 @@ export class MusicPlayer {
     }
   }
 
-  levelTo(level: number) {
+  /** `seconds` lets a cinematic fade the score out slowly instead of the default ramp. */
+  levelTo(level: number, seconds?: number) {
     this.level = Math.max(0, Math.min(1.3, level));
-    if (this.active !== null && this.enabled) this.ramp(this.active, this.level, level === 0 ? .08 : .7);
+    if (this.active !== null && this.enabled) this.ramp(this.active, this.level, seconds ?? (level === 0 ? .08 : .7));
   }
 
   private reconcile() {

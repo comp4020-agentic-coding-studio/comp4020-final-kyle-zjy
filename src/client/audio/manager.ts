@@ -188,11 +188,14 @@ class AudioManager {
     this.syncMusic();
   }
 
-  tension(level: number) {
+  tension(level: number, seconds?: number) {
     if (level === this.level) return;
     this.level = level;
-    this.music?.levelTo(level);
+    this.music?.levelTo(level, seconds);
   }
+
+  /** Cuts any short effect still sounding, so a closed cinematic leaves no foley behind. */
+  hush() { this.stopVoices(true); }
 
   play(cue: OpeningSfx) {
     // Never queue muted/blocked effects to play unexpectedly after unmuting.

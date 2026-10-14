@@ -15,6 +15,8 @@ import { startGame, applyGameAction } from "../src/server/engine/engine.ts";
 import { startEnding } from "../src/server/engine/ending.ts";
 import { openFinal04 } from "../src/server/engine/scenario04/final.ts";
 import { MUSIC_CUES, MUSIC_TRACKS, type AudioTheme } from "../src/client/audio/catalog.ts";
+import { ENDING_FILMS, endingFor } from "../src/client/game/ending/cinematics.ts";
+import { project } from "../src/server/engine/project.ts";
 import type { GameState, Outcome, ScenarioId } from "../src/shared/game/state.ts";
 import { clippedElements, smallTargets } from "./lib/layout-check.ts";
 
@@ -108,8 +110,18 @@ try {
       await page.locator(".music-credits > summary").click();
     }
     const outcome: Outcome = scenario === "S01_LAST_TRAIN" ? "NORMAL" : scenario === "S02_SUNKEN_CITY" ? "S02_EVACUATED" : scenario === "S03_INCIDENT_ZERO" ? "S03_OFFICIAL_HISTORY" : "S04_EXIT";
-    publish((s) => startEnding({ s, now, events: [] }, outcome));
+    const filmOf: { id: ReturnType<typeof endingFor> } = { id: null };
+    publish((s) => { startEnding({ s, now, events: [] }, outcome); filmOf.id = endingFor(project(s, first.playerId)); });
+    const film = filmOf.id;
     const ending: AudioTheme = scenario === "S01_LAST_TRAIN" ? "s01_ending" : scenario === "S02_SUNKEN_CITY" ? "s02_ending" : scenario === "S03_INCIDENT_ZERO" ? "s03_ending" : "s04_ending";
+    // the ending film takes over the score from its first scene (still two decks, one audible), then skip hands back
+    if (film) {
+      await verify(desk, ENDING_FILMS[film].scenes[0].theme, `${scenario}/film ${film}`);
+      const skip = desk.getByRole("button", { name: "Skip Ending" });
+      await desk.waitForTimeout(400);
+      await skip.click();
+      await desk.locator("[data-ending]").waitFor({ state: "detached", timeout: 5000 });
+    }
     await verify(desk, ending, `${scenario}/ending`);
     publish((s) => { s.phase = "RESULTS"; s.sequence = null; });
     await verify(desk, ending, `${scenario}/results`);

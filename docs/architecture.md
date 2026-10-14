@@ -115,7 +115,10 @@ stays mounted across INTRO/acts/Ending/Results, acknowledges existing readiness
 immediately, and leaves the server running while viewers watch/skip independently.
 The shared cinematic owns one clock, captions, focus, Skip and handoff;
 separate Train/Flood/Temporal/Auction renderers own world-specific art and motion.
-See [`opening-cinematics.md`](opening-cinematics.md).
+See [`opening-cinematics.md`](opening-cinematics.md). The same wrapper plays each
+viewer's ending film once the server is in ENDING (world films for 01/03, the
+viewer's own fate for 02/04), then shows the recap; the server never waits on it.
+See [`ending-cinematics.md`](ending-cinematics.md).
 Licensed recordings stream locally from `public/audio/music/`; one shared
 context and two reusable media decks bound client memory. Public projected
 stages select cues; hidden state and server RNG never participate.

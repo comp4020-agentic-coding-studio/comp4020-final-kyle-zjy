@@ -2,7 +2,7 @@ import { useT } from "../../i18n/index.ts";
 import { Icon } from "../Icon.tsx";
 import { OpeningTitle } from "./OpeningTitle.tsx";
 
-function Carriage({ arriving = false, doors = false }: { arriving?: boolean; doors?: boolean }) {
+export function Carriage({ arriving = false, doors = false }: { arriving?: boolean; doors?: boolean }) {
   return <div className={`opening-rail-world ${arriving ? "is-arriving" : ""} ${doors ? "doors-open" : ""}`} aria-hidden="true">
     <svg viewBox="0 0 800 340">
       <path className="rail-tunnel" d="M0 0H800V340H0Z" />

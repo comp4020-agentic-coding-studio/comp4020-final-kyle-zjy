@@ -6,6 +6,7 @@ import type { s2en } from "./s2-en.ts";
 import type { s3en } from "./s3-en.ts";
 import type { s4en } from "./s4-en.ts";
 import type { openingEn } from "./opening-en.ts";
+import type { endingEn } from "./ending-en.ts";
 
 /** Scenario 02's keys (s2-en.ts / s2-zh-CN.ts). */
 export type S2Key = keyof typeof s2en;
@@ -13,6 +14,7 @@ export type S3Key = keyof typeof s3en;
 export type S4Key = keyof typeof s4en;
 export type OpeningKey = keyof typeof openingEn;
 export type DeveloperKey = keyof typeof developerEn;
-export type MessageKey = keyof typeof en | S2Key | S3Key | S4Key | OpeningKey | DeveloperKey;
+export type EndingKey = keyof typeof endingEn;
+export type MessageKey = keyof typeof en | S2Key | S3Key | S4Key | OpeningKey | DeveloperKey | EndingKey;
 export type Catalog = Record<keyof typeof en, string>;
 export type Params = Record<string, string | number>;

@@ -1,4 +1,6 @@
 @layer components {
+  .developer-toggle { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; margin-bottom: 12px; color: var(--c-mist); font-size: 14px; cursor: pointer; }
+  .developer-toggle input { width: 20px; height: 20px; accent-color: var(--c-signal); }
   .developer-entry { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 64px; margin-top: 12px; padding: 10px 12px; border-top: 1px solid #c9a55a25; color: var(--c-mist); font-size: 13px; cursor: pointer; }
   .developer-entry small { color: var(--c-ash); font-size: 11px; }
   .developer-entry:hover, .developer-entry:focus-visible { color: var(--c-gold-bright); }

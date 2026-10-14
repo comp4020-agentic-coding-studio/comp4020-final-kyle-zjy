@@ -5,13 +5,13 @@ import { Icon } from "../Icon.tsx";
 import { LOT_ICON04 } from "../scenario04/lotVisuals.ts";
 import { OpeningTitle } from "./OpeningTitle.tsx";
 
-function AuctionSetting({ seats = false, names = [] }: { seats?: boolean; names?: readonly string[] }) {
+export function AuctionSetting({ seats = false, names = [] }: { seats?: boolean; names?: readonly string[] }) {
   return <div className="opening-auction-table" aria-hidden="true"><div className="auction-spotlight" /><div className="auction-felt"><div className="auction-glass" /><div className="auction-sealed-letter" /><div className="auction-chip-pile"><i /><i /><i /></div></div>
     {seats && <div className="auction-seat-ring">{names.map((name, i) => <div key={i} className="auction-seat"><span>{name}</span></div>)}</div>}
   </div>;
 }
 
-function Gavel() {
+export function Gavel() {
   return <div className="opening-gavel" aria-hidden="true"><svg viewBox="0 0 400 260"><g className="gavel-hand"><path d="M314 18 255 74 222 67 205 86 226 124 254 127 320 76" /><path className="gavel-handle" d="M132 87 278 160 269 178 123 106Z" /><path className="gavel-head" d="M82 67 115 39 160 99 127 127Z" /></g><path className="gavel-block" d="M63 207Q121 181 178 207V220H63Z" /><path d="M0 230H400" /></svg></div>;
 }
 

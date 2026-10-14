@@ -337,10 +337,16 @@ try {
   console.log(`attempted actions: ${[...done].join(", ")}`);
   await shot(phone, "phone", "last");
   await shot(desk, "desktop", "last");
-  sawEndingStory = await visible(phone.getByText("YOUR FATE")) && await visible(desk.getByText("YOUR FATE"));
+  // each seat plays its own ending film, whose card is headed YOUR FATE; skip it to the recap
+  sawEndingStory = true;
   if (reached === 10) {
-    await phone.getByRole("button", { name: "Results" }).click();
-    await desk.getByRole("button", { name: "Results" }).click();
+    for (const page of [phone, desk]) {
+      const film = page.getByRole("button", { name: "Skip Ending" });
+      await film.waitFor({ timeout: 15_000 });
+      await page.locator('[data-scene="card"]').waitFor({ timeout: 60_000 });
+      sawEndingStory &&= await visible(page.getByText("YOUR FATE"));
+      await film.click();
+    }
     await shot(phone, "phone", "results");
     await shot(desk, "desktop", "results");
     sawResultsStory = await visible(phone.getByText("THE AUCTION'S LAST RECORD")) && await visible(desk.getByText("THE AUCTION'S LAST RECORD")) && await visible(phone.getByText(/Final bid \d+ · effective bid \d+/));

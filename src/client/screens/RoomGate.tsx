@@ -8,6 +8,7 @@ import { useT } from "../i18n/index.ts";
 import { rich } from "../i18n/rich.ts";
 import { navigate } from "../router.ts";
 import { connectRoom, disconnectRoom, reconnect, useStore } from "../store.ts";
+import { useEndingFilmDone } from "../game/ending/done.ts";
 import { ConnectionBanner } from "../components/ConnectionBanner.tsx";
 import { Landing } from "./Landing.tsx";
 import { Lobby } from "./Lobby.tsx";
@@ -34,6 +35,8 @@ function Run() {
 
 function ScenarioEnding() {
   const scenario = useStore((s) => s.snapshot?.game?.scenarioId);
+  // the ending cinematic replaced this screen; results are already projected, so the recap needn't wait
+  if (useEndingFilmDone()) return <ScenarioResults />;
   return scenario === "S04_UNDERGROUND_AUCTION" ? <Scenario04Ending /> : scenario === "S03_INCIDENT_ZERO" ? <Scenario03Ending /> : <Ending />;
 }
 function ScenarioResults() {
