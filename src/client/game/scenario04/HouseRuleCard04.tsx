@@ -14,12 +14,13 @@ export function HouseRuleCard04({ round, rule }: { round: number; rule: HouseRul
   const reduceMotion = useReducedMotion();
   if (!rule) return null;
   const key = (part: "title" | "description" | "flavor" | "detail") => `s4.house.${rule}.${part}` as MessageKey;
-  return <motion.aside key={`${round}:${rule}`} data-house-rule={rule} className="min-w-0 rounded-2xl border border-gold/40 bg-[#15172a] p-3 shadow-[inset_0_0_24px_#d7ae5110] sm:p-4"
+  return <motion.aside key={`${round}:${rule}`} data-house-rule={rule} className="min-w-0 self-start rounded-xl border border-gold/25 bg-[#111524] px-3 py-2.5"
     initial={{ opacity: 0, x: reduceMotion ? 0 : 14, y: reduceMotion ? 0 : 6 }} animate={{ opacity: 1, x: 0, y: 0 }} transition={{ duration: reduceMotion ? 0.15 : 0.4 }}>
-    <p className="label text-xs text-gold">{t("s4.house.label", { n: String(round).padStart(2, "0") })}</p>
-    <div className="mt-2 flex min-w-0 items-center gap-2 text-gold-bright"><Icon name={icons[rule]} size={22} /><h2 className="min-w-0 font-display text-xl leading-tight">{t(key("title"))}</h2></div>
-    <p className="mt-2 text-sm leading-relaxed text-moon">{t(key("description"))}</p>
-    <p className="mt-1 text-xs italic text-mist">{t(key("flavor"))}</p>
-    <details className="mt-2 border-t border-gold/20 pt-1 text-xs text-mist"><summary className="flex min-h-12 cursor-pointer items-center text-gold">{t("s4.house.details")}</summary><p className="pb-1 leading-relaxed">{t(key("detail"))}</p></details>
+    <details className="group"><summary className="min-h-12 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+      <span className="label block text-[10px] text-gold/80">{t("s4.house.label", { n: String(round).padStart(2, "0") })}</span>
+      <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-moon"><Icon name={icons[rule]} size={17} /><strong className="min-w-0 text-sm font-semibold leading-tight">{t(key("title"))}</strong></span>
+      <span className="mt-1 block text-xs leading-snug text-mist">{t(key("description"))}</span>
+      <span className="mt-1.5 block text-right text-xs text-gold/80 group-open:hidden">{t("s4.house.details")} →</span>
+    </summary><div className="mt-2 border-t border-gold/20 pt-2 text-xs leading-relaxed text-mist"><p className="text-gold-bright italic">{t(`s4.house.${rule}.host` as MessageKey)}</p><p className="mt-1 italic">{t(key("flavor"))}</p><p className="mt-1">{t(key("detail"))}</p></div></details>
   </motion.aside>;
 }
