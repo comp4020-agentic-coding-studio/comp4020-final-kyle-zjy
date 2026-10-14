@@ -1,6 +1,7 @@
 export const s4en = {
   "s4.house.label": "HOUSE RULE {n}",
   "s4.house.details": "View full rule",
+  "s4.house.collapse": "Collapse rule",
   "s4.house.declarations": "DECLARED HOLDINGS",
   "s4.house.trades": "COMPLETED TRADES",
   "s4.house.anonymous": "Anonymous",

@@ -69,6 +69,17 @@ try {
       assert.equal(await desktop.locator(`[data-house-rule="${game.auction.houseRule}"]`).count(), 1);
       assert.equal(await phone.locator(`[data-house-rule="${game.auction.houseRule}"]`).count(), 1);
       assert.equal(await desktop.locator(`[data-s4-transition="${round}"] summary`).count(), 1);
+      if (round === 4) {
+        for (const page of [desktop, phone]) {
+          const card = page.locator(`[data-house-rule="${game.auction.houseRule}"] details`);
+          assert.equal(await card.evaluate((element) => (element as HTMLDetailsElement).open), false);
+          await card.getByText("View full rule").click();
+          assert.equal(await card.evaluate((element) => (element as HTMLDetailsElement).open), true);
+          assert.equal(await card.getByText("Collapse rule").isVisible(), true);
+          await card.getByText("Collapse rule").click();
+          assert.equal(await card.evaluate((element) => (element as HTMLDetailsElement).open), false);
+        }
+      }
       seen.add(round);
       if ([1, 4, 9, 10].includes(round)) {
         await shot(desktop, `round-${round}-1280`);

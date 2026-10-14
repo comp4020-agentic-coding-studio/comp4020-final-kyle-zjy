@@ -1,6 +1,7 @@
 export const s4zhCN = {
   "s4.house.label": "拍卖条例 {n}",
   "s4.house.details": "查看完整规则",
+  "s4.house.collapse": "收起规则",
   "s4.house.declarations": "持仓申报",
   "s4.house.trades": "已完成交易",
   "s4.house.anonymous": "匿名",

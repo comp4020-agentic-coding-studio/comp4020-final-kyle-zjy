@@ -297,7 +297,8 @@ The existing `data-s4-transition` region now has an auctioneer icon and a
 persistent House Rule card side by side at desktop widths. At phone widths they
 stack in reading order. The card stays compact by default: rule number, icon,
 name, and one sentence. The auctioneer's rule-specific line, flavor, and full
-explanation appear when the card is expanded; a short reduced-motion-aware
+explanation appear when the card is expanded. The same card offers an explicit
+collapse label while open; a short reduced-motion-aware
 reveal marks each new round. Round 9
 also places a private server-calculated preliminary settlement below the
 proclamation. The developer controls expose

@@ -21,6 +21,7 @@ export function HouseRuleCard04({ round, rule }: { round: number; rule: HouseRul
       <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-moon"><Icon name={icons[rule]} size={17} /><strong className="min-w-0 text-sm font-semibold leading-tight">{t(key("title"))}</strong></span>
       <span className="mt-1 block text-xs leading-snug text-mist">{t(key("description"))}</span>
       <span className="mt-1.5 block text-right text-xs text-gold/80 group-open:hidden">{t("s4.house.details")} →</span>
+      <span className="mt-1.5 hidden text-right text-xs text-gold/80 group-open:block">{t("s4.house.collapse")} ↑</span>
     </summary><div className="mt-2 border-t border-gold/20 pt-2 text-xs leading-relaxed text-mist"><p className="text-gold-bright italic">{t(`s4.house.${rule}.host` as MessageKey)}</p><p className="mt-1 italic">{t(key("flavor"))}</p><p className="mt-1">{t(key("detail"))}</p></div></details>
   </motion.aside>;
 }
