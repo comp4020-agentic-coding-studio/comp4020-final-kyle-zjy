@@ -655,3 +655,10 @@ here.
   contradiction, shift reading, no route named, privacy, replay) and
   `scripts/ui-dossier03.ts` (1280/390/320, link-back). Developer presets:
   initial, one intervention, multiple rewrites, contradiction, final archive.
+
+## Recovery action
+
+The Scenario 03 dock replaces Help with Recover: one press spends 1 AP and
+restores 1 Sanity through the shared gainSanity handler. Full Sanity rejects
+the action without spending AP. Help remains supported by the engine for
+existing recorded runs, but is no longer offered in the dock.

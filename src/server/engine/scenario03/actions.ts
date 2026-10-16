@@ -1,3 +1,4 @@
+import { MAX_SANITY } from "../../../shared/game/scenario01/content.ts";
 import type { GameAction, TradeOffer } from "../../../shared/game/actions.ts";
 import { ADJACENT03, OPENS_IN_ACT03, placeFromKey03, placeKey03, type RoomId03, type Year03 } from "../../../shared/game/scenario03/map.ts";
 import { ITEMS03, ORDINARY_POOL03, PROTECTED_STORAGE03, RELIC_STORAGE03, type S03ItemId } from "../../../shared/game/scenario03/items.ts";
@@ -9,7 +10,7 @@ import { list, m, ref } from "../../../shared/i18n/msg.ts";
 import { END_TURN, USE_SKILL, fail, helped, type Spec } from "../actions.ts";
 import { cue, log, type Ctx } from "../context.ts";
 import { applyEffects, changeCollapse, grantItem } from "../effects.ts";
-import { addStatus, gainFate, loseSanity, removeStatus, spendFate, statusOf } from "../players.ts";
+import { addStatus, gainFate, gainSanity, loseSanity, removeStatus, spendFate, statusOf } from "../players.ts";
 import { isSuccess, onRollOutcome, startRoll } from "../dice.ts";
 import type { ActionSet } from "../scenario.ts";
 import { onResume, openWindow } from "../windows.ts";
@@ -17,6 +18,12 @@ import { reveal03 } from "./story.ts";
 import { interveneWithPrediction03, settlePredictions03 } from "./prediction.ts";
 import { recordTrace03 } from "./surveillance.ts";
 import { bootstrapClosed03, resolveHistory03, routeConditions03, routeTargets03 } from "./ending.ts";
+
+const RECOVER03: Spec<Extract<GameAction, { type: "RECOVER" }>> = {
+  check: (_s, p) => p.sanity < MAX_SANITY ? null : fail("ILLEGAL_TARGET", m`Your Sanity is already full.`),
+  hint: () => m`Recover 1 Sanity.`,
+  apply: (ctx, p) => { gainSanity(ctx, p, 1, m`steadying themselves`); },
+};
 
 export const canEnter03 = (s: GameState, room: RoomId03, year: Year03 = "Y2026"): boolean =>
   !(room === "POWER_ROOM" && year === "Y2026" && !s.temporal?.present.powerRoomExists) &&
@@ -602,9 +609,9 @@ const RESOLVE_HISTORY03: Spec<Extract<GameAction, { type: "RESOLVE_HISTORY" }>> 
 
 export function s03Actions(): ActionSet {
   return {
-    specs: { MOVE: MOVE03, TIME_JUMP, SCAN: SCAN03, HELP: HELP03, USE_SKILL, SEARCH: SEARCH03, USE_ITEM: USE_ITEM03, PICK_UP: PICK_UP03, STORE_ITEM: STORE_ITEM03, TRADE: TRADE03, INVESTIGATE: INVESTIGATE03, INTERACT_NPC: INTERACT_NPC03, INTERVENE: INTERVENE03, RESOLVE_HISTORY: RESOLVE_HISTORY03, END_TURN },
-    turnActions: ["MOVE", "TIME_JUMP", "SCAN", "HELP", "USE_SKILL", "SEARCH", "PICK_UP", "STORE_ITEM", "TRADE", "USE_ITEM", "INVESTIGATE", "INTERACT_NPC", "INTERVENE", "RESOLVE_HISTORY", "END_TURN"],
-    apCost: { MOVE: 1, TIME_JUMP: 2, SCAN: 1, HELP: 1, USE_SKILL: 0, SEARCH: 1, PICK_UP: 1, STORE_ITEM: 1, TRADE: 0, USE_ITEM: 0, INVESTIGATE: 1, INTERACT_NPC: 1, INTERVENE: 1, RESOLVE_HISTORY: 1, END_TURN: 0 },
+    specs: { RECOVER: RECOVER03, MOVE: MOVE03, TIME_JUMP, SCAN: SCAN03, HELP: HELP03, USE_SKILL, SEARCH: SEARCH03, USE_ITEM: USE_ITEM03, PICK_UP: PICK_UP03, STORE_ITEM: STORE_ITEM03, TRADE: TRADE03, INVESTIGATE: INVESTIGATE03, INTERACT_NPC: INTERACT_NPC03, INTERVENE: INTERVENE03, RESOLVE_HISTORY: RESOLVE_HISTORY03, END_TURN },
+    turnActions: ["RECOVER", "MOVE", "TIME_JUMP", "SCAN", "HELP", "USE_SKILL", "SEARCH", "PICK_UP", "STORE_ITEM", "TRADE", "USE_ITEM", "INVESTIGATE", "INTERACT_NPC", "INTERVENE", "RESOLVE_HISTORY", "END_TURN"],
+    apCost: { RECOVER: 1, MOVE: 1, TIME_JUMP: 2, SCAN: 1, HELP: 1, USE_SKILL: 0, SEARCH: 1, PICK_UP: 1, STORE_ITEM: 1, TRADE: 0, USE_ITEM: 0, INVESTIGATE: 1, INTERACT_NPC: 1, INTERVENE: 1, RESOLVE_HISTORY: 1, END_TURN: 0 },
     costFor: (_s, p, type) => type === "TIME_JUMP" && statusOf(p, "TEMPORAL_ALIGNMENT") ? 1 : undefined,
   };
 }

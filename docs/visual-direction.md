@@ -508,3 +508,9 @@ per scenario per browser (`localStorage` `fate:guide:<scenario>`), and the "?"
 button beside the sound controls replays it. The tour is presentation only: it
 reads no game state beyond what is already rendered. It is checked by
 `test/bubble-guide.test.ts` and in the browser by `scripts/ui-guide.ts`.
+
+### Movement confirmation
+
+The Move action always opens the destination picker, even with only one legal
+destination. Choosing a destination in the picker or highlighted map confirms
+the move; pressing Move alone never sends a movement intent.

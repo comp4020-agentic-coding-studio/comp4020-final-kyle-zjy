@@ -18,8 +18,8 @@ import { routeSteps03 } from "./clarity03.ts";
 const option = "btn btn-ghost min-h-12 text-sm";
 
 export const DOCK03: DockExtension = {
-  grid: ["MOVE", "TIME_JUMP", "INVESTIGATE", "SCAN", "SEARCH", "INTERACT_NPC", "INTERVENE", "PICK_UP", "STORE_ITEM", "RESOLVE_HISTORY", "HELP", "TRADE"],
-  direct: new Set(["TIME_JUMP", "INVESTIGATE", "SEARCH", "END_TURN"]),
+  grid: ["MOVE", "TIME_JUMP", "INVESTIGATE", "SCAN", "SEARCH", "INTERACT_NPC", "INTERVENE", "PICK_UP", "STORE_ITEM", "RESOLVE_HISTORY", "RECOVER", "TRADE"],
+  direct: new Set(["TIME_JUMP", "INVESTIGATE", "SEARCH", "RECOVER", "END_TURN"]),
   columns: "lg:grid-cols-6",
   picker: ({ g, mode, availability, send }) => {
     switch (mode) {

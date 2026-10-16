@@ -66,10 +66,6 @@ export function Dock({ g, mode, setMode, extension }: { g: PlayerView; mode: Mod
       void sendGame({ type: a.type } as GameAction);
       return;
     }
-    if (a.type === "MOVE" && a.targets?.length === 1) {
-      void sendGame({ type: "MOVE", toCarriage: Number(a.targets[0]) });
-      return;
-    }
     setMode(mode === a.type ? null : (a.type as Mode));
   };
 

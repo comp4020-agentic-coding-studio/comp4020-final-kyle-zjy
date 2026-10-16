@@ -202,6 +202,7 @@ export const ZH_MESSAGES: Record<string, string> = {
   "Your Sanity is already full.": "你的理智已满。",
   "No ordinary negative status to clear.": "没有可清除的普通负面状态。",
   "Choose what to steady.": "选择要稳定的内容。",
+  "Recover 1 Sanity.": "恢复 1 点理智。",
   "Recover 1 Sanity, or clear one ordinary negative status.": "恢复 1 点理智，或清除一个普通负面状态。",
   "steadying themselves": "稳定自身",
   "{0} shakes off {1}.": "{0} 摆脱了{1}。",
