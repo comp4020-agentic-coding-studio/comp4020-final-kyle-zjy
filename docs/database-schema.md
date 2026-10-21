@@ -178,3 +178,12 @@ Test identities use the existing hashed-token `players` and `room_members`
 tables. Returned raw credentials are saved only in the creator's separate,
 bounded browser test-session store. Failed preparation removes newly created
 room/identity rows; it never patches an ordinary session.
+
+## `toolbox_rooms` (migration 003)
+
+`room_code` is the primary key and cascades on room deletion. `state_json` stores
+the independent public chip table, private per-player dice histories, seeded RNG,
+public table version and bounded deduplication keys. All mutations use
+`BEGIN IMMEDIATE` on the existing database; no extra database or process is used.
+Only the server reads this snapshot. The HTTP projection explicitly allowlists the
+public table/members and `mine` for the authenticated viewer.

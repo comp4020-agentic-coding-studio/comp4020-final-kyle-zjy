@@ -378,3 +378,22 @@ Prepared snapshots become the session's replay initial state; subsequent
 inputs use the existing game transaction and broadcast path. The convenience
 advance endpoint authenticates a test seat and rejects normal rooms. See
 [developer-check.md](developer-check.md) for presets and construction details.
+
+## Standalone tabletop toolbox
+
+Lobby slot 05 opens `/tools/:code`, a Chinese-only mobile utility screen. It
+reuses room membership, anonymous identity and host authorization, without adding
+a narrative ScenarioId or requiring characters. The existing room WebSocket keeps
+presence alive; authenticated HTTP snapshots poll once per second for tool state.
+Each mutation is synchronous inside a SQLite transaction. Table versions reject
+stale public intents and per-player request IDs deduplicate retries. Private dice
+rolls do not change the public table version. The server's seeded RNG generates
+all five dice; an explicit projection returns only the viewer's own last ten rolls,
+never the RNG or another member's rolls, including to the host.
+
+The host switches between chips and dice without clearing either. The chip reducer
+owns blinds, turn order, betting streets, short all-ins, side pots, unmatched-bet
+refunds and split-pot remainders (clockwise after the dealer). Physical cards and
+hand evaluation remain offline: the host confirms eligible pot winners. Advancing
+a street is a host action after physical dealing. Resetting the table requires a
+client confirmation and server host authorization. There is no developer preview.

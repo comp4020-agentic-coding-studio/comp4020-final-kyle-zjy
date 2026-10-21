@@ -10,10 +10,14 @@ import { renderReadme } from "./readme.ts";
 import type { Hub } from "./rooms/hub.ts";
 import { RoomError, type RoomService } from "./rooms/service.ts";
 
+import { ToolStore } from "./toolbox/store.ts";
+import { T } from "../shared/toolbox/text.ts";
+
 const startedAt = Date.now();
 
 export function createApp(rooms: RoomService, hub: Hub): Hono {
   const app = new Hono();
+  const tools = new ToolStore(rooms);
   const indexPath = join(config.clientDir, "index.html");
 
   const fail = (c: Context, err: unknown) => {
@@ -76,6 +80,23 @@ export function createApp(rooms: RoomService, hub: Hub): Hono {
     catch (error) { return fail(c, error); }
   });
 
+  const toolFail = (c: Context, error: unknown) => {
+    if (error instanceof RoomError) return c.json({ message: T.auth }, error.status);
+    const message = error instanceof Error && Object.values(T).includes(error.message as never) ? error.message : T.invalid;
+    return c.json({ message }, 400);
+  };
+  app.get("/api/tools/:code", (c) => {
+    c.header("Cache-Control", "no-store");
+    try { return c.json(tools.view(c.req.param("code"), c.req.header("Authorization")?.replace(/^Bearer /, ""))); }
+    catch (error) { return toolFail(c, error); }
+  });
+  app.post("/api/tools/:code/action", async (c) => {
+    c.header("Cache-Control", "no-store");
+    const input = await body(c);
+    try { return c.json(tools.action(c.req.param("code"), c.req.header("Authorization")?.replace(/^Bearer /, ""), input.version, input.requestId, input.action)); }
+    catch (error) { return toolFail(c, error); }
+  });
+
   app.all("/api/*", (c) => c.json({ code: "INVALID", message: "Not found." }, 404));
 
   app.get("/readme", (c) => c.redirect("/readme/", 301));
@@ -92,6 +113,7 @@ export function createApp(rooms: RoomService, hub: Hub): Hono {
       : c.html("<!doctype html><title>Fate Instance</title><p>Client not built. Run <code>pnpm build</code>.</p>");
   app.get("/", spa);
   app.get("/room/:code", spa);
+  app.get("/tools/:code", spa);
   app.get("/developer", spa);
   app.get("/developer/room/:code/:seat", spa);
 

@@ -514,3 +514,13 @@ reads no game state beyond what is already rendered. It is checked by
 The Move action always opens the destination picker, even with only one legal
 destination. Choosing a destination in the picker or highlighted map confirms
 the move; pressing Move alone never sends a movement intent.
+
+## Mobile tabletop toolbox
+
+Slot 05 uses a Chinese-only utility surface, independent of narrative scenarios.
+The design targets 320/390px phones: a two-column seat list, central pot/actor,
+and a fixed safe-area-aware action tray shown only on the viewer's turn. The
+tray scrolls internally on short screens. Five dice share one row with a full-width
+roll button; all recent results are private. Controls are at least 48px high;
+reduced motion disables the dice shake. Desktop uses the same centered phone
+width rather than a separate layout.

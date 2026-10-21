@@ -5,7 +5,7 @@ import type { Scenario02Text } from "../scenario02.ts";
 
 export const ZH_SCENARIO02: Scenario02Text = {
   scenario: {
-    title: "沉没都市：最后的高地",
+  title: "沉没都市：最后的高地",
     tagline: "水要来了。船坐不下所有人。"
   },
   zones: {

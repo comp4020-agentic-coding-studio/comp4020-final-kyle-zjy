@@ -1,3 +1,5 @@
+import { navigate } from "../router.ts";
+import { T as toolboxText } from "../../shared/toolbox/text.ts";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { ZODIAC_INFO } from "../../shared/characters/signs.ts";
@@ -374,6 +376,7 @@ const PLAYABLE = Object.values(SCENARIOS).filter((x) => x.open);
 
 /** The room's scenario. The host picks among the open ones; the rest are still to come. */
 function ScenarioStrip() {
+  const code = useStore(st => st.snapshot?.room.code);
   const t = useT();
   const me = useMe();
   const chosen = useStore((st) => st.snapshot?.room.scenarioId) ?? "S01_LAST_TRAIN";
@@ -400,6 +403,7 @@ function ScenarioStrip() {
         {SLOTS.map((n) => {
           const open = PLAYABLE.find((x) => Number(x.number) === n);
           const on = open?.id === chosen;
+          if (n === 5) return <li key={n} className="shrink-0"><button type="button" className="flex h-16 min-w-16 flex-col items-center justify-center rounded-md border border-gold/30 px-2 text-gold" onClick={() => navigate(`/tools/${code}`)}><span className="font-mono text-sm">05</span><span className="text-xs">{toolboxText.title}</span></button></li>;
           if (!open)
             return (
               <li key={n} className="flex h-16 w-14 shrink-0 flex-col items-center justify-center rounded-md border border-dashed border-indigo text-center">

@@ -1,0 +1,63 @@
+import { strict as assert } from "node:assert";
+import { mkdirSync } from "node:fs";
+import { chromium, type Page } from "playwright";
+import { clippedElements, smallTargets } from "./lib/layout-check.ts";
+const base = process.env.APP_URL ?? "http://localhost:8091";
+const out = "/tmp/fate-toolbox-shots"; mkdirSync(out, { recursive: true });
+async function post(path: string, body: unknown) { const r = await fetch(base + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); assert(r.ok, await r.clone().text()); return r.json(); }
+const a = await post("/api/rooms", { nickname: "房主甲" });
+const b = await post(`/api/rooms/${a.roomCode}/join`, { nickname: "玩家乙" });
+const browser = await chromium.launch();
+try {
+  const contexts = await Promise.all([390, 320].map(width => browser.newContext({ viewport: { width, height: 844 }, isMobile: true, hasTouch: true })));
+  const pages = await Promise.all(contexts.map(async (context, i) => {
+    const seat = i === 0 ? a : b;
+    await context.addInitScript(token => localStorage.setItem("fate:token", token), seat.sessionToken);
+    const page = await context.newPage(); page.on("dialog", dialog => void dialog.accept());
+    page.on("pageerror", error => { throw error; });
+    await page.goto(`${base}/tools/${a.roomCode}`);
+    await page.getByRole("heading", { name: "桌游工具箱" }).waitFor();
+    return page;
+  }));
+  const [host, guest] = pages;
+  async function check(page: Page, label: string) {
+    assert.deepEqual(await clippedElements(page), [], `${label}: clipped`);
+    assert.deepEqual(await smallTargets(page), [], `${label}: target`);
+    await page.screenshot({ path: `${out}/${label}.png`, fullPage: true });
+  }
+  await host.getByRole("button", { name: "确认开桌", exact: true }).click();
+  await host.getByRole("button", { name: "开始下一手", exact: true }).click();
+  await host.getByRole("button", { name: "跟注 5", exact: true }).waitFor();
+  await check(host, "chips-390");
+  await host.getByRole("button", { name: "跟注 5", exact: true }).click();
+  await guest.getByRole("button", { name: "过牌", exact: true }).click();
+  await host.getByRole("button", { name: "已发实体牌，进入下一轮", exact: true }).waitFor();
+  for (let n = 0; n < 3; n++) {
+    await host.getByRole("button", { name: "已发实体牌，进入下一轮", exact: true }).click();
+    await guest.getByRole("button", { name: "过牌", exact: true }).click();
+    await host.getByRole("button", { name: "过牌", exact: true }).click();
+  }
+  await host.getByText("选择赢家（可多选平分）", { exact: true }).waitFor();
+  await host.locator(".tool-pots").getByLabel("玩家乙", { exact: true }).check();
+  await host.getByRole("button", { name: "确认分配", exact: true }).click();
+  await host.getByText("已分配 · 玩家乙", { exact: true }).waitFor();
+  await host.getByRole("button", { name: "五骰", exact: true }).click();
+  await guest.getByRole("button", { name: "摇五个骰子", exact: true }).click();
+  await guest.getByRole("button", { name: "摇五个骰子", exact: true }).waitFor();
+  const gv = await (await guest.request.get(`${base}/api/tools/${a.roomCode}`, { headers: { Authorization: `Bearer ${b.sessionToken}` } })).json();
+  const hv = await (await host.request.get(`${base}/api/tools/${a.roomCode}`, { headers: { Authorization: `Bearer ${a.sessionToken}` } })).json();
+  assert.equal(gv.mine.length, 1); assert.equal(hv.mine.length, 0); assert(!("dice" in hv));
+  await host.getByRole("button", { name: "摇五个骰子", exact: true }).click();
+  await host.getByRole("button", { name: "摇五个骰子", exact: true }).waitFor();
+  await host.waitForTimeout(650); await guest.waitForTimeout(650);
+  await check(host, "dice-390"); await check(guest, "dice-320");
+  await guest.reload(); await guest.locator(".tool-die small").first().filter({ hasText: /^[1-6]$/ }).waitFor();
+  await host.getByRole("button", { name: "筹码台", exact: true }).click();
+  await host.getByRole("button", { name: "开始下一手", exact: true }).click();
+  await guest.getByRole("button", { name: "跟注 5", exact: true }).waitFor();
+  await check(guest, "chips-320");
+  await host.goto(`${base}/room/${a.roomCode}`);
+  await host.getByRole("button", { name: /05.*桌游工具箱/s }).click();
+  await host.getByRole("heading", { name: "桌游工具箱", exact: true }).waitFor();
+  console.log(`toolbox: betting, showdown, dealer rotation, private dice, switch, refresh; 390/320 passed. ${base}/tools/${a.roomCode}`);
+} finally { await browser.close(); }
