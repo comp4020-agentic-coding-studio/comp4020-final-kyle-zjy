@@ -60,7 +60,7 @@ try {
   await guest.getByRole("button", { name: "摇五个骰子", exact: true }).waitFor();
   const gv = await (await guest.request.get(`${base}/api/tools/${a.roomCode}`, { headers: { Authorization: `Bearer ${b.sessionToken}` } })).json();
   const hv = await (await host.request.get(`${base}/api/tools/${a.roomCode}`, { headers: { Authorization: `Bearer ${a.sessionToken}` } })).json();
-  const expectedCounts = [1, 2, 3, 4, 5, 6].map(face => ({ face, count: gv.mine[0].values.filter((v: number) => v === face).length })).filter(x => x.count).map(x => `${x.count} 个 ${x.face}`).join("、");
+  const expectedCounts = [1, 2, 3, 4, 5, 6].map(face => ({ face, count: gv.mine[0].values.filter((v: number) => v === face).length })).filter(x => x.count).map(x => `${x.count} 个 ${String.fromCodePoint(0x267f + x.face)}`).join("、");
   assert.equal(await guest.locator(".tool-dice-counts").textContent(), expectedCounts);
   assert.equal(await guest.getByText(/合计/).count(), 0);
   assert.equal(gv.mine.length, 1); assert.equal(hv.mine.length, 0); assert(!("dice" in hv));

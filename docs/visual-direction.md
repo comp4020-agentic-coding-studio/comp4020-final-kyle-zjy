@@ -530,4 +530,5 @@ betting total, with a clear button and a minimum-raise hint. No keyboard input
 is needed during betting. Selections reset when the actor or betting street changes.
 
 Dice results and private history show nonzero face counts in ascending face
-order (for example, two ones and three fives), rather than the sum of pips.
+order, using a numeral for the count and a die-face symbol for the face
+(for example, `2 个 ⚀、3 个 ⚄`), rather than the sum of pips.

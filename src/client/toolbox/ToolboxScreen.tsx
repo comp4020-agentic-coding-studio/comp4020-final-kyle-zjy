@@ -7,10 +7,12 @@ import { navigate } from "../router.ts";
 import { connectRoom, disconnectRoom } from "../store.ts";
 import "./toolbox.css";
 
+const DICE_FACES = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+
 function diceCounts(values: number[]): string {
   return [1, 2, 3, 4, 5, 6].flatMap(face => {
     const count = values.filter(value => value === face).length;
-    return count ? [T.diceCount.replace("{count}", String(count)).replace("{face}", String(face))] : [];
+    return count ? [T.diceCount.replace("{count}", String(count)).replace("{face}", DICE_FACES[face - 1])] : [];
   }).join(T.diceSeparator);
 }
 
@@ -77,7 +79,7 @@ export default function ToolboxScreen({ code }: { code: string }) {
       <p className="tool-note">{host ? T.intro : T.hostHint}</p>
       {view.tool === "dice" ? <section className="tool-panel tool-dice-panel"><h2>{T.dice}</h2><p className="tool-note">{T.private}</p>
         <div className={`tool-dice ${rolling ? "is-rolling" : ""}`} aria-live="polite" aria-label={T.dice}>
-          {Array.from({ length: 5 }, (_, i) => <div className="tool-die" key={i} aria-label={`${T.diceLabel}${i + 1}：${view.mine[0]?.values[i] ?? "—"}`}><span aria-hidden="true">{view.mine[0] ? ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"][view.mine[0].values[i] - 1] : "?"}</span><small>{view.mine[0]?.values[i] ?? "—"}</small></div>)}
+          {Array.from({ length: 5 }, (_, i) => <div className="tool-die" key={i} aria-label={`${T.diceLabel}${i + 1}：${view.mine[0]?.values[i] ?? "—"}`}><span aria-hidden="true">{view.mine[0] ? DICE_FACES[view.mine[0].values[i] - 1] : "?"}</span><small>{view.mine[0]?.values[i] ?? "—"}</small></div>)}
         </div>
         <p className="tool-dice-counts">{view.mine[0] ? diceCounts(view.mine[0].values) : T.noRoll}</p>
         <button className="tool-primary tool-roll" disabled={busy || rolling} onClick={() => void act({ type: "ROLL" })}>{rolling ? T.rolling : T.roll}</button>
