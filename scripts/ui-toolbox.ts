@@ -66,6 +66,14 @@ try {
   assert.equal(await guest.locator('.tool-bet-total output').textContent(), "15");
   assert(await guest.getByRole("button", { name: "下注 / 加注", exact: true }).isDisabled());
   await check(guest, "chips-320");
+  await guest.getByRole("button", { name: "添加筹码 5", exact: true }).click();
+  await guest.getByRole("button", { name: "下注 / 加注", exact: true }).click();
+  await host.getByRole("button", { name: "添加筹码 50", exact: true }).click();
+  await host.getByRole("button", { name: "下注 / 加注", exact: true }).click();
+  await guest.getByText("本下注轮已加注一次，只能跟注或弃牌。", { exact: true }).waitFor();
+  assert(await guest.getByRole("button", { name: "下注 / 加注", exact: true }).isDisabled());
+  assert(await guest.getByRole("button", { name: "全下", exact: true }).isDisabled());
+  await check(guest, "raise-used-320");
   await host.goto(`${base}/room/${a.roomCode}`);
   await host.getByRole("button", { name: /05.*桌游工具箱/s }).click();
   await host.getByRole("heading", { name: "桌游工具箱", exact: true }).waitFor();

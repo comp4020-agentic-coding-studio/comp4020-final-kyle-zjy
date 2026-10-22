@@ -39,6 +39,26 @@ describe("physical-card chip table", () => {
     expect(p.stage).toBe("waiting"); expect(p.seats.reduce((n, s) => n + s.stack, 0)).toBe(initial);
     act("0", { type: "START" }); expect(p.dealer).toBe("1");
   });
+  it("caps each player at one raise per street, including all-in raises, then resets", () => {
+    const { p, act } = table();
+    act("0", { type: "CONFIG", buyIn: 1000, small: 5, big: 10, ids: ["0", "1", "2"], dealer: "0" });
+    act("0", { type: "START" });
+    act("0", { type: "RAISE", to: 50 }); act("1", { type: "RAISE", to: 100 }); act("2", { type: "FOLD" });
+    const before = structuredClone(p);
+    expect(() => act("0", { type: "RAISE", to: 150 })).toThrow("已加注一次");
+    expect(() => act("0", { type: "ALL_IN" })).toThrow("已加注一次");
+    expect(p).toEqual(before);
+    act("0", { type: "CALL" }); expect(p.stage).toBe("between");
+    act("0", { type: "NEXT" }); expect(p.raised).toEqual([]);
+    act("1", { type: "CHECK" }); act("0", { type: "RAISE", to: 10 });
+    expect(p.raised).toEqual(["0"]);
+    act("1", { type: "FOLD" }); act("0", { type: "START" }); expect(p.raised).toEqual([]);
+  });
+  it("allows a previously raised player to call all-in without increasing the price", () => {
+    const { p, act } = table(2);
+    act("0", { type: "RAISE", to: 50 }); act("1", { type: "ALL_IN" });
+    act("0", { type: "ALL_IN" }); expect(p.stage).toBe("settlement");
+  });
   it("automatically pays the sole remaining player", () => {
     const { p, act } = table(); act("0", { type: "FOLD" }); act("1", { type: "FOLD" });
     expect(p.stage).toBe("waiting"); expect(p.seats.reduce((n, s) => n + s.stack, 0)).toBe(300);

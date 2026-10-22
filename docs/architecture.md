@@ -397,3 +397,10 @@ refunds and split-pot remainders (clockwise after the dealer). Physical cards an
 hand evaluation remain offline: the host confirms eligible pot winners. Advancing
 a street is a host action after physical dealing. Resetting the table requires a
 client confirmation and server host authorization. There is no developer preview.
+
+The chip tool uses a house rule: each player may increase the price only once
+per betting street, including an all-in raise. Calling (including a short all-in
+call) remains available. The server records `poker.raised` and clears it on
+`START`, `NEXT`, or table reset. Legacy snapshots without this optional field
+start tracking on their next raise. This cap is independent of the standard
+minimum-raise and short-all-in reopening checks.

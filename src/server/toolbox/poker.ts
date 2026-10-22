@@ -2,7 +2,7 @@ import type { Poker, Seat, ToolAction, Street } from "../../shared/toolbox/types
 import { T } from "../../shared/toolbox/text.ts";
 export function demand(ok: unknown, message: string): asserts ok { if (!ok) throw new Error(message); }
 export const integer = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v) && v > 0 && v <= 10_000_000;
-export function emptyPoker(): Poker { return { seats: [], dealer: null, actor: null, street: "preflop", stage: "waiting", small: 5, big: 10, buyIn: 1000, price: 0, raise: 10, pending: [], pots: [], hand: 0, log: [] }; }
+export function emptyPoker(): Poker { return { seats: [], dealer: null, actor: null, street: "preflop", stage: "waiting", small: 5, big: 10, buyIn: 1000, price: 0, raise: 10, raised: [], pending: [], pots: [], hand: 0, log: [] }; }
 const live = (p: Poker) => p.seats.filter(s => !s.folded);
 function clockwise(p: Poker, after: string, allowed: string[]): string | null {
   const at = p.seats.findIndex(s => s.id === after);
@@ -46,7 +46,7 @@ export function actPoker(p: Poker, id: string, a: ToolAction, host: boolean, mem
     const eligible = p.seats.filter(s => s.stack > 0).map(s => s.id);
     p.dealer = p.hand === 0 && eligible.includes(p.dealer!) ? p.dealer : clockwise(p, p.dealer!, eligible);
     for (const s of p.seats) Object.assign(s, { bet: 0, total: 0, folded: s.stack === 0, actedAt: null });
-    p.hand++; p.pots = []; p.log = []; p.street = "preflop"; p.stage = "betting"; p.price = p.big; p.raise = p.big;
+    p.hand++; p.raised = []; p.pots = []; p.log = []; p.street = "preflop"; p.stage = "betting"; p.price = p.big; p.raise = p.big;
     const smallId = eligible.length === 2 ? p.dealer! : clockwise(p, p.dealer!, eligible)!;
     const bigId = clockwise(p, smallId, eligible)!;
     pay(p.seats.find(s => s.id === smallId)!, p.small); pay(p.seats.find(s => s.id === bigId)!, p.big);
@@ -57,7 +57,7 @@ export function actPoker(p: Poker, id: string, a: ToolAction, host: boolean, mem
     demand(p.stage === "between", T.stage);
     p.street = ({ preflop: "flop", flop: "turn", turn: "river" } as Partial<Record<Street, Street>>)[p.street]!;
     for (const s of p.seats) { s.bet = 0; s.actedAt = null; }
-    p.price = 0; p.raise = p.big; p.stage = "betting"; p.pending = live(p).filter(s => s.stack > 0).map(s => s.id); advance(p, p.dealer!); return;
+    p.raised = []; p.price = 0; p.raise = p.big; p.stage = "betting"; p.pending = live(p).filter(s => s.stack > 0).map(s => s.id); advance(p, p.dealer!); return;
   }
   if (a.type === "AWARD") {
     demand(p.stage === "settlement", T.stage);
@@ -77,11 +77,13 @@ export function actPoker(p: Poker, id: string, a: ToolAction, host: boolean, mem
     const to = a.type === "ALL_IN" ? s.bet + s.stack : a.to;
     demand(integer(to) && to > s.bet && to <= s.bet + s.stack, T.insufficient);
     if (to > p.price) {
+      demand(!p.raised?.includes(id), T.raiseUsed);
       demand(s.actedAt === null || p.price - s.actedAt >= p.raise, T.raiseError);
       const increase = to - p.price;
       demand(increase >= p.raise || to === s.bet + s.stack, T.raiseError);
       if (increase >= p.raise) p.raise = increase;
       p.price = to;
+      (p.raised ??= []).push(id);
     }
     pay(s, to - s.bet);
   } else demand(false, T.invalid);

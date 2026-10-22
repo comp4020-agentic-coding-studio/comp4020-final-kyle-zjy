@@ -59,6 +59,7 @@ export default function ToolboxScreen({ code }: { code: string }) {
   const p = view?.poker; const mine = p?.seats.find(s => s.id === view?.viewer);
   const turn = p?.stage === "betting" && p.actor === view?.viewer;
   const owe = Math.max(0, (p?.price ?? 0) - (mine?.bet ?? 0));
+  const raised = view?.poker.raised?.includes(view.viewer) ?? false;
   const minimum = (p?.price ?? 0) + (p?.raise ?? 0);
   useEffect(() => setAmount(0), [p?.hand, p?.street, p?.actor]);
   return <main className="toolbox" lang="zh-CN">
@@ -85,16 +86,16 @@ export default function ToolboxScreen({ code }: { code: string }) {
         </section>}
         {host && (config || !p.seats.length) && <Config view={view} busy={busy} save={a => { if (!p.seats.length || confirm(T.resetConfirm)) void act(a); }} />}
         {p.log.length > 0 && <details className="tool-panel"><summary>{T.logs}</summary>{p.log.slice(-12).reverse().map((line, i) => { const [id, type, bet] = line.split("|"); const label = ({ FOLD: T.fold, CHECK: T.check, CALL: T.call, RAISE: T.raise, ALL_IN: T.allIn } as Record<string, string>)[type]; return <p className="tool-history" key={i}>{name(id)} · {label} · {bet}</p>; })}</details>}
-        <p className="tool-note">{T.noCards}</p>
+        <p className="tool-note">{T.noCards} {T.raiseRule}</p>
         {turn && mine && <section className="tool-actions" aria-label={T.thinking}><div className="tool-action-title"><strong>{T.me} · {T.thinking}</strong><span>{T.owe} {Math.min(owe, mine.stack)}</span></div><div className="tool-action-grid">
           <button disabled={busy} onClick={() => { if (confirm(T.fold + "？")) void act({ type: "FOLD" }); }}>{T.fold}</button>
           <button className="tool-primary" disabled={busy} onClick={() => void act({ type: owe ? "CALL" : "CHECK" })}>{owe ? `${T.call} ${Math.min(owe, mine.stack)}` : T.check}</button>
-          <button disabled={busy} onClick={() => { if (confirm(T.allIn + ` ${mine.stack}？`)) void act({ type: "ALL_IN" }); }}>{T.allIn}</button>
-        </div><form onSubmit={e => { e.preventDefault(); if (amount >= minimum && amount <= mine.bet + mine.stack) void act({ type: "RAISE", to: amount }); }}>
+          <button disabled={busy || (raised && mine.bet + mine.stack > p.price)} onClick={() => { if (confirm(T.allIn + ` ${mine.stack}？`)) void act({ type: "ALL_IN" }); }}>{T.allIn}</button>
+        </div><form onSubmit={e => { e.preventDefault(); if (!raised && amount >= minimum && amount <= mine.bet + mine.stack) void act({ type: "RAISE", to: amount }); }}>
           <div className="tool-bet-total"><span>{T.to}</span><output aria-label={T.to} aria-live="polite">{amount}</output></div>
-          <button className="tool-primary" disabled={busy || amount < minimum || amount > mine.bet + mine.stack}>{T.raise}</button>
-          <div className="tool-chip-row" role="group" aria-label={T.addChips}>{[5, 10, 20, 50, 100].map(value => <button type="button" key={value} className={`tool-chip tool-chip-${value}`} aria-label={`${T.addChips} ${value}`} disabled={busy || amount + value > mine.bet + mine.stack} onClick={() => setAmount(current => current + value)}>{value}</button>)}</div>
-          <div className="tool-bet-hint"><small>{T.minRaise} {minimum}</small><button type="button" disabled={busy || amount === 0} onClick={() => setAmount(0)}>{T.clearChips}</button></div>
+          <button className="tool-primary" disabled={busy || raised || amount < minimum || amount > mine.bet + mine.stack}>{T.raise}</button>
+          <div className="tool-chip-row" role="group" aria-label={T.addChips}>{[5, 10, 20, 50, 100].map(value => <button type="button" key={value} className={`tool-chip tool-chip-${value}`} aria-label={`${T.addChips} ${value}`} disabled={busy || raised || amount + value > mine.bet + mine.stack} onClick={() => setAmount(current => current + value)}>{value}</button>)}</div>
+          <div className="tool-bet-hint"><small>{raised ? T.raiseUsed : `${T.minRaise} ${minimum}`}</small><button type="button" disabled={busy || amount === 0} onClick={() => setAmount(0)}>{T.clearChips}</button></div>
         </form></section>}
       </>}
     </>}
