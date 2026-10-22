@@ -528,3 +528,6 @@ width rather than a separate layout.
 The chip table uses 5/10/20/50/100 chip buttons to accumulate a read-only
 betting total, with a clear button and a minimum-raise hint. No keyboard input
 is needed during betting. Selections reset when the actor or betting street changes.
+
+Dice results and private history show nonzero face counts in ascending face
+order (for example, two ones and three fives), rather than the sum of pips.

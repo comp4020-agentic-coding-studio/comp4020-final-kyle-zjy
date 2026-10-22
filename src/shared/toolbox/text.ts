@@ -14,7 +14,7 @@ export const T = {
   waiting: "等待房主开局", between: "本轮下注结束，等待实体牌", settlement: "请房主按实体牌分配底池", thinking: "正在行动", folded: "已弃牌", allInState: "已全下",
   stack: "剩余", bet: "本轮", total: "本手投入", pot: "底池", mainPot: "主池", sidePot: "边池", award: "确认分配", winners: "选择赢家（可多选平分）", paid: "已分配",
   price: "当前下注", owe: "需要跟注", minRaise: "最低加注至", hand: "手牌", hostTag: "房主", me: "你", logs: "本手动态", noCards: "不发牌、不判断牌型；摊牌由房主根据实体牌确认。",
-  roll: "摇五个骰子", rolling: "摇骰中…", private: "只有你能看见自己的骰子，其他人及房主都看不到。", noRoll: "点击按钮，摇出你的第一组骰子。", history: "最近的私人记录", sum: "合计", diceLabel: "骰子",
+  roll: "摇五个骰子", rolling: "摇骰中…", private: "只有你能看见自己的骰子，其他人及房主都看不到。", noRoll: "点击按钮，摇出你的第一组骰子。", history: "最近的私人记录", diceCount: "{count} 个 {face}", diceSeparator: "、", diceLabel: "骰子",
   badConfig: "请选择至少两人，大小盲及初始筹码需为合理的正整数。", turn: "还没轮到你。", stage: "当前阶段无法进行这项操作。", insufficient: "筹码不足。", checkError: "尚未跟齐下注，不能过牌。", raiseError: "加注金额不合法，或本轮加注权尚未重新开放。", potError: "请选择该底池中至少一位有效赢家。",
   streets: { preflop: "翻牌前", flop: "翻牌", turn: "转牌", river: "河牌" },
 } as const;
