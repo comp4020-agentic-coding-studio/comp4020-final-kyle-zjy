@@ -404,3 +404,10 @@ call) remains available. The server records `poker.raised` and clears it on
 `START`, `NEXT`, or table reset. Legacy snapshots without this optional field
 start tracking on their next raise. This cap is independent of the standard
 minimum-raise and short-all-in reopening checks.
+
+The host may toggle `allowRebuy` (off by default). A seated member can send
+`REBUY` only between hands, after every pot has been paid. The server adds
+exactly one configured buy-in to that member, records a public cumulative
+`rebuys` amount and enforces a 10,000,000 per-seat stack cap. Neither hand
+contributions nor pot results change. Existing request deduplication and
+transactional persistence apply; a table reset clears permission and totals.

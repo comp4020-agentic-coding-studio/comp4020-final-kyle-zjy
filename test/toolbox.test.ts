@@ -59,6 +59,37 @@ describe("physical-card chip table", () => {
     act("0", { type: "RAISE", to: 50 }); act("1", { type: "ALL_IN" });
     act("0", { type: "ALL_IN" }); expect(p.stage).toBe("settlement");
   });
+  it("lets the host allow between-hand rebuys without changing pots or contributions", () => {
+    const { p, act } = table(2);
+    expect(() => act("1", { type: "SET_REBUY", allowed: true })).toThrow();
+    expect(() => act("1", { type: "REBUY" })).toThrow("尚未允许");
+    act("0", { type: "SET_REBUY", allowed: true });
+    expect(() => act("1", { type: "REBUY" })).toThrow("两手之间");
+    act("0", { type: "FOLD" });
+    const pots = structuredClone(p.pots); const before = p.seats.map(s => s.stack);
+    act("1", { type: "REBUY" });
+    expect(p.seats.map(s => s.stack)).toEqual([before[0], before[1] + p.buyIn]);
+    expect(p.pots).toEqual(pots); expect(p.rebuys).toEqual({ "1": 100 });
+    act("0", { type: "START" }); expect(p.rebuys).toEqual({ "1": 100 });
+    act("0", { type: "SET_REBUY", allowed: false });
+    expect(() => act("1", { type: "REBUY" })).toThrow("尚未允许");
+  });
+  it("blocks rebuys before pot settlement and deduplicates persisted rebuy requests", () => {
+    const db = openDb(":memory:"); const rooms = new RoomService(db); const store = new ToolStore(rooms);
+    const a = rooms.createRoom("甲", undefined); const b = rooms.joinRoom(a.roomCode, "乙", undefined);
+    let seq = 0;
+    const act = (token: string, action: ToolAction, key = `request-${++seq}`) => store.action(a.roomCode, token, store.view(a.roomCode, token).version, key, action);
+    act(a.sessionToken, { type: "CONFIG", buyIn: 100, small: 5, big: 10, ids: [a.playerId, b.playerId], dealer: a.playerId });
+    act(a.sessionToken, { type: "SET_REBUY", allowed: true });
+    const before = act(b.sessionToken, { type: "REBUY" }, "rebuy-once");
+    expect(act(b.sessionToken, { type: "REBUY" }, "rebuy-once")).toEqual(before);
+    expect(new ToolStore(rooms).view(a.roomCode, b.sessionToken).poker.rebuys?.[b.playerId]).toBe(100);
+    act(a.sessionToken, { type: "START" });
+    act(a.sessionToken, { type: "ALL_IN" }); act(b.sessionToken, { type: "CALL" });
+    expect(store.view(a.roomCode, a.sessionToken).poker.stage).toBe("settlement");
+    expect(() => act(b.sessionToken, { type: "REBUY" })).toThrow("两手之间");
+    db.close();
+  });
   it("automatically pays the sole remaining player", () => {
     const { p, act } = table(); act("0", { type: "FOLD" }); act("1", { type: "FOLD" });
     expect(p.stage).toBe("waiting"); expect(p.seats.reduce((n, s) => n + s.stack, 0)).toBe(300);

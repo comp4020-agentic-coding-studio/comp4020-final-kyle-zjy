@@ -47,6 +47,14 @@ try {
   await host.locator(".tool-pots").getByLabel("玩家乙", { exact: true }).check();
   await host.getByRole("button", { name: "确认分配", exact: true }).click();
   await host.getByText("已分配 · 玩家乙", { exact: true }).waitFor();
+  await host.getByLabel("允许玩家补码", { exact: true }).click();
+  await host.waitForFunction(() => (document.querySelector(".tool-host input[type=checkbox]") as HTMLInputElement)?.checked);
+  await guest.getByRole("button", { name: "补码 +1000", exact: true }).click();
+  await guest.getByText("累计补码 1000", { exact: true }).waitFor();
+  await check(guest, "rebuy-320");
+  await host.getByText("累计补码 1000", { exact: true }).waitFor();
+  await host.getByLabel("允许玩家补码", { exact: true }).click();
+  await guest.waitForFunction(() => (Array.from(document.querySelectorAll("button")).find(b => b.textContent === "补码 +1000") as HTMLButtonElement)?.disabled);
   await host.getByRole("button", { name: "五骰", exact: true }).click();
   await guest.getByRole("button", { name: "摇五个骰子", exact: true }).click();
   await guest.getByRole("button", { name: "摇五个骰子", exact: true }).waitFor();

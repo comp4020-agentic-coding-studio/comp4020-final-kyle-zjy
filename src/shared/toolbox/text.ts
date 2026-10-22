@@ -8,6 +8,7 @@ export const T = {
   config: "开桌设置", buyIn: "每人初始筹码", small: "小盲", big: "大盲", dealer: "庄家", players: "参与者（按座位顺序）",
   reset: "重置筹码台", resetConfirm: "重新开桌会清除当前手牌和全部筹码进度，确认继续？", save: "确认开桌", start: "开始下一手", next: "已发实体牌，进入下一轮",
   fold: "弃牌", check: "过牌", call: "跟注", raise: "下注 / 加注", allIn: "全下", to: "本轮下注总额", confirm: "确认", cancel: "取消",
+  allowRebuy: "允许玩家补码", rebuy: "补码", rebuyTotal: "累计补码", rebuyClosed: "房主尚未允许补码。", rebuyBetween: "只能在两手之间、底池分配完成后补码。", rebuyLimit: "你尚未入座，或补码后将超过筹码上限。", rebuyConfirm: "确认补码？将增加一份初始筹码，所有玩家均可看到。",
   raiseUsed: "本下注轮已加注一次，只能跟注或弃牌。", raiseRule: "每人每个下注轮最多加注一次（含提高下注额的全下）。",
   addChips: "添加筹码", clearChips: "清零",
   waiting: "等待房主开局", between: "本轮下注结束，等待实体牌", settlement: "请房主按实体牌分配底池", thinking: "正在行动", folded: "已弃牌", allInState: "已全下",

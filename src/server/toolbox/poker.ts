@@ -2,7 +2,7 @@ import type { Poker, Seat, ToolAction, Street } from "../../shared/toolbox/types
 import { T } from "../../shared/toolbox/text.ts";
 export function demand(ok: unknown, message: string): asserts ok { if (!ok) throw new Error(message); }
 export const integer = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v) && v > 0 && v <= 10_000_000;
-export function emptyPoker(): Poker { return { seats: [], dealer: null, actor: null, street: "preflop", stage: "waiting", small: 5, big: 10, buyIn: 1000, price: 0, raise: 10, raised: [], pending: [], pots: [], hand: 0, log: [] }; }
+export function emptyPoker(): Poker { return { seats: [], dealer: null, actor: null, street: "preflop", stage: "waiting", small: 5, big: 10, buyIn: 1000, price: 0, raise: 10, allowRebuy: false, rebuys: {}, raised: [], pending: [], pots: [], hand: 0, log: [] }; }
 const live = (p: Poker) => p.seats.filter(s => !s.folded);
 function clockwise(p: Poker, after: string, allowed: string[]): string | null {
   const at = p.seats.findIndex(s => s.id === after);
@@ -36,10 +36,24 @@ function advance(p: Poker, after: string) {
   if (!p.actor) { if (p.street === "river") settle(p); else p.stage = "between"; }
 }
 export function actPoker(p: Poker, id: string, a: ToolAction, host: boolean, memberIds: string[]) {
-  if (["CONFIG", "START", "NEXT", "AWARD"].includes(a.type)) demand(host, T.host);
+  if (["CONFIG", "START", "NEXT", "AWARD", "SET_REBUY"].includes(a.type)) demand(host, T.host);
   if (a.type === "CONFIG") {
     demand(integer(a.buyIn) && a.buyIn <= 1_000_000 && integer(a.small) && integer(a.big) && a.small <= a.big && a.big <= a.buyIn && Array.isArray(a.ids) && a.ids.length >= 2 && a.ids.length <= 10 && new Set(a.ids).size === a.ids.length && a.ids.every(x => memberIds.includes(x)) && a.ids.includes(a.dealer), T.badConfig);
     Object.assign(p, emptyPoker(), { buyIn: a.buyIn, small: a.small, big: a.big, dealer: a.dealer, seats: a.ids.map(id => ({ id, stack: a.buyIn, bet: 0, total: 0, folded: false, actedAt: null })) }); return;
+  }
+  if (a.type === "SET_REBUY") {
+    demand(typeof a.allowed === "boolean", T.invalid);
+    p.allowRebuy = a.allowed; return;
+  }
+  if (a.type === "REBUY") {
+    demand(p.allowRebuy, T.rebuyClosed);
+    demand(p.stage === "waiting", T.rebuyBetween);
+    const seat = p.seats.find(s => s.id === id);
+    demand(seat && seat.stack + p.buyIn <= 10_000_000, T.rebuyLimit);
+    seat.stack += p.buyIn;
+    const history = p.rebuys ??= {};
+    history[id] = (history[id] ?? 0) + p.buyIn;
+    return;
   }
   if (a.type === "START") {
     demand(p.stage === "waiting" && p.seats.filter(s => s.stack > 0).length >= 2, T.stage);
