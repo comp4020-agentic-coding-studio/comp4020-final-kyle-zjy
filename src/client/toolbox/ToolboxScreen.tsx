@@ -60,6 +60,7 @@ export default function ToolboxScreen({ code }: { code: string }) {
   const turn = p?.stage === "betting" && p.actor === view?.viewer;
   const owe = Math.max(0, (p?.price ?? 0) - (mine?.bet ?? 0));
   const minimum = (p?.price ?? 0) + (p?.raise ?? 0);
+  useEffect(() => setAmount(0), [p?.hand, p?.street, p?.actor]);
   return <main className="toolbox" lang="zh-CN">
     <header className="tool-header"><div><small>{T.room} {code}</small><h1>{T.title}</h1></div><button onClick={() => navigate(`/room/${code}`)}>{T.back}</button></header>
     {error && <p className="tool-error" role="alert">{error}</p>}
@@ -89,7 +90,12 @@ export default function ToolboxScreen({ code }: { code: string }) {
           <button disabled={busy} onClick={() => { if (confirm(T.fold + "？")) void act({ type: "FOLD" }); }}>{T.fold}</button>
           <button className="tool-primary" disabled={busy} onClick={() => void act({ type: owe ? "CALL" : "CHECK" })}>{owe ? `${T.call} ${Math.min(owe, mine.stack)}` : T.check}</button>
           <button disabled={busy} onClick={() => { if (confirm(T.allIn + ` ${mine.stack}？`)) void act({ type: "ALL_IN" }); }}>{T.allIn}</button>
-        </div><form onSubmit={e => { e.preventDefault(); void act({ type: "RAISE", to: amount || minimum }); }}><label>{T.to}<input type="number" inputMode="numeric" min={minimum} max={mine.bet + mine.stack} value={amount || minimum} onChange={e => setAmount(Number(e.target.value))} /></label><button disabled={busy || mine.bet + mine.stack < minimum}>{T.raise}</button></form></section>}
+        </div><form onSubmit={e => { e.preventDefault(); if (amount >= minimum && amount <= mine.bet + mine.stack) void act({ type: "RAISE", to: amount }); }}>
+          <div className="tool-bet-total"><span>{T.to}</span><output aria-label={T.to} aria-live="polite">{amount}</output></div>
+          <button className="tool-primary" disabled={busy || amount < minimum || amount > mine.bet + mine.stack}>{T.raise}</button>
+          <div className="tool-chip-row" role="group" aria-label={T.addChips}>{[5, 10, 20, 50, 100].map(value => <button type="button" key={value} className={`tool-chip tool-chip-${value}`} aria-label={`${T.addChips} ${value}`} disabled={busy || amount + value > mine.bet + mine.stack} onClick={() => setAmount(current => current + value)}>{value}</button>)}</div>
+          <div className="tool-bet-hint"><small>{T.minRaise} {minimum}</small><button type="button" disabled={busy || amount === 0} onClick={() => setAmount(0)}>{T.clearChips}</button></div>
+        </form></section>}
       </>}
     </>}
   </main>;

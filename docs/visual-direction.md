@@ -524,3 +524,7 @@ tray scrolls internally on short screens. Five dice share one row with a full-wi
 roll button; all recent results are private. Controls are at least 48px high;
 reduced motion disables the dice shake. Desktop uses the same centered phone
 width rather than a separate layout.
+
+The chip table uses 5/10/20/50/100 chip buttons to accumulate a read-only
+betting total, with a clear button and a minimum-raise hint. No keyboard input
+is needed during betting. Selections reset when the actor or betting street changes.

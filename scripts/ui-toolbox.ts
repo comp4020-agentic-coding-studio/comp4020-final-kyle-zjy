@@ -29,8 +29,14 @@ try {
   await host.getByRole("button", { name: "开始下一手", exact: true }).click();
   await host.getByRole("button", { name: "跟注 5", exact: true }).waitFor();
   await check(host, "chips-390");
-  await host.getByRole("button", { name: "跟注 5", exact: true }).click();
-  await guest.getByRole("button", { name: "过牌", exact: true }).click();
+  assert.equal(await host.locator('.tool-actions input').count(), 0);
+  for (const value of [5, 10, 20, 50, 100]) await host.getByRole("button", { name: `添加筹码 ${value}`, exact: true }).click();
+  assert.equal(await host.locator('.tool-bet-total output').textContent(), "185");
+  await host.getByRole("button", { name: "清零", exact: true }).click();
+  assert.equal(await host.locator('.tool-bet-total output').textContent(), "0");
+  await host.getByRole("button", { name: "添加筹码 20", exact: true }).click();
+  await host.getByRole("button", { name: "下注 / 加注", exact: true }).click();
+  await guest.getByRole("button", { name: "跟注 10", exact: true }).click();
   await host.getByRole("button", { name: "已发实体牌，进入下一轮", exact: true }).waitFor();
   for (let n = 0; n < 3; n++) {
     await host.getByRole("button", { name: "已发实体牌，进入下一轮", exact: true }).click();
@@ -55,6 +61,10 @@ try {
   await host.getByRole("button", { name: "筹码台", exact: true }).click();
   await host.getByRole("button", { name: "开始下一手", exact: true }).click();
   await guest.getByRole("button", { name: "跟注 5", exact: true }).waitFor();
+  await guest.getByRole("button", { name: "添加筹码 5", exact: true }).click();
+  await guest.getByRole("button", { name: "添加筹码 10", exact: true }).click();
+  assert.equal(await guest.locator('.tool-bet-total output').textContent(), "15");
+  assert(await guest.getByRole("button", { name: "下注 / 加注", exact: true }).isDisabled());
   await check(guest, "chips-320");
   await host.goto(`${base}/room/${a.roomCode}`);
   await host.getByRole("button", { name: /05.*桌游工具箱/s }).click();
