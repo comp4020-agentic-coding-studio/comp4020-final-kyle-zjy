@@ -532,3 +532,6 @@ is needed during betting. Selections reset when the actor or betting street chan
 Dice results and private history show nonzero face counts in ascending face
 order, using a numeral for the count and a die-face symbol for the face
 (for example, `2 个 ⚀、3 个 ⚄`), rather than the sum of pips.
+
+Count summaries use 40px die symbols on contrasting 48px tiles, with 18px
+quantity labels. Entries wrap on phones; private history uses the same sizing.

@@ -9,11 +9,15 @@ import "./toolbox.css";
 
 const DICE_FACES = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
 
-function diceCounts(values: number[]): string {
-  return [1, 2, 3, 4, 5, 6].flatMap(face => {
+function DiceCounts({ values }: { values: number[] }) {
+  return <>{[1, 2, 3, 4, 5, 6].map(face => {
     const count = values.filter(value => value === face).length;
-    return count ? [T.diceCount.replace("{count}", String(count)).replace("{face}", DICE_FACES[face - 1])] : [];
-  }).join(T.diceSeparator);
+    if (!count) return null;
+    const label = T.diceCount.replace("{count}", String(count));
+    return <span className="tool-count-entry" key={face} role="img" aria-label={label.replace("{face}", String(face))}>
+      <span>{label.replace("{face}", "").trim()}</span>{" "}<span className="tool-count-face" aria-hidden="true">{DICE_FACES[face - 1]}</span>
+    </span>;
+  })}</>;
 }
 
 const errorText = (e: unknown) => e instanceof Error && Object.values(T).includes(e.message as never) ? e.message : T.network;
@@ -81,9 +85,9 @@ export default function ToolboxScreen({ code }: { code: string }) {
         <div className={`tool-dice ${rolling ? "is-rolling" : ""}`} aria-live="polite" aria-label={T.dice}>
           {Array.from({ length: 5 }, (_, i) => <div className="tool-die" key={i} aria-label={`${T.diceLabel}${i + 1}：${view.mine[0]?.values[i] ?? "—"}`}><span aria-hidden="true">{view.mine[0] ? DICE_FACES[view.mine[0].values[i] - 1] : "?"}</span><small>{view.mine[0]?.values[i] ?? "—"}</small></div>)}
         </div>
-        <p className="tool-dice-counts">{view.mine[0] ? diceCounts(view.mine[0].values) : T.noRoll}</p>
+        <div className="tool-dice-counts">{view.mine[0] ? <DiceCounts values={view.mine[0].values} /> : T.noRoll}</div>
         <button className="tool-primary tool-roll" disabled={busy || rolling} onClick={() => void act({ type: "ROLL" })}>{rolling ? T.rolling : T.roll}</button>
-        {view.mine.length > 1 && <details><summary>{T.history}</summary>{view.mine.slice(1).map((r, i) => <p key={i} className="tool-history">{diceCounts(r.values)}</p>)}</details>}
+        {view.mine.length > 1 && <details><summary>{T.history}</summary>{view.mine.slice(1).map((r, i) => <div key={i} className="tool-history-counts"><DiceCounts values={r.values} /></div>)}</details>}
       </section> : p && <>
         <section className="tool-panel tool-pot"><small>{T.hand} {p.hand} · {T.streets[p.street]}</small><strong>{T.pot} {p.stage === "settlement" || p.stage === "waiting" ? p.pots.filter(x => !x.winners.length).reduce((n, x) => n + x.amount, 0) : p.seats.reduce((n, s) => n + s.total, 0)}</strong><span>{p.stage === "betting" ? `${name(p.actor)} · ${T.thinking}` : T[p.stage]}</span><small>{T.price} {p.price}</small></section>
         <ol className="tool-seats">{p.seats.map(s => <li key={s.id} className={s.id === p.actor ? "is-actor" : s.folded ? "is-folded" : ""}><div><b>{name(s.id)}</b><small>{s.id === view.viewer ? T.me : ""} {s.id === p.dealer ? T.dealer : ""}</small></div><strong>{s.stack}</strong><small>{T.bet} {s.bet} · {T.total} {s.total}</small>{!!p.rebuys?.[s.id] && <small className="block">{T.rebuyTotal} {p.rebuys[s.id]}</small>}<span>{s.folded ? T.folded : s.stack === 0 ? T.allInState : s.id === p.actor ? T.thinking : ""}</span></li>)}</ol>

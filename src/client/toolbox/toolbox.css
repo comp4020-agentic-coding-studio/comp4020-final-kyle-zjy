@@ -19,6 +19,10 @@
   .tool-bet-hint { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; }.tool-bet-hint small { color: #b9c5d3; min-width: 0; }.tool-bet-hint button { flex-shrink: 0; white-space: nowrap; }
   .tool-error { padding: 12px; background: #45232c; border: 1px solid #c4868c; border-radius: 12px; font-size: 14px; margin-bottom: 12px; }.tool-history { margin: 8px 0; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; }.toolbox summary { min-height: 48px; display: flex; align-items: center; cursor: pointer; }
   .tool-dice-panel { text-align: center; }.tool-dice { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 5px; margin: 30px 0 18px; }.tool-die { background: #f3ead5; border-radius: 10px; padding: 5px 0; color: #1e2736; min-width: 0; box-shadow: 0 4px 0 #a89b81; }.tool-die span { font-family: sans-serif; font-size: clamp(30px,10vw,46px); line-height: 1.2; display: block; }.tool-die small { font-size: 13px; }.toolbox .tool-roll { width: 100%; margin: 24px 0 12px; min-height: 64px; font-size: 20px; }.tool-dice.is-rolling .tool-die { animation: tool-shake .14s ease-in-out 4; }
+  .tool-dice-counts, .tool-history-counts { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .tool-history-counts { margin: 12px 0; padding: 12px 0; border-top: 1px solid #344156; }
+  .tool-count-entry { display: inline-flex; align-items: center; gap: 6px; font-size: 18px; white-space: nowrap; }
+  .tool-count-face { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 48px; height: 48px; border-radius: 10px; background: #f3ead5; color: #1e2736; font-family: sans-serif; font-size: 40px; line-height: 1; }
   @keyframes tool-shake { 50% { transform: translateY(-5px) rotate(4deg); } }
   @media(prefers-reduced-motion:reduce) { .tool-dice.is-rolling .tool-die { animation: none; } }
 }
