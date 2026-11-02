@@ -514,24 +514,3 @@ reads no game state beyond what is already rendered. It is checked by
 The Move action always opens the destination picker, even with only one legal
 destination. Choosing a destination in the picker or highlighted map confirms
 the move; pressing Move alone never sends a movement intent.
-
-## Mobile tabletop toolbox
-
-Slot 05 uses a Chinese-only utility surface, independent of narrative scenarios.
-The design targets 320/390px phones: a two-column seat list, central pot/actor,
-and a fixed safe-area-aware action tray shown only on the viewer's turn. The
-tray scrolls internally on short screens. Five dice share one row with a full-width
-roll button; all recent results are private. Controls are at least 48px high;
-reduced motion disables the dice shake. Desktop uses the same centered phone
-width rather than a separate layout.
-
-The chip table uses 5/10/20/50/100 chip buttons to accumulate a read-only
-betting total, with a clear button and a minimum-raise hint. No keyboard input
-is needed during betting. Selections reset when the actor or betting street changes.
-
-Dice results and private history show nonzero face counts in ascending face
-order, using a numeral for the count and a die-face symbol for the face
-(for example, `2 个 ⚀、3 个 ⚄`), rather than the sum of pips.
-
-Count summaries use 40px die symbols on contrasting 48px tiles, with 18px
-quantity labels. Entries wrap on phones; private history uses the same sizing.
