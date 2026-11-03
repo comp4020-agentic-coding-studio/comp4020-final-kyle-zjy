@@ -1,13 +1,37 @@
-# Your harness
+# AGENTS.md
 
-This file is yours, and it arrives empty on purpose. The rules you hold the
-agent to are part of what gets marked, so they should be rules you decided on.
+Codex and other agents read this file; Claude Code reads `CLAUDE.md`. Both
+carry the same rules, copied below so the two never drift. Edit `CLAUDE.md`
+and copy it here in the same change.
 
-Nothing about the template is recorded here. What the repo ships is explained
-where it lives --- `fly.toml`, the `Dockerfile`, the CI workflow and
-`spec/README.md` each say what they fix --- and the course website publishes the
-[final project brief](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/assessments/final-project/).
-What the agent needs to carry from any of it is your call.
+Rules I hold the agent to on this repo. They come from three places: the
+course constraints (`fly.toml`, `Dockerfile`, `spec/README.md`), the
+definition of good argued in `README.md`, and mistakes that happened once and
+must not happen again. When a rule here and a habit disagree, the rule wins.
+
+## What good means here (from `README.md`)
+
+A party game for 2-10 friends on their own phones is good when these hold.
+Each one is either enforced by a check or judged by a stated method; the
+README says which.
+
+- **Fair:** the server decides every outcome. A client can't roll its own
+  dice, see another player's secrets, or act out of turn. Enforced:
+  `spec/game.test.ts`, `spec/promises.test.ts`, the projection tests in
+  `test/engine.test.ts` and `test/scenario04-visibility.test.ts`.
+- **Shared:** a change by one player reaches every other screen in about a
+  second, without a reload. Enforced: `spec/rooms.test.ts` (`PUSH_MS`),
+  `scripts/ui-marking.ts` (1920 + 390 side by side).
+- **Durable:** a refresh, a dropped phone or a machine restart never loses a
+  seat or a run. Enforced: `test/store.test.ts`, `spec/game.test.ts`,
+  `spec/promises.test.ts`.
+- **Readable at a glance on a phone:** every state has text as well as
+  colour, every target is ≥ 48 px, nothing clips at 320-1920 px. Enforced:
+  `scripts/ui-play.ts`, `scripts/ui-marking.ts`. Judged: screenshots looked at.
+- **Worth replaying:** no strategy that wins by doing nothing, no table size
+  that always wins or always loses. Judged with `pnpm sim`, never by feel.
+
+Never trade one of these away to finish a feature faster.
 
 ## Working in phases
 
@@ -16,6 +40,8 @@ What the agent needs to carry from any of it is your call.
   until the user says "continue" (继续). Fixing a bug from an earlier phase is
   allowed; deleting a feature to go faster is not.
 - No fake buttons, TODO stubs or simulated multiplayer presented as finished.
+- `AGENTS.md` (read by Codex) mirrors this file. Change both in the same
+  commit; `PROJECT_RULES.md` holds the product rules every scenario keeps.
 - Design docs live in `docs/` (`architecture.md`, `game-state.md`,
   `database-schema.md`, `visual-direction.md`). Read the relevant one before
   changing that area; update it in the same change when the design moves.
@@ -56,10 +82,10 @@ What the agent needs to carry from any of it is your call.
   file per sign, 16 entries in canonical MBTI order. A character is id, sign,
   type, title, avatar and a `coreSkillId`, nothing about any scenario.
 - Ability layers: core skill (`src/shared/skills/core/`, mechanics only) →
-  scenario adapter (`src/shared/game/scenario01/skill-adapters/`, name,
-  description, visual, a `behaviour` only where the scenario's own rules must
-  take part) → `characterSkill(id)`. A new scenario adds adapters, never a
-  copy of the mechanics.
+  scenario adapter (`scenario01/skill-adapters/`, and `skill-adapters.ts` or
+  `skills.ts` in scenarios 02-04: name, description, visual, a `behaviour`
+  only where the scenario's own rules must take part) → `characterSkill(id)`.
+  A new scenario adds adapters, never a copy of the mechanics.
 - `pnpm test:unit` proves 12 × 16 = 192 with no duplicate or missing pair,
   unique ids, unique titles and unique skill names, 192/192 at each ability
   layer, and runs the static skill checks.
@@ -120,7 +146,10 @@ What the agent needs to carry from any of it is your call.
 - `pnpm check` (spec against the running app + unit tests) must pass before
   reporting a phase done. Start the app first: `pnpm build && pnpm start`.
 - UI changes are checked in a real browser (Playwright, two isolated
-  contexts) at 390 and 1280 px, and the screenshots looked at.
+  contexts) at 390 and 1280 px, and the screenshots looked at. Markers use
+  **1920×1080 and 390×844 side by side**; `node scripts/ui-marking.ts` opens
+  all four scenarios that way and times a turn change between them. Run it
+  before any submission.
   `pnpm ui:walkthrough` is the full end-to-end path for milestones.
   `node scripts/ui-play.ts --until end --phone 320` plays every screen at
   320 px and fails on clipped content or touch targets under 48 px

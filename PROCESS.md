@@ -1,17 +1,117 @@
 # Process
 
-I started this project with a fairly different technical plan from the one that was finally shipped. My first idea was to build the multiplayer game with Next.js and Supabase, mainly because that combination would make authentication, realtime updates, and database access convenient. After inspecting the course deployment constraints, I realised that this was a poor fit. The application had to run on a single small Fly.io machine with about 256 MB of memory and one persistent volume mounted at `/data`, while a separate managed database was outside the intended environment. I therefore changed the architecture to a Vite + React client, a Node server using Hono, SQLite stored on `/data`, and WebSockets in the same process. This was one of the most important decisions in the project because it reduced operational complexity and made the system match the environment instead of fighting it.
+## Stack: fitting the machine instead of fighting it
 
-I also changed how I worked with the coding agent. My first prompt already planned the build as PHASE 0–11: early phases focused on architecture, state machines, shared types, and deployment constraints before moving into the realtime lobby, the 192-character roster, portraits, the game engine, scenario content, skill execution, balancing, and final simulation. For a while I let the agent run several phases unattended, but that made it difficult for me to judge whether a design decision was good before many other parts depended on it. I switched back, so for most of the project the agent had to stop after each phase, report what it had changed, list what remained, and wait for me to say "continue". This made the development process slower, but it gave me a clear checkpoint for reviewing the direction.
+My first plan was Next.js with Supabase, because it would have given me auth,
+realtime and a database for free. Reading `fly.toml` ended that plan: one
+256 MB machine, one volume at `/data`, and no separate database server. I
+switched to a Vite + React client built to static files, plus one Node process
+running Hono, `ws` and SQLite (`node:sqlite`) on `/data`. The whole game
+shipped in that shape in [3a614a6](https://github.com/comp4020-agentic-coding-studio/comp4020-final-kyle-zjy/commit/3a614a6).
 
-The main harness for this workflow became `CLAUDE.md` together with the design documents under `docs/`. I treated these files as persistent instructions rather than relying on a single long prompt. For example, I added rules that all player-facing content should be in English, that the server must be authoritative for game state, that hidden information must never be sent to other clients, and that avatar SVG files must only be changed through the generator. I also added lessons after real failures. When Tailwind utilities were unexpectedly overridden, the rule about keeping custom CSS inside `@layer` was recorded. When button sizing broke, I documented that a utility such as `min-h-11` must not defeat the 48 px interaction target. Later, after balancing work, I added the rule that tuning should be based on simulation data and that deterministic simulation logs must be regenerated when rule changes make old replays invalid. These changes made the harness a record of decisions and failures, not just a style guide.
+I chose WebSockets over server-sent events or polling because a party game
+talks both ways at high frequency. Every press is an intent going up, and
+every accepted action is a new per-player view coming down. One socket
+carries both, with an action id and a state version, so the server can refuse
+duplicates and stale presses. The cost is that I own reconnects and presence
+myself. Identity is a nickname plus a session token in the browser, with no
+accounts, because nobody signs up to play a party game for one evening.
+Persistence is write-through: every accepted action and its resulting state
+go into one SQLite transaction before anything is broadcast. A restarted
+server rebuilds each run from the database, and `test/store.test.ts` holds it
+to that.
 
-My testing strategy also changed during the project. In the early phases I asked for exhaustive checks because the foundations were still moving. By PHASE 5, however, the suite had already become large and I noticed that repeatedly testing stable static data was consuming time and tokens without finding many new problems. I changed the instruction to use risk-driven testing. New or modified state-machine logic, concurrency, hidden information, reconnect behaviour, skills, deterministic random behaviour, and win/loss conditions still received strong coverage, while unchanged avatar files, schema checks, and identical character cases did not need repeated heavyweight browser tests. This was an important trade-off: I did not want fewer tests simply to make the numbers smaller; I wanted the expensive tests to concentrate on areas where a bug could corrupt a multiplayer game.
+The trade-off of one process is that nothing runs in parallel, so all
+correctness lives in a serialised per-room queue. In exchange, the app idles
+far below 256 MB, survives Fly stopping the machine when nobody is playing,
+and needs no infrastructure beyond what the course provides.
 
-Several bugs showed why this mattered. Tests caught a hidden-information leak where a field revealing whether a secret message was true or false was being sent to the client. They also found that two players could both successfully submit an "end turn" action at the same time. Simulation exposed a less obvious design problem: a critical failure while investigating or searching increased collapse for the whole team, so the safest strategy could become doing nothing. After changing exploration failures to mainly punish the individual player's sanity, the game stopped rewarding inactivity. By the final phase, more than 2,000 simulated games had completed without a deadlock, and saved action logs could be replayed to the same endings because important random decisions came from a server-side seeded RNG.
+## Workflow: phases, a harness, and a second agent
 
-A useful example of the complete feedback loop happened after deployment. The main build was committed in [3a614a6](https://github.com/comp4020-agentic-coding-studio/comp4020-final-kyle-zjy/commit/3a614a6). While checking the live deployment, a suspicious value from the health endpoint led to a local reproduction: if the active player disconnected, even for a browser refresh, the game skipped their turn immediately, although the design already specified a 15-second disconnect grace period. The bug was an older "skip if offline" condition that bypassed the grace-period logic. In [8bea061](https://github.com/comp4020-agentic-coding-studio/comp4020-final-kyle-zjy/commit/8bea061), I fixed the engine and added tests for reconnecting inside the grace period and for skipping only after the grace period expires. The old behaviour was temporarily restored to confirm that the new tests would fail. I then redeployed and verified the behaviour by disconnecting the active player for eight seconds and reconnecting successfully. Online testing also showed that Fly's proxy can take roughly five seconds to report a closed WebSocket, unlike the near-immediate local behaviour. Commit [71602e7](https://github.com/comp4020-agentic-coding-studio/comp4020-final-kyle-zjy/commit/71602e7) adjusted relevant network timing expectations without changing game rules.
+I planned the build as PHASE 0–11, from architecture and shared types,
+through the lobby, the 192-character roster and the engine, to balance. For a
+while I let the agent run several phases unattended. I couldn't judge a
+decision before ten others depended on it, so I made it stop after every
+phase, report done / files changed / not done / next, and wait for me to say
+"continue". That is slower, but every direction change happened at a
+checkpoint I had actually reviewed.
 
-The final architecture involved trade-offs. Keeping the server, WebSocket layer, and SQLite database in one process made deployment simple and kept memory within the course limit, but it also meant I had to be careful about transactions and serialising concurrent state changes. Making the game engine deterministic required more structure than calling `Math.random()`, but it enabled replayable logs, reproducible bugs, and balancing simulations. Supporting 192 characters made the content much richer, but only became manageable after skills were represented as combinations of shared triggers, target rules, and effect handlers rather than one-off code per character.
+`CLAUDE.md` became the harness. I added rules there when something went
+wrong, not when I imagined it might:
 
-The main thing I learned is that using an agent effectively is not the same as asking it to produce more code. The useful part was building a workflow in which I could constrain it, make decisions visible, turn failures into persistent instructions, and require evidence for important claims. The agent was very effective at implementation, refactoring, generating repetitive content, and running large test and simulation workloads. My role was still to decide what kind of game I wanted, which trade-offs were acceptable, when a test was worth its cost, and when a technically correct rule produced a bad player incentive. That is the workflow I would keep for a future project: use the agent for speed and breadth, but keep architecture, evaluation, and product judgement explicit.
+- Tailwind utilities silently lost to unlayered CSS, so custom CSS now goes in
+  `@layer`.
+- A `min-h-11` utility shrank buttons below the 48 px target, so it is banned
+  on buttons.
+- Balance changes judged by feel kept going wrong, so tuning is now judged
+  with `pnpm sim`.
+
+After scenario 01, I brought in Codex for scenario 03 and wrote it a handoff
+in [cfa1891](https://github.com/comp4020-agentic-coding-studio/comp4020-final-kyle-zjy/commit/cfa1891):
+`AGENTS.md`, `PROJECT_RULES.md` and `CODEX_HANDOFF.md`. Its rules split into
+two layers. Product rules (server authority, 2–10 players, 192 shared
+characters) apply to every scenario. Working rules are per agent. The mistake
+I made was letting `AGENTS.md` keep the stale template text while
+`CLAUDE.md` moved on. They now mirror each other, and the harness says so.
+
+## Testing: from exhaustive to risk-driven
+
+Early on, I asked for exhaustive tests because the foundations were moving.
+By PHASE 5, re-testing unchanged roster data and avatar files cost time and
+found nothing, so I wrote a risk-driven policy into `CLAUDE.md`. New logic in
+the state machine, concurrency, hidden information, reconnects, abilities,
+seeded randomness and win/loss still gets strong tests, and the
+security-sensitive ones get mutation checks.
+
+That focus paid off. Tests caught a field that told each player whether their
+own secret message was true. They caught two players both ending the same
+turn. Simulation found the worst incentive: a disastrous investigation raised
+Collapse for the whole train, so idling beat exploring. 10-player tables fell
+from 72% to 12% when the bot explored instead of idling. Moving that cost onto
+the explorer's own Sanity fixed it. More than 2,000 simulated runs finished
+with no deadlock.
+
+## Deployment found what local runs couldn't
+
+On the live site, a refresh by the active player skipped their turn
+immediately. An old "skip if offline" check was bypassing the 15-second grace
+period. I fixed it in [8bea061](https://github.com/comp4020-agentic-coding-studio/comp4020-final-kyle-zjy/commit/8bea061)
+with regression tests. I restored the old code to watch them fail, then
+redeployed and verified the fix by disconnecting for eight seconds. Fly's proxy
+also takes about five seconds to report a dropped socket, so
+[71602e7](https://github.com/comp4020-agentic-coding-studio/comp4020-final-kyle-zjy/commit/71602e7)
+gave the presence specs real network time without changing any rule.
+
+The ten-player spec stayed flaky after
+[98294b1](https://github.com/comp4020-agentic-coding-studio/comp4020-final-kyle-zjy/commit/98294b1)
+made it wait for a fresh snapshot per turn. Raising the wait to ten seconds
+didn't help either. Logging the last snapshot on a timeout showed the real
+cause: when seat 0 moved first, the test had already consumed the very
+snapshot it was waiting for. [b8e621c](https://github.com/comp4020-agentic-coding-studio/comp4020-final-kyle-zjy/commit/b8e621c)
+fixed the test's logic, not its timeout.
+
+## Breadth, and one thing I took out
+
+Scenarios 02–04 reused the engine, the characters and the realtime layer, and
+added only their own rules and content. A skill is data (trigger, target and
+effect primitives) with a per-scenario adapter, so 192 abilities work in four
+scenarios without per-character code. Later work went into presentation:
+openings, music, ending films, a timeline dossier, and an onboarding guide.
+Each one checks that it reads only the projected state.
+
+I also built a standalone poker toolbox
+([2777d4b](https://github.com/comp4020-agentic-coding-studio/comp4020-final-kyle-zjy/commit/2777d4b))
+and later removed it
+([38be9ab](https://github.com/comp4020-agentic-coding-studio/comp4020-final-kyle-zjy/commit/38be9ab)).
+It served none of the five promises in the README, so it went. A test now
+checks that its retired routes stay closed and that old stored data isn't
+exposed.
+
+## What I would keep
+
+Using an agent well was never about producing more code. It was about making
+decisions visible, turning failures into rules, and requiring evidence: a test
+that fails without the fix, a simulation number, a screenshot at the marking
+size. The agent gave me speed and breadth. Choosing the trade-offs, deciding
+which tests were worth their cost, and noticing when a correct rule created a
+bad incentive stayed my job.

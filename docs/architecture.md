@@ -1,7 +1,9 @@
-# Architecture — Fate Instance (working title)
+# Architecture — Fate Instance
 
-Status: PHASE 1 implemented the server, rooms, realtime lobby and client shell.
-The game engine (§4 reduce/validate for `GameAction`) arrives in PHASE 4.
+Status: complete. Four scenarios (01 The Last Train, 02 Sunken City,
+03 Incident Zero, 04 Underground Auction) run on one shared engine, rooms,
+realtime layer and persistence described below. Scenario-specific design is in
+`scenario03-technical-design.md`, `game-state.md` and `build-log.md`.
 
 ## 1. Constraints that decide the stack
 

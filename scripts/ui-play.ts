@@ -30,10 +30,12 @@ mkdirSync(out, { recursive: true });
 
 const browser = await chromium.launch();
 const phoneWidth = Number(arg("phone", "390"));
+// --desk 1920: the marking desktop is 1920×1080; 1280×800 is the everyday default
+const deskWidth = Number(arg("desk", "1280"));
 // --reduced-motion: both browsers ask for reduced motion, as an OS setting would
 const reducedMotion = process.argv.includes("--reduced-motion") ? "reduce" as const : "no-preference" as const;
 const phone = await (await browser.newContext({ viewport: { width: phoneWidth, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, reducedMotion })).newPage();
-const desk = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion })).newPage();
+const desk = await (await browser.newContext({ viewport: { width: deskWidth, height: deskWidth >= 1920 ? 1080 : 800 }, reducedMotion })).newPage();
 const pages: [Page, string][] = [
   [phone, "phone"],
   [desk, "desktop"],
